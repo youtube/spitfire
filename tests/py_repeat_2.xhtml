@@ -1,0 +1,13 @@
+<html xmlns:py="http://code.google.com/p/msolo/wiki/spitfire">
+  <head>
+    <title py:content="$test_dict.key1">Title Here</title>
+  </head>
+  <body>
+    <ul>
+      <li py:repeat="item $test_object_list">
+          <x py:replace="$item.name" />
+      </li>
+    </ul>
+  </body>
+</html>
+

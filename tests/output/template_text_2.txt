@@ -1,0 +1,10 @@
+test line 1
+$
+
+$$
+
+$$$
+
+$1.00
+
+test line 2

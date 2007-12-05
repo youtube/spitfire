@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+import os.path
+import sys
+
+from spitfire.compiler import analyzer
+import spitfire.compiler.util
+
+def process_file(filename, options):
+  def print_output(*args):
+    if options.verbose:
+      print >> sys.stderr, ' '.join(args)
+
+  try:
+    opt = analyzer.optimizer_map[options.optimizer_level]
+    opt.strip_optional_whitespace = options.ignore_optional_whitespace
+    if options.output_file:
+      write_file = False
+      if options.output_file == '-':
+        f = sys.stdout
+      else:
+        f = open(options.output_file, 'w')
+    else:
+      write_file = True
+    src_code = spitfire.compiler.util.compile_file(
+      filename, write_file, options=opt)
+    if options.output_file:
+      f.write(src_code)
+      f.close()
+  except Exception, e:
+    print >> sys.stderr, "FAILED:", filename, e
+    raise
+
+
+if __name__ == '__main__':
+  from optparse import OptionParser
+  op = OptionParser()
+  op.add_option('--preserve-optional-whitespace', action='store_false',
+                default=True, dest='ignore_optional_whitespace',
+                help='preserve leading whitespace before a directive')
+  op.add_option('-v', '--verbose', action='store_true', default=False)
+  op.add_option('-O', dest='optimizer_level', type='int', default=0)
+  op.add_option('-o', '--output-file',  dest='output_file', default=None)
+  (options, args) = op.parse_args()
+
+  for filename in args:
+    process_file(filename, options)

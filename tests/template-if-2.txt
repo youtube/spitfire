@@ -1,0 +1,10 @@
+#for $x in [-2, -1, 0, 1, 2]
+ #if $x > 1#test $x#end if
+ #if $x > 0 and $x < 2#test and#end if
+ #if $x > 0 and $x < 1 * 1 + 1 * 1#test and#end if
+ #if $x % 2 == 0#$x even#else#$x odd#end if
+ #if $x == -1#negative one!#end if
+ #if not $x#not x#end if
+ #if not $x == -2#not -2#end if#
+#end for
+
