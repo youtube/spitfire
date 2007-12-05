@@ -1,0 +1,6 @@
+#for $x in $test_object_list
+  #if $x.id < 2
+    #continue
+  #end if
+  test line $x.id : $x.name
+#end for
