@@ -1,0 +1,16 @@
+{
+    'test_x': 'x var',
+    'test_y': 'y var',
+    'test_z': 'z var',
+    'test_empty_list': [],
+    'test_number_list': [1, 2, 3, 4, 5],
+    'test_object_list': [{'id': 1, 'name': 'o1'},
+                         {'id': 2, 'name': 'o2'},
+                         {'id': 3, 'name': 'o3'},
+                         ],
+    'test_dict': {'key1': 1},
+    'test_whitespaced_dict': {'key 1': 1},
+    'test_str_function': str,
+    'test_range': range,
+    'content_type': 'text/html',
+}

@@ -1,0 +1,5 @@
+## fixme: this test case is weak
+#implements main
+test line 1
+
+test line 2

@@ -1,0 +1,9 @@
+#for $x,$y in [(True,0), (False, 1), (False, 0)]
+  #if $x
+  test if $x
+  #elif $y
+  test elif $y
+  #else
+  else nothing $x $y
+  #end if
+#end for

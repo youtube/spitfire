@@ -1,0 +1,5 @@
+existing variable: x var
+missing variable with default: default text
+missing variable with default array: []
+has missing variable? False
+has existing variable? True
