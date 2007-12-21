@@ -3,6 +3,7 @@ import os.path
 
 from spitfire.compiler.ast import *
 
+
 def tree_walker(node):
   yield node
   for n in node.child_nodes:
@@ -217,6 +218,24 @@ class SemanticAnalyzer(object):
     function = self.build_ast(function)[0]
     self.template.append(function)
     return []
+
+  def macro_i18n(self, pnode):
+    # fixme: parse the parameter list into something usable
+    # pnode.parameter_list
+    import spitfire.util
+    # generate a fake translation for now to verify this is working
+    # most apps will have to stub this part out somehow i think
+    return spitfire.util.i18n_mangled_message(pnode.value)
+
+  def analyzeMacroNode(self, pnode):
+    # fixme: better error handler
+    macro_function = getattr(self, 'macro_%s' % pnode.name, None)
+    macro_output = macro_function(pnode)
+    # fixme: bad place to import, difficult to put at the top due to
+    # cyclic dependency
+    import spitfire.compiler.util
+    macro_ast = spitfire.compiler.util.parse(macro_output)
+    return self.build_ast(macro_ast)
 
   def analyzeAttributeNode(self, pnode):
     self.template.attr_nodes.append(pnode.copy())
