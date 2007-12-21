@@ -1,3 +1,9 @@
+0.6.1 - initial support for macros. special macro case for i18n. needs more
+fleshing out, but can more or less handle the naive use cases. operating theory
+is that each translation will get its own compiled template.
+
+0.6.0 - spitfire/sparrow parity
+
 0.5.10 - renamed from 'sparrow' to 'spitfire' - i wonder if i can make it out
 of 0.6 without another rename.
 

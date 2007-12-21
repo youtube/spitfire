@@ -29,6 +29,7 @@ class SpitfireParserScanner(Scanner):
         ("'[ \\t]*in[ \\t]*'", re.compile('[ \t]*in[ \t]*')),
         ("'for[ \\t]*'", re.compile('for[ \t]*')),
         ("'def'", re.compile('def')),
+        ("'i18n'", re.compile('i18n')),
         ("'block'", re.compile('block')),
         ("'attr'", re.compile('attr')),
         ("'continue'", re.compile('continue')),
@@ -62,6 +63,7 @@ class SpitfireParserScanner(Scanner):
         ('PYTHON_LINE', re.compile('.+')),
         ('TEXT', re.compile('[^#\\$\n]+')),
         ('END', re.compile('$')),
+        ('I18N_BODY', re.compile('[^#]+')),
     ]
     def __init__(self, str):
         Scanner.__init__(self,None,[],str)
@@ -140,7 +142,7 @@ class SpitfireParser(Parser):
     def directive(self):
         START_DIRECTIVE = self._scan('START_DIRECTIVE')
         _node_list = NodeList()
-        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'def'", "'for[ \\t]*'", "'if'", "'implements'", "'extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
+        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'if'", "'implements'", "'extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
         if _token_ == 'SINGLE_LINE_COMMENT':
             SINGLE_LINE_COMMENT = self._scan('SINGLE_LINE_COMMENT')
             _node_list.append(CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT))
@@ -163,6 +165,26 @@ class SpitfireParser(Parser):
             self._scan("'block'")
             CLOSE_DIRECTIVE = self._scan('CLOSE_DIRECTIVE')
             _node_list.append(_block)
+        elif _token_ == "'i18n'":
+            self._scan("'i18n'")
+            _macro = MacroNode('i18n')
+            _token_ = self._peek('OPEN_PAREN', 'CLOSE_DIRECTIVE')
+            if _token_ == 'OPEN_PAREN':
+                OPEN_PAREN = self._scan('OPEN_PAREN')
+                if self._peek('CLOSE_PAREN', 'START_PLACEHOLDER') == 'START_PLACEHOLDER':
+                    parameter_list = self.parameter_list()
+                    _macro.parameter_list = parameter_list
+                CLOSE_PAREN = self._scan('CLOSE_PAREN')
+            else:# == 'CLOSE_DIRECTIVE'
+                CLOSE_DIRECTIVE = self._scan('CLOSE_DIRECTIVE')
+                start = CLOSE_DIRECTIVE.endswith('\n')
+            I18N_BODY = self._scan('I18N_BODY')
+            _macro.value = I18N_BODY
+            END_DIRECTIVE = self._scan('END_DIRECTIVE')
+            SPACE = self._scan('SPACE')
+            self._scan("'i18n'")
+            CLOSE_DIRECTIVE = self._scan('CLOSE_DIRECTIVE')
+            _node_list.append(_macro)
         elif _token_ == "'def'":
             self._scan("'def'")
             SPACE = self._scan('SPACE')
@@ -280,6 +302,48 @@ class SpitfireParser(Parser):
             START_PLACEHOLDER = self._scan('START_PLACEHOLDER')
             _primary = TextNode(START_PLACEHOLDER)
             if self._peek('OPEN_BRACE', 'ID', 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'") in ['OPEN_BRACE', 'ID']:
+                _token_ = self._peek('OPEN_BRACE', 'ID')
+                if _token_ == 'OPEN_BRACE':
+                    OPEN_BRACE = self._scan('OPEN_BRACE')
+                    placeholder_in_text = self.placeholder_in_text()
+                    CLOSE_BRACE = self._scan('CLOSE_BRACE')
+                    _primary = placeholder_in_text
+                else:# == 'ID'
+                    placeholder_in_text = self.placeholder_in_text()
+                    _primary = placeholder_in_text
+            if type(_primary) != TextNode: return PlaceholderSubstitutionNode(_primary)
+            return _primary
+
+    def text_or_placeholders(self, start=False):
+        _token_ = self._peek('SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT')
+        if _token_ == 'TEXT':
+            text = self.text()
+            return text
+        elif _token_ == 'SPACE':
+            SPACE = self._scan('SPACE')
+            _node_list = NodeList()
+            _node_list.append(WhitespaceNode(SPACE))
+            if 1:
+                directive = self.directive()
+                if start: _node_list[-1] = OptionalWhitespaceNode(SPACE)
+                _node_list.append(directive)
+            return _node_list
+        elif _token_ == 'NEWLINE':
+            NEWLINE = self._scan('NEWLINE')
+            _node_list = NodeList()
+            _node_list.append(NewlineNode(NEWLINE))
+            if 1:
+                SPACE = self._scan('SPACE')
+                _node_list.append(WhitespaceNode(SPACE))
+                if 1:
+                    directive = self.directive()
+                    _node_list[-1] = OptionalWhitespaceNode(SPACE)
+                    _node_list.append(directive)
+            return _node_list
+        else:# == 'START_PLACEHOLDER'
+            START_PLACEHOLDER = self._scan('START_PLACEHOLDER')
+            _primary = TextNode(START_PLACEHOLDER)
+            if 1:
                 _token_ = self._peek('OPEN_BRACE', 'ID')
                 if _token_ == 'OPEN_BRACE':
                     OPEN_BRACE = self._scan('OPEN_BRACE')
