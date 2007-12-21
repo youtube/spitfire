@@ -33,6 +33,11 @@ parser SpitfireParser:
   token TEXT: '[^#\$\n]+'
   token END:   '$'
 
+  # don't allow directive inside i18n
+  # fixme: need to allow an escape hatch in case you want a literal # in the
+  # i18n message body
+  token I18N_BODY: '[^#]+'
+
   rule goal:
     {{ template = TemplateNode() }}
     ( block<<start=True>> {{ template.append(block) }} ) *
@@ -75,6 +80,23 @@ parser SpitfireParser:
         ( block<<start>> {{ _block.append(block) }} ) *
         {{ make_optional(_block.child_nodes) }}
         END_DIRECTIVE SPACE 'block' CLOSE_DIRECTIVE {{ _node_list.append(_block) }}
+        |
+        'i18n' {{ _macro = MacroNode('i18n') }}
+        ( OPEN_PAREN
+          [ parameter_list {{ _macro.parameter_list = parameter_list }} ]
+          CLOSE_PAREN
+        |
+        CLOSE_DIRECTIVE
+        {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
+        )
+        # fixme: fairly nasty hack here - strip off the last "#end i18n"
+        # I18N_BODY {{ _macro.append(RawNode(re.sub('#end\s+i18n', '', I18N_BODY))) }}
+        I18N_BODY {{ _macro.value = I18N_BODY }}
+        END_DIRECTIVE SPACE 'i18n' CLOSE_DIRECTIVE {{ _node_list.append(_macro) }}
+        #CLOSE_DIRECTIVE {{ _node_list.append(_macro) }}
+        #( text_or_placeholders<<start>> {{ _macro.append(text_or_placeholders) }} ) *
+        #{{ make_optional(_macro.child_nodes) }}
+        #END_DIRECTIVE SPACE 'i18n' CLOSE_DIRECTIVE {{ _node_list.append(_macro) }}
         |
         'def' SPACE ID {{ _def = DefNode(ID) }}
         [ OPEN_PAREN
@@ -156,6 +178,37 @@ parser SpitfireParser:
     {{ if type(_primary) != TextNode: return PlaceholderSubstitutionNode(_primary) }}
     {{ return _primary }}
     
+  rule text_or_placeholders<<start=False>>:
+    text {{ return text }}
+    |
+    SPACE {{ _node_list = NodeList() }}
+    {{ _node_list.append(WhitespaceNode(SPACE)) }}
+    [ directive {{ if start: _node_list[-1] = OptionalWhitespaceNode(SPACE) }}
+      {{ _node_list.append(directive) }} ]
+    {{ return _node_list }}
+    |
+    NEWLINE {{ _node_list = NodeList() }}
+    {{ _node_list.append(NewlineNode(NEWLINE)) }}
+    [
+      SPACE {{ _node_list.append(WhitespaceNode(SPACE)) }}
+      [
+        directive {{ _node_list[-1] = OptionalWhitespaceNode(SPACE) }}
+        {{ _node_list.append(directive) }}
+        ]
+    ]
+    {{ return _node_list }}
+    |
+    START_PLACEHOLDER {{ _primary = TextNode(START_PLACEHOLDER) }}
+    [
+      (
+        OPEN_BRACE  placeholder_in_text CLOSE_BRACE {{ _primary = placeholder_in_text }}
+        |
+        placeholder_in_text {{ _primary = placeholder_in_text }}
+      )
+    ]
+    {{ if type(_primary) != TextNode: return PlaceholderSubstitutionNode(_primary) }}
+    {{ return _primary }}
+
   rule text:
     TEXT {{ return TextNode(TEXT) }}
 

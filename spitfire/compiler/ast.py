@@ -167,6 +167,9 @@ class DefNode(ASTNode):
 class BlockNode(DefNode):
   pass
 
+class MacroNode(DefNode):
+  pass
+
 class ExpressionListNode(_ListNode):
   pass
 
