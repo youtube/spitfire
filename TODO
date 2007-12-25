@@ -96,6 +96,12 @@ Cleanup:
  * EatPrevious node is a vile thing - make the DOM scanner look ahread 1 or 2
    nodes and determine what to do with optional whitespace nodes before
    processing them
+ * ideally, analysis and optimization should be distinct steps and code paths.
+   i added an optimization for direct variable access that taints the analysis
+   module, but it was much easier to do it there for the time being.
+ * rewrite resolve_placeholder as a module function that happens to take 'self'
+   as an argument - remove the need to use a bound function, but still allows
+   yout to search the 'self' object 
 
 Bugs:
  * py:conditional directives that are skipped still output a good amount of

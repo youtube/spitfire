@@ -332,7 +332,6 @@ ASTForNode_tmpl = ['for %(target_list)s in %(expression_list)s:']
 ASTTargetNode_tmpl = ['%(name)s']
 
 ASTIdentifierNode_tmpl = ['%(name)s']
-ASTAssignIdentifierNode_tmpl = ASTIdentifierNode_tmpl
 
 ASTLiteralNode_tmpl = ['%(value)r']
 

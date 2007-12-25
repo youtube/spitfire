@@ -208,8 +208,11 @@ class FunctionNode(ASTNode):
 
     self.child_nodes = NodeList([
       AssignNode(
-        AssignIdentifierNode('buffer'),
+        IdentifierNode('buffer'),
         new_buffer),
+      AssignNode(
+        IdentifierNode('_globals'),
+        CallFunctionNode(IdentifierNode('globals'))),
       ReturnNode(
         CallFunctionNode(GetAttrNode(IdentifierNode('buffer'), 'getvalue'))),
       ])
@@ -267,8 +270,6 @@ class IdentifierNode(ASTNode):
   def __hash__(self):
     return hash(self.name)
 
-class AssignIdentifierNode(IdentifierNode):
-  pass
 
 class IfNode(ASTNode):
   def __init__(self, test_expression=None):
