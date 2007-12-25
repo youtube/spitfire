@@ -10,14 +10,15 @@ import spitfire.compiler.analyzer
 import spitfire.compiler.optimizer
 import spitfire.compiler.xhtml2ast
 
-valid_identfier = re.compile('[a-z]\w*', re.IGNORECASE)
+valid_identfier = re.compile('[_a-z]\w*', re.IGNORECASE)
 
 def filename2classname(filename):
   classname = os.path.splitext(
     os.path.basename(filename))[0].lower().replace('-', '_')
   if not valid_identfier.match(classname):
     raise SyntaxError(
-      'filename "%s" must be valid python identifier' % filename)
+      'filename "%s" must yield valid python identifier: %s' % (filename,
+                                                                classname))
   return classname
 
 

@@ -1,3 +1,7 @@
+0.6.2 - caved and added #set directive. added True and False as literals.
+expanded optimizer to handle unary operators and placeholder substitutions.
+added more cases to get_local_indentifiers().
+
 0.6.1 - initial support for macros. special macro case for i18n. needs more
 fleshing out, but can more or less handle the naive use cases. operating theory
 is that each translation will get its own compiled template.
