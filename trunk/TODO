@@ -5,9 +5,11 @@ Functionality:
      * need this when you are translating a block that doesn't have pure text
        and contains placeholders that need to be compiled
    * how to handle something like the #i18n block - it can be evaluated at
-     compile time
+     compile time (mostly complete)
    * want to save an intermediate representation to make it fast to do many
      versions of a single language
+     * this may be pretty hard - next-best bet is to generate the parse tree
+       and reanalyze it once per language
    * do you want to allow arbitrary nesting and tagging?
    * should you have a different (shorthand?) syntax for args?
      * could borrow the _() function from gettext
@@ -30,7 +32,6 @@ Functionality:
      should be more consistent. right now you must have it in the def, but you
      can't have it when you do the calling.
  * add #encoding directive
- * #set directive
  * add a build time/version attribute?
  * xhtml-oriented front end
    * emulate virtual odd/even var in loops (partially implemented Repeater)
