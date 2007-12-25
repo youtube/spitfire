@@ -293,6 +293,8 @@ class SemanticAnalyzer(object):
     if (isinstance(fn.expression, PlaceholderNode) and
         fn.expression.name in ('get_var', 'has_var')):
       # fixme: total cheat here
+      method_name = fn.expression.name
+      fn.expression = GetAttrNode(IdentifierNode('self'), method_name)
       fn.arg_list.append(t_local_vars())
       fn.arg_list.append(t_global_vars())
     fn.expression = self.build_ast(fn.expression)[0]
