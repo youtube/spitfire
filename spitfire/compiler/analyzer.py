@@ -35,6 +35,7 @@ class AnalyzerOptions(object):
     self.enable_psyco = False
     
     self.__dict__.update(kargs)
+
   def update(self, **kargs):
     self.__dict__.update(kargs)
   
@@ -263,7 +264,9 @@ class SemanticAnalyzer(object):
     f = CallFunctionNode(GetAttrNode(IdentifierNode('self'),
                                      'resolve_placeholder'))
     f.arg_list.append(LiteralNode(pnode.name))
-    f.arg_list.append(t_local_vars())
+    # fixme: clouding the optimization layer
+    if not self.options.directly_access_defined_variables:
+      f.arg_list.append(t_local_vars())
     f.arg_list.append(t_global_vars())
     f.hint_map['resolve_placeholder'] = IdentifierNode(pnode.name)
     return self.build_ast(f)
@@ -293,10 +296,11 @@ class SemanticAnalyzer(object):
     # analysis phase. i think that's wrong - but i'm not 100% sure
     if (isinstance(fn.expression, PlaceholderNode) and
         fn.expression.name in ('get_var', 'has_var')):
-      # fixme: total cheat here
+      # fixme: total cheat here, also clouding the optimization layer
       method_name = fn.expression.name
       fn.expression = GetAttrNode(IdentifierNode('self'), method_name)
-      fn.arg_list.append(t_local_vars())
+      if not self.options.directly_access_defined_variables:
+        fn.arg_list.append(t_local_vars())
       fn.arg_list.append(t_global_vars())
     fn.expression = self.build_ast(fn.expression)[0]
     fn.arg_list = self.build_ast(fn.arg_list)[0]
@@ -331,5 +335,5 @@ def t_local_vars():
 
 def t_global_vars():
   t = ParameterNode('global_vars',
-                    CallFunctionNode(IdentifierNode('globals')))
+                    IdentifierNode('_globals'))
   return t

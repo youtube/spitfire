@@ -44,7 +44,8 @@ class OptimizationAnalyzer(object):
   def analyzeFunctionNode(self, function):
     function.aliased_expression_map = {}
     function.alias_name_set = set()
-    function.local_identifiers = function.parameter_list
+    function.local_identifiers = [IdentifierNode(n.name)
+                                  for n in function.parameter_list]
     for n in function.child_nodes:
       self.visit_ast(n, function)
 
@@ -54,6 +55,12 @@ class OptimizationAnalyzer(object):
     self.visit_ast(for_node.expression_list, for_node)
     for n in for_node.child_nodes:
       self.visit_ast(n, for_node)
+
+  def analyzeAssignNode(self, node):
+    _identifier = IdentifierNode(node.left.name)
+    function = self.get_parent_function(node)
+    function.local_identifiers.append(_identifier)
+    self.visit_ast(node.right, node)
 
   def analyzeExpressionListNode(self, expression_list_node):
     for n in expression_list_node:
@@ -214,6 +221,15 @@ class OptimizationAnalyzer(object):
 
   def get_local_identifiers(self, node):
     local_identifiers = []
+#     # search over the previous siblings for this node
+#     # mostly to look for AssignNode
+#     if node.parent is not None:
+#       idx = node.parent.child_nodes.index(node)
+#       previous_siblings = node.parent.child_nodes[:idx]
+      
+    
+    # search the parent scopes
+    # fixme: looking likely that this should be recursive
     node = node.parent
     while node is not None:
       # fixme: there are many more sources of local_identifiers
@@ -222,8 +238,7 @@ class OptimizationAnalyzer(object):
       if isinstance(node, ForNode):
         local_identifiers.extend(node.loop_variant_set)
       elif isinstance(node, FunctionNode):
-        local_identifiers.extend(
-          [IdentifierNode(n.name) for n in node.parameter_list])
+        local_identifiers.extend(node.local_identifiers)
         break
       node = node.parent
     return local_identifiers
