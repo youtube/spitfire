@@ -101,11 +101,16 @@ class OptimizationAnalyzer(object):
     raise SemanticAnalyzerError("expected a parent function")
 
   def get_insert_block_and_point(self, node):
+    original_node = node
     insert_marker = node
     node = node.parent
     while node is not None:
-      if isinstance(node, (FunctionNode, ForNode, IfNode)):
+      if isinstance(node, (FunctionNode, ForNode)):
         return node, insert_marker
+      elif isinstance(node, (IfNode,)):
+        if original_node in node.child_nodes:
+          return node, insert_marker
+        
       insert_marker = node
       node = node.parent
     raise SemanticAnalyzerError("expected a parent block")
@@ -118,7 +123,7 @@ class OptimizationAnalyzer(object):
     if not self.options.alias_invariants:
       return
     
-    # fixme; only handle the trivial case for now
+    # fixme: only handle the trivial case for now
     # simplifies the protocol for making up alias names
     if type(node.expression) != IdentifierNode:
       return
