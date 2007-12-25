@@ -22,30 +22,32 @@ class SpitfireTemplate(object):
   # FIXME: i'm sure this is a little pokey - might be able to speed this up
   # somehow. not sure if it's better to look before leaping or raise.
   # might also want to let users tune whether to prefer keys or attributes
-  def resolve_placeholder(self, name, local_vars, global_vars,
+  def resolve_placeholder(self, name, local_vars=None, global_vars=None,
                           default=Unspecified):
-    try:
-      return local_vars[name]
-    except TypeError:
-      raise PlaceholderError('unexpected type for local_vars: %s' %
-                             type(local_vars))
-    except KeyError:
-      pass
+    if local_vars is not None:
+      try:
+        return local_vars[name]
+      except TypeError:
+        raise PlaceholderError('unexpected type for local_vars: %s' %
+                               type(local_vars))
+      except KeyError:
+        pass
 
-    try:
-      return global_vars[name]
-    except TypeError:
-      raise PlaceholderError('unexpected type for global_vars: %s' %
-                             type(global_vars))
-    except KeyError:
-      pass
+    if global_vars is not None:
+      try:
+        return global_vars[name]
+      except TypeError:
+        raise PlaceholderError('unexpected type for global_vars: %s' %
+                               type(global_vars))
+      except KeyError:
+        pass
 
     try:
       return getattr(self, name)
     except AttributeError:
       pass
 
-    if self.search_list:
+    if self.search_list is not None:
       for scope in self.search_list:
         try:
           return scope[name]
@@ -73,16 +75,16 @@ class SpitfireTemplate(object):
                                     global_vars=global_vars,
                                     default=default)
 
-  def has_var(self, name, local_vars, global_vars):
-    if name in local_vars:
+  def has_var(self, name, local_vars=None, global_vars=None):
+    if local_vars is not None and name in local_vars:
       return True
-    if name in global_vars:
+    if global_vars is not None and name in global_vars:
       return True
 
     if hasattr(self, name):
       return True
 
-    if self.search_list:
+    if self.search_list is not None:
       for scope in self.search_list:
         if name in scope:
           return True
