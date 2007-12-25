@@ -8,6 +8,7 @@ parser SpitfireParser:
   token DOT: '\.'
   token NUM:   '[0-9]+'
   token ID:    '[A-Za-z_][0-9A-Za-z_]*'
+
   #token STR:   r'"([^\\"]+|\\.)*"'
   token SINGLE_QUOTE_STR: "[^']*"
   token DOUBLE_QUOTE_STR: '[^"]*'
@@ -61,6 +62,10 @@ parser SpitfireParser:
         |
         'attr' SPACE placeholder SPACE ASSIGN_OPERATOR SPACE literal CLOSE_DIRECTIVE
         {{ return AttributeNode(placeholder.name, literal) }}
+        |
+        'set' SPACE placeholder {{ _lhs = IdentifierNode(placeholder.name) }}
+        SPACE ASSIGN_OPERATOR SPACE expression {{ _rhs = expression }}
+        CLOSE_DIRECTIVE {{ return AssignNode(_lhs, _rhs) }}
         
   rule modulename:
     identifier {{ _module_name_list = [identifier] }}
@@ -291,6 +296,10 @@ parser SpitfireParser:
 
   # had to factor out the floats
   rule literal:
+    "True" {{ return LiteralNode(True) }}
+    |
+    "False" {{ return LiteralNode(False) }}
+    |
     stringliteral {{ return LiteralNode(stringliteral) }}
     |
     NUM {{ int_part = NUM }}

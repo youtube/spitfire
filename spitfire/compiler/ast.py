@@ -75,7 +75,13 @@ class ASTNode(object):
       node.child_nodes = NodeList()
     return node
 
+
 class NodeList(list):
+  # note: need to iterate over a copy due to the way i modify the tree in-place
+  # this is probably an indication that this approach is fundamentally flawed
+  def __iter__(self):
+    return iter(list(list.__iter__(self)))
+  
   def append(self, node):
     if isinstance(node, list):
       self.extend(node)
@@ -200,13 +206,13 @@ class FunctionNode(ASTNode):
     new_buffer = CallFunctionNode(
           GetAttrNode(IdentifierNode('self'), 'new_buffer'))
 
-    self.child_nodes = [
+    self.child_nodes = NodeList([
       AssignNode(
         AssignIdentifierNode('buffer'),
         new_buffer),
       ReturnNode(
         CallFunctionNode(GetAttrNode(IdentifierNode('buffer'), 'getvalue'))),
-      ]
+      ])
     self.parameter_list = ParameterListNode()
     
   def append(self, node):
@@ -419,6 +425,12 @@ class UnaryOpNode(ASTNode):
     ASTNode.__init__(self)
     self.operator = operator
     self.expression = expression
+
+  def replace(self, node, replacement_node):
+    if self.expression is node:
+      self.expression = replacement_node
+    else:
+      raise Exception("expression does not match target")
 
 # this is sort of a hack to support optional white space nodes inside the
 # parse tree.  the reality is that this probably requires a more complex

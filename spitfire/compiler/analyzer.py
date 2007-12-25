@@ -275,6 +275,7 @@ class SemanticAnalyzer(object):
     return [n]
 
   analyzeBinOpExpressionNode = analyzeBinOpNode
+  analyzeAssignNode = analyzeBinOpNode
   
   def analyzeUnaryOpNode(self, pnode):
     n = pnode.copy()

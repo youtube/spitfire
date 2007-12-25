@@ -44,6 +44,7 @@ class OptimizationAnalyzer(object):
   def analyzeFunctionNode(self, function):
     function.aliased_expression_map = {}
     function.alias_name_set = set()
+    function.local_identifiers = function.parameter_list
     for n in function.child_nodes:
       self.visit_ast(n, function)
 
@@ -68,6 +69,12 @@ class OptimizationAnalyzer(object):
         flat_list.append(n)
     target_list_node.flat_list = flat_list
 
+#   def analyzeParameterListNode(self, parameter_list_node):
+#     flat_list = []
+#     for n in parameter_list_node:
+#       flat_list.append(n)
+#     target_list_node.flat_list = flat_list
+
   def analyzeArgListNode(self, arg_list_node):
     for n in arg_list_node:
       self.visit_ast(n, arg_list_node)
@@ -84,6 +91,10 @@ class OptimizationAnalyzer(object):
       except KeyError:
         pass
       
+  def analyzePlaceholderSubstitutionNode(self, placeholder_substitution):
+    self.visit_ast(placeholder_substitution.expression,
+                   placeholder_substitution)
+
   def get_parent_loop(self, node):
     node = node.parent
     while node is not None:
@@ -118,6 +129,34 @@ class OptimizationAnalyzer(object):
   def replace_in_parent_block(self, node, new_node):
     insert_block, insert_marker = self.get_insert_block_and_point(node)
     insert_block.replace(insert_marker, new_node)
+
+#   def alias_expression_in_function(self, function, expression):
+#     alias = function.aliased_expression_map.get(expression)
+#     if not alias:
+#       alias_name = '_%s' % (expression.name)
+#       if alias_name in function.alias_name_set:
+#         print "duplicate alias_name", alias_name
+#         return
+      
+#       alias = IdentifierNode(alias_name)
+#       function.aliased_expression_map[expression] = alias
+#       assign_alias = AssignNode(alias, expression)
+#       parent_loop = self.get_parent_loop(node)
+#       # fixme: check to see if this expression is loop-invariant
+#       # must add a test case for this
+#       child_node_set = set(node.getChildNodes())
+#       #print "child_node_set", child_node_set
+#       #print "parent_loop", parent_loop, "parent", node.parent
+#       if (parent_loop is not None and
+#           not parent_loop.loop_variant_set.intersection(child_node_set)):
+#         #print "pull up loop invariant", assign_alias
+#         parent_loop.parent.insert_before(parent_loop, assign_alias)
+#       else:
+#         insert_block, insert_marker = self.get_insert_block_and_point(node)
+#         insert_block.insert_before(insert_marker, assign_alias)
+
+#     node.parent.replace(node, alias)
+    
 
   def analyzeGetAttrNode(self, node):
     if not self.options.alias_invariants:
@@ -168,16 +207,24 @@ class OptimizationAnalyzer(object):
     self.visit_ast(n.right, n)
 
   analyzeBinOpExpressionNode = analyzeBinOpNode
+  analyzeAssignNode = analyzeBinOpNode
+
+  def analyzeUnaryOpNode(self, op_node):
+    self.visit_ast(op_node.expression, op_node)
 
   def get_local_identifiers(self, node):
     local_identifiers = []
     node = node.parent
-    while node is not None and not isinstance(node, FunctionNode):
+    while node is not None:
       # fixme: there are many more sources of local_identifiers
       # have to scan AssignNodes up to your current position
       # also check the parameters of your function
       if isinstance(node, ForNode):
         local_identifiers.extend(node.loop_variant_set)
+      elif isinstance(node, FunctionNode):
+        local_identifiers.extend(
+          [IdentifierNode(n.name) for n in node.parameter_list])
+        break
       node = node.parent
     return local_identifiers
   
@@ -196,7 +243,3 @@ class OptimizationAnalyzer(object):
 #     return []
 
   
-#   def analyzeUnaryOpNode(self, pnode):
-#     n = pnode.copy()
-#     n.expression = self.build_ast(n.expression)[0]
-#     return [n]
