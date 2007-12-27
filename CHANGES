@@ -1,3 +1,9 @@
+0.6.4 - added restricted variable set for macros and easy accessor function to
+turn literal args into a nice dictionary. fixed keyword argument parsing to
+correctly accept multiple keywords args. fixed macros so that they result in a
+new tree fragment rather than a template. standardized the comma delimiter to
+fix a few parse errors.
+
 0.6.3 - further optimized calls to resolve_placeholder via calculating
 globals() in advance and removed spurious calls to locals().
 

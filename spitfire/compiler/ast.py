@@ -60,7 +60,6 @@ class ASTNode(object):
     self.child_nodes.insert(idx, insert_node)
 
   def replace(self, marker_node, insert_node_list):
-    print "replace", type(self)
     idx = self.child_nodes.index(marker_node)
     try:
       for n in reversed(insert_node_list):
@@ -338,7 +337,11 @@ class AttributeNode(ParameterNode):
   pass
 
 class ParameterListNode(_ListNode):
-  pass
+  def get_arg_map(self):
+    arg_map = {}
+    for parameter_node in self.child_nodes:
+      arg_map[parameter_node.name] = parameter_node.default.value
+    return arg_map
 
 class PlaceholderNode(ASTNode):
   pass
@@ -393,6 +396,9 @@ class WhitespaceNode(TextNode):
     return OptionalWhitespaceNode(self.value)
 
 class OptionalWhitespaceNode(TextNode):
+  pass
+
+class FragmentNode(ASTNode):
   pass
 
 class TemplateNode(ASTNode):
