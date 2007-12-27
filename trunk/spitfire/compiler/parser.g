@@ -16,13 +16,15 @@ parser SpitfireParser:
   token SINGLE_LINE_COMMENT: '#.*?\n'
   token MULTI_LINE_COMMENT: '\*[\W\w\S\s]+\*#'
   token ASSIGN_OPERATOR: '='
-  token COMP_OPERATOR: '[ \t]*(<|>|==|>=|<=|!=)[ \t]*'
+  token COMP_OPERATOR: '[ \t]*(<=|>=|==|>|<|!=)[ \t]*'
   token OPEN_PAREN: '[ \t]*\([ \t]*'
   token CLOSE_PAREN: '[ \t]*\)[ \t]*'
   token OPEN_BRACKET: '[ \t]*\[[ \t]*'
   token CLOSE_BRACKET: '[ \t]*\][ \t]*'
   token OPEN_BRACE: '[ \t]*\{[ \t]*'
   token CLOSE_BRACE: '[ \t]*\}[ \t]*'
+
+  token COMMA_DELIMITER: '[ \t]*,[ \t]*'
 
   token SPACE: '[ \t]+'
   token CLOSE_DIRECTIVE: '[ \t]*[\n#]'
@@ -44,6 +46,10 @@ parser SpitfireParser:
     ( block<<start=True>> {{ template.append(block) }} ) *
     END {{ return template }}
 
+  rule fragment_goal:
+    {{ fragment = FragmentNode() }}
+    ( block<<start=True>> {{ fragment.append(block) }} ) *
+    END {{ return fragment}}
 
   rule statement:
         'implements' SPACE ID CLOSE_DIRECTIVE {{ return ImplementsNode(ID) }}
@@ -87,13 +93,13 @@ parser SpitfireParser:
         END_DIRECTIVE SPACE 'block' CLOSE_DIRECTIVE {{ _node_list.append(_block) }}
         |
         'i18n' {{ _macro = MacroNode('i18n') }}
-        ( OPEN_PAREN
-          [ parameter_list {{ _macro.parameter_list = parameter_list }} ]
+        [ OPEN_PAREN
+          [ macro_parameter_list {{ _macro.parameter_list = macro_parameter_list }} ]
           CLOSE_PAREN
-        |
+        ]
         CLOSE_DIRECTIVE
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-        )
+
         # fixme: fairly nasty hack here - strip off the last "#end i18n"
         # I18N_BODY {{ _macro.append(RawNode(re.sub('#end\s+i18n', '', I18N_BODY))) }}
         I18N_BODY {{ _macro.value = I18N_BODY }}
@@ -254,7 +260,7 @@ parser SpitfireParser:
   rule target_list:
     {{ _target_list = TargetListNode() }}
     target {{ _target_list.append(target) }}
-    ("[ \t]*,[ \t]*" target {{ _target_list.append(target) }} )*
+    (COMMA_DELIMITER target {{ _target_list.append(target) }} )*
     # this optional comma cause a SPACE scan in the parse function
     #[","]
     {{ return _target_list }}
@@ -262,7 +268,7 @@ parser SpitfireParser:
   rule expression_list:
     {{ _expression_list = ExpressionListNode() }}
     expression {{ _expression_list.append(expression) }}
-    ("[ \t]*,[ \t]*" expression {{ _expression_list.append(expression) }} )*
+    (COMMA_DELIMITER expression {{ _expression_list.append(expression) }} )*
     # this optional comma cause a SPACE scan in the parse function
     #[","]
     {{ return _expression_list }}
@@ -279,13 +285,25 @@ parser SpitfireParser:
 
    rule parameter:
      placeholder {{ _node = ParameterNode(placeholder.name) }}
-     [ ASSIGN_OPERATOR literal {{ _node.default = literal }} ]
+     [ ASSIGN_OPERATOR expression {{ _node.default = expression }} ]
      {{ return _node }}
 
    rule parameter_list:
      {{ _parameter_list = ParameterListNode() }}
      parameter {{ _parameter_list.append(parameter) }}
-     ("[ \t]*,[ \t]*" parameter {{ _parameter_list.append(parameter) }} ) *
+     (COMMA_DELIMITER parameter {{ _parameter_list.append(parameter) }} ) *
+     {{ return _parameter_list }}
+     
+   ## restricted data types for macros
+   rule macro_parameter:
+     placeholder {{ _node = ParameterNode(placeholder.name) }}
+     [ ASSIGN_OPERATOR literal {{ _node.default = literal }} ]
+     {{ return _node }}
+
+   rule macro_parameter_list:
+     {{ _parameter_list = ParameterListNode() }}
+     macro_parameter {{ _parameter_list.append(macro_parameter) }}
+     (COMMA_DELIMITER macro_parameter {{ _parameter_list.append(macro_parameter) }} ) *
      {{ return _parameter_list }}
      
 
@@ -323,14 +341,14 @@ parser SpitfireParser:
       OPEN_BRACKET {{ _list_literal = ListLiteralNode() }}
       [
         expression {{ _list_literal.append(expression) }}
-        ( "[ \t]*,[ \t]*" expression {{ _list_literal.append(expression) }} ) *
+        ( COMMA_DELIMITER expression {{ _list_literal.append(expression) }} ) *
       ]
       CLOSE_BRACKET {{ _primary = _list_literal }}
       |
       OPEN_PAREN {{ _tuple_literal = TupleLiteralNode() }}
       [
         expression {{ _tuple_literal.append(expression) }}
-        ( "[ \t]*,[ \t]*" expression {{ _tuple_literal.append(expression) }} ) *
+        ( COMMA_DELIMITER expression {{ _tuple_literal.append(expression) }} ) *
       ]
       CLOSE_PAREN {{ _primary = _tuple_literal }}
       |
@@ -339,7 +357,7 @@ parser SpitfireParser:
         expression {{ _key = expression }}
         '[ \t]*:[ \t]*'
         expression {{ _dict_literal.append((_key, expression)) }}
-        ( "[ \t]*,[ \t]*" expression {{ _key = expression }}
+        ( COMMA_DELIMITER expression {{ _key = expression }}
           '[ \t]*:[ \t]*' expression
           {{ _dict_literal.append((_key, expression)) }}
           ) *
@@ -373,17 +391,18 @@ parser SpitfireParser:
     {{ _pargs, _kargs = [], [] }}
     expression {{ _arg = expression }}
     (
-    "[ \t]*,[ \t]*" {{ _pargs.append(_arg) }}
+    COMMA_DELIMITER {{ _pargs.append(_arg) }}
     expression {{ _arg = expression }}
     ) *
     [
     ASSIGN_OPERATOR
-    {{ if not isinstance(_arg, IdentifierNode): raise SyntaxError(self._scanner.pos, "keyword arg can't be complex expression") }}
+    {{ if not isinstance(_arg, IdentifierNode): raise SyntaxError(self._scanner.pos, "keyword arg can't be complex expression: %s" % _arg) }}
     {{ _karg = ParameterNode(_arg.name) }}
     {{ _arg = None }}
     expression {{ _karg.default = expression }}
     {{ _kargs.append(_karg) }}
     (
+      COMMA_DELIMITER
       identifier {{ _karg = ParameterNode(identifier.name) }}
       ASSIGN_OPERATOR
       expression {{ _karg.default = expression }}

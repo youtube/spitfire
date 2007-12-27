@@ -145,6 +145,12 @@ class SemanticAnalyzer(object):
       if_node.else_.extend(self.build_ast(pn))
     return [if_node]
 
+  def analyzeFragmentNode(self, node):
+    new_nodes = []
+    for n in node.child_nodes:
+      new_nodes.extend(self.build_ast(n))
+    return new_nodes
+
   def analyzeArgListNode(self, pnode):
     list_node = ArgListNode()
     for n in pnode:
@@ -220,7 +226,7 @@ class SemanticAnalyzer(object):
     self.template.append(function)
     return []
 
-  def macro_i18n(self, pnode):
+  def macro_i18n(self, pnode, arg_map=None):
     # fixme: parse the parameter list into something usable
     # pnode.parameter_list
     import spitfire.util
@@ -231,12 +237,14 @@ class SemanticAnalyzer(object):
   def analyzeMacroNode(self, pnode):
     # fixme: better error handler
     macro_function = getattr(self, 'macro_%s' % pnode.name, None)
-    macro_output = macro_function(pnode)
+    # arg_map = pnode.parameter_list.get_arg_map()
+    arg_map = None
+    macro_output = macro_function(pnode, arg_map)
     # fixme: bad place to import, difficult to put at the top due to
     # cyclic dependency
     import spitfire.compiler.util
-    macro_ast = spitfire.compiler.util.parse(macro_output)
-    return self.build_ast(macro_ast)
+    fragment_ast = spitfire.compiler.util.parse(macro_output, 'fragment_goal')
+    return self.build_ast(fragment_ast)
 
   def analyzeAttributeNode(self, pnode):
     self.template.attr_nodes.append(pnode.copy())
