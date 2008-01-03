@@ -1,3 +1,8 @@
+0.6.5 - remove resolve_placeholder call for members of __builtin__ when the
+optimizer is turned on. enable psyco on the compiler itself - yields about
+25% boost. added a new rule to parse the limited contents of an #i18n block.
+removed some stale lines from codegen.
+
 0.6.4 - added restricted variable set for macros and easy accessor function to
 turn literal args into a nice dictionary. fixed keyword argument parsing to
 correctly accept multiple keywords args. fixed macros so that they result in a

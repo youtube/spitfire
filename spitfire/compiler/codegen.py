@@ -1,4 +1,4 @@
-import StringIO
+import cStringIO as StringIO
 
 class CodegenError(Exception):
   pass
@@ -305,29 +305,12 @@ if __name__ == '__main__':
 """
 
 
-#ASTTextNode_tmpl = ['buffer.write(u"""%(value)s""")']
-
-# ASTOptionalWhitespaceNode_tmpl = ASTTextNode_tmpl
-
-# ASTWhitespaceNode_tmpl = ASTTextNode_tmpl
-
-# ASTNewlineNode_tmpl = ASTTextNode_tmpl
 
 ASTFunctionNode_tmpl = ['def %(name)s(%(parameter_list)s):']
-
-# ASTFunctionInitNode_tmpl = ['buffer = self.new_buffer()']
-
-#ASTReturnNode_tmpl = ['return %(expression)s']
 
 ASTCallFunctionNode_tmpl = ['%(expression)s(%(arg_list)s)']
 
 ASTForNode_tmpl = ['for %(target_list)s in %(expression_list)s:']
-
-# ASTPlaceholderNode_tmpl = [
-# 'self.resolve_placeholder("%(name)s", local_vars=locals())']
-
-#ASTPlaceholderSubstitutionNode_tmpl = [
-#  'buffer.write("%%s" %% %(placeholder)s)']
 
 ASTTargetNode_tmpl = ['%(name)s']
 
@@ -338,4 +321,3 @@ ASTLiteralNode_tmpl = ['%(value)r']
 ASTBreakNode_tmpl = ['break']
 
 ASTContinueNode_tmpl = ['continue']
-

@@ -14,7 +14,7 @@ Functionality:
    * should you have a different (shorthand?) syntax for args?
      * could borrow the _() function from gettext
  * how do we do template import?
-   * it's really going to be multiple inheritence, but can i make it less
+   * it's really going to be multiple inheritance, but can i make it less
      shady from a designer standpoint? maybe that's how i implement the 
      #include directive - but check at runtime that it's a library?
      * does that check buy you anything?
@@ -38,14 +38,14 @@ Functionality:
  * Attribute Language - (like TAL and Kid)
    * guarantee well-formed
    * test attribute operator precedence
-   * figure out nice way of inheritence
-     * most TAL templates only use 1 level of inheritence
+   * figure out nice way of inheritance
+     * most TAL templates only use 1 level of inheritance
        * need to remember that most "subtemplates" are really complete,
          well formed xhtml documents, so it's hard to define function fragments
      * use processing instructions to create inheritance?
      * use py:def nodes to create "functions"?
    * add py:define
-     * use pythonesqe syntax
+     * use pythonesque syntax
      * syntax: py:define="x=$placeholder[0], y=$placeholder[1].my_attribute" 
    * add py:attributes
      * use exactly the same syntax as define?
@@ -54,9 +54,10 @@ Functionality:
        * creates yet another namespace - but might be the most logical
 
 Optimization:
- * replace functions that only write a constant with one that just returns that
-   constant string - no intermediate buffer
-   * in some cases, might be able to skip the whole function call too
+ * replace functions that only write a string constant with one that just
+   returns that constant string - no need for intermediate buffer
+   * in some cases, might be able to skip the whole function call too - make
+     the value an attribute? hard to do if this is used by a subclass
  * expose imports as globals vars that don't need to be resolved at runtime
  * factor out common sub-expressions during resolve_udn
  * only store local variables called more than once?
@@ -73,14 +74,12 @@ Variant 1.1:
 Variant 2:
         write(u"""<td>%s</td>\n""" % column)
 
-   * optimization of this loop is dependend on the python version (2.4 vs 2.5)
+   * optimization of this loop is dependent on the python version (2.4 vs 2.5)
    * Variant 2 is universally the slowest
- * collapse functions that comprise of a single text node to a return a unicode
-   string constant
 
 Cleanup:
  * revisit all uses of default_analyze_node - usually this is where
-   unimplimented functionality lurks
+   unimplemented functionality lurks
  * front-end mode is a bit annoying - need to better detect xhtml vs text mode
    instead of passing around
  * analyzer is still a bit foul
@@ -93,15 +92,15 @@ Cleanup:
    variables etc for get_var/has_var seems ugly.
  * crunner is a bit foul - might be better to have separate front end for tests
    * borrow more code from spitfire-compile
- * EatPrevious node is a vile thing - make the DOM scanner look ahread 1 or 2
+ * EatPrevious node is a vile thing - make the DOM scanner look ahead 1 or 2
    nodes and determine what to do with optional whitespace nodes before
    processing them
  * ideally, analysis and optimization should be distinct steps and code paths.
    i added an optimization for direct variable access that taints the analysis
    module, but it was much easier to do it there for the time being.
- * rewrite resolve_placeholder as a module function that happens to take 'self'
-   as an argument - remove the need to use a bound function, but still allows
-   yout to search the 'self' object 
+ * rewrite resolve_placeholder as a module function that happens to take
+   'self' as an argument - remove the need to use a bound function, but still
+   allows you to search the 'self' object 
 
 Bugs:
  * py:conditional directives that are skipped still output a good amount of
@@ -116,3 +115,4 @@ test line $x.id : $x.name
   #end if
 #end for
 
+ * Can't have a literal '#' inside a macro block
