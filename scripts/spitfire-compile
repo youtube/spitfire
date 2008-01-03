@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import logging
 import os.path
 import sys
 
@@ -28,9 +29,34 @@ def process_file(filename, options):
       f.write(src_code)
       f.close()
   except Exception, e:
-    print >> sys.stderr, "FAILED:", filename, e
+    print >> sys.stderr, 'FAILED:', filename, e
     raise
 
+# selectively enable psyco on import methods
+def init_psyco(options):
+  if options.x_psyco:
+    try:
+      import psyco
+    except ImportError:
+      print >> sys.stderr, 'WARNING: unable to import psyco'
+      return
+    
+    import re
+    psyco.cannotcompile(re.compile)
+
+    if options.x_psyco_profile:
+      psyco.log()
+      psyco.profile()
+    else:
+      import spitfire.compiler.scanner
+      psyco.bind(spitfire.compiler.scanner.SpitfireScanner.scan)
+      import copy
+      psyco.bind(copy.deepcopy)
+      import yappsrt
+      psyco.bind(yappsrt.Scanner.token)
+      import spitfire.compiler.ast
+      psyco.bind(spitfire.compiler.ast.NodeList.__iter__)
+  
 
 if __name__ == '__main__':
   from optparse import OptionParser
@@ -41,7 +67,16 @@ if __name__ == '__main__':
   op.add_option('-v', '--verbose', action='store_true', default=False)
   op.add_option('-O', dest='optimizer_level', type='int', default=0)
   op.add_option('-o', '--output-file',  dest='output_file', default=None)
+  op.add_option('--x-disable-psyco', dest='x_psyco', default=True,
+                action='store_false',
+                help='disable psyco')
+  op.add_option('--x-psyco-profile',
+                action='store_true',
+                help='enable psyco profiler logging')
+
   (options, args) = op.parse_args()
 
+  init_psyco(options)
+  
   for filename in args:
     process_file(filename, options)

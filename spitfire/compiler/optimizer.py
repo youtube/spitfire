@@ -4,6 +4,8 @@ import os.path
 from spitfire.compiler.ast import *
 from spitfire.compiler.analyzer import *
 
+import __builtin__
+builtin_names = vars(__builtin__)
 
 class OptimizationAnalyzer(object):
   def __init__(self, ast_root, options=default_options):
@@ -95,6 +97,9 @@ class OptimizationAnalyzer(object):
         local_identifiers = self.get_local_identifiers(function_call)
         if local_var in local_identifiers:
           function_call.parent.replace(function_call, local_var)
+        elif local_var.name in builtin_names:
+          function_call.parent.replace(function_call,
+                                       IdentifierNode(local_var.name))
       except KeyError:
         pass
       
@@ -177,7 +182,11 @@ class OptimizationAnalyzer(object):
     function = self.get_parent_function(node)
     alias = function.aliased_expression_map.get(node)
     if not alias:
-      alias_name = '_%s_%s' % (node.expression.name, node.name)
+      if node.expression.name[0] != '_':
+        alias_format = '_%s_%s'
+      else:
+        alias_format = '%s_%s'
+      alias_name = alias_format % (node.expression.name, node.name)
       if alias_name in function.alias_name_set:
         print "duplicate alias_name", alias_name
         return

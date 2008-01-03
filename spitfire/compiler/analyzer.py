@@ -197,7 +197,7 @@ class SemanticAnalyzer(object):
   def analyzeTextNode(self, pnode):
     if pnode.child_nodes:
       raise SemanticAnalyzerError("TextNode can't have children")
-    f = CallFunctionNode(GetAttrNode(IdentifierNode('buffer'), 'write'))
+    f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
     f.arg_list.append(LiteralNode(pnode.value))
     return [f]
 
@@ -226,13 +226,15 @@ class SemanticAnalyzer(object):
     self.template.append(function)
     return []
 
-  def macro_i18n(self, pnode, arg_map=None):
+  def macro_i18n(self, macro_node, arg_map=None):
     # fixme: parse the parameter list into something usable
     # pnode.parameter_list
     import spitfire.util
     # generate a fake translation for now to verify this is working
     # most apps will have to stub this part out somehow i think
-    return spitfire.util.i18n_mangled_message(pnode.value)
+    macro_content_ast = spitfire.compiler.util.parse(macro_node.value, 'i18n_goal')
+    # print "macro_content_ast", macro_content_ast
+    return spitfire.util.i18n_mangled_message(macro_node.value)
 
   def analyzeMacroNode(self, pnode):
     # fixme: better error handler
@@ -263,7 +265,7 @@ class SemanticAnalyzer(object):
   # note: we do a copy-thru to force analysis of the child nodes
   def analyzePlaceholderSubstitutionNode(self, pnode):
     #print "analyzePlaceholderSubstitutionNode", id(pnode), pnode
-    f = CallFunctionNode(GetAttrNode(IdentifierNode('buffer'), 'write'))
+    f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
     f.arg_list.append(BinOpNode('%', LiteralNode('%s'),
                                 self.build_ast(pnode.expression)[0]))
     return self.build_ast(f)
