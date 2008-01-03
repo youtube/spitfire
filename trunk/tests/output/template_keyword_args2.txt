@@ -1,0 +1,10 @@
+
+default: test_def output arg list: default arg, None, None
+
+
+keyword: test_def output arg list: test keyword arg, mcshittle, None
+
+
+keyword expression: test_def output arg list: test keyword argmy extra string, None, None
+
+

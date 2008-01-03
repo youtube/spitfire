@@ -51,6 +51,11 @@ parser SpitfireParser:
     ( block<<start=True>> {{ fragment.append(block) }} ) *
     END {{ return fragment}}
 
+  rule i18n_goal:
+    {{ fragment = FragmentNode() }}
+    ( text_or_placeholders<<start=True>> {{ fragment.append(text_or_placeholders) }} ) *
+    END {{ return fragment}}
+
   rule statement:
         'implements' SPACE ID CLOSE_DIRECTIVE {{ return ImplementsNode(ID) }}
         |
@@ -99,15 +104,8 @@ parser SpitfireParser:
         ]
         CLOSE_DIRECTIVE
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-
-        # fixme: fairly nasty hack here - strip off the last "#end i18n"
-        # I18N_BODY {{ _macro.append(RawNode(re.sub('#end\s+i18n', '', I18N_BODY))) }}
         I18N_BODY {{ _macro.value = I18N_BODY }}
         END_DIRECTIVE SPACE 'i18n' CLOSE_DIRECTIVE {{ _node_list.append(_macro) }}
-        #CLOSE_DIRECTIVE {{ _node_list.append(_macro) }}
-        #( text_or_placeholders<<start>> {{ _macro.append(text_or_placeholders) }} ) *
-        #{{ make_optional(_macro.child_nodes) }}
-        #END_DIRECTIVE SPACE 'i18n' CLOSE_DIRECTIVE {{ _node_list.append(_macro) }}
         |
         'def' SPACE ID {{ _def = DefNode(ID) }}
         [ OPEN_PAREN

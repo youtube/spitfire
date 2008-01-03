@@ -207,13 +207,13 @@ class FunctionNode(ASTNode):
 
     self.child_nodes = NodeList([
       AssignNode(
-        IdentifierNode('buffer'),
+        IdentifierNode('_buffer'),
         new_buffer),
       AssignNode(
         IdentifierNode('_globals'),
         CallFunctionNode(IdentifierNode('globals'))),
       ReturnNode(
-        CallFunctionNode(GetAttrNode(IdentifierNode('buffer'), 'getvalue'))),
+        CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'getvalue'))),
       ])
     self.parameter_list = ParameterListNode()
     
