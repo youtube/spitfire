@@ -5,24 +5,23 @@ import os.path
 import sys
 
 from spitfire.compiler import analyzer
-from spitfire.compiler.util import Compiler, CompilerSettings
+from spitfire.compiler.util import Compiler
 
-def process_file(filename, options):
+
+def process_file(compiler, filename, options):
   def print_output(*args):
     if options.verbose:
       print >> sys.stderr, ' '.join(args)
 
   try:
-    settings = CompilerSettings.settings_from_optparse(options)
     if options.output_file:
-      write_file = False
+      compiler.write_file = False
       if options.output_file == '-':
         f = sys.stdout
       else:
         f = open(options.output_file, 'w')
     else:
-      write_file = True
-    compiler = Compiler(settings, write_file=write_file)
+      compiler.write_file = True
     src_code = compiler.compile_file(filename)
     if options.output_file:
       f.write(src_code)
@@ -56,6 +55,9 @@ def init_psyco(options):
       import spitfire.compiler.ast
       psyco.bind(spitfire.compiler.ast.NodeList.__iter__)
   
+def validate_path(option, opt_str, value, parser):
+  path = os.path.abspath(os.path.expanduser(path))
+  setattr(parser.values, option.dest, path)
 
 if __name__ == '__main__':
   from optparse import OptionParser
@@ -73,9 +75,26 @@ if __name__ == '__main__':
                 action='store_true',
                 help='enable psyco profiler logging')
 
+  op.add_option('--output-directory', default=None,
+                action="callback", callback=validate_path,
+                type="str", nargs=1,
+                help='alternate directory to store compiled templates')
+
+  op.add_option('--base-extends-package', default=None)
+  op.add_option('--extract-message-catalogue', action='store_true',
+                default=False)
+  op.add_option('--message-catalogue-file', default=None,
+                action="callback", callback=validate_path,
+                type="str", nargs=1,
+                help='file to use as the message catalogue')
+  op.add_option('--locale', default='')
+
   (options, args) = op.parse_args()
 
   init_psyco(options)
+
+  compiler_args = Compiler.args_from_optparse(options)
+  compiler = Compiler(**compiler_args)
   
   for filename in args:
-    process_file(filename, options)
+    process_file(compiler, filename, options)

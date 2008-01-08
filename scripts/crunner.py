@@ -38,9 +38,9 @@ def process_file(filename, options):
   opt.update(ignore_optional_whitespace=options.ignore_optional_whitespace)
 
   classname = spitfire.compiler.util.filename2classname(filename)
-  spitfire.compiler.util.register_macros()
   try:
     print_output("compile", filename)
+    compiler = spitfire.compiler.util.Compiler(analyzer_options=opt)
     if not options.quiet:
       print "parse_root walk"
       parse_root = spitfire.compiler.util.parse_file(filename, options.xhtml)
@@ -50,13 +50,13 @@ def process_file(filename, options):
     if not options.quiet:
       print "ast_root walk"
       ast_root = spitfire.compiler.analyzer.SemanticAnalyzer(
-        classname, parse_root, options=opt).get_ast()
+        classname, parse_root, opt, compiler).get_ast()
       print_tree(ast_root)
 
     if not options.quiet:
       print "optimized ast_root walk"
       spitfire.compiler.optimizer.OptimizationAnalyzer(
-        ast_root, options=opt).optimize_ast()
+        ast_root, opt, compiler).optimize_ast()
       print_tree(ast_root)
 
     if not options.quiet:
