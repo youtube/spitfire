@@ -1,3 +1,7 @@
+0.6.7 - added a compiler front-end to make it easier to pass through state and
+settings to different phases of compilation. this should make it easier to
+communicate variables to non-core functionality like macros.
+
 0.6.6 - for the i18n macro, added token position tracking so it is possible to
 jump to the original test of placeholder or other future nested directive. made
 some of errors tolerate unicode data (print really should just deal with this

@@ -18,7 +18,7 @@ class AnalyzerOptions(object):
   def __init__(self, **kargs):
     self.debug = False
     
-    self.strip_optional_whitespace = False
+    self.ignore_optional_whitespace = False
 
     # adjacent text nodes become one single node
     self.collapse_adjacent_text = False
@@ -80,10 +80,12 @@ def register_macro(name, function):
 # the parse tree, so i do them inline here. it's a bit split-brain, but it's
 # seems easier.
 class SemanticAnalyzer(object):
-  def __init__(self, classname, parse_root, options=default_options):
+  def __init__(self, classname, parse_root, options=default_options,
+               compiler=None):
     self.classname = classname
     self.parse_root = parse_root
     self.options = options
+    self.compiler = compiler
     self.ast_root = None
     self.template = None
     
@@ -250,7 +252,7 @@ class SemanticAnalyzer(object):
                                   % macro_handler_name)
     # arg_map = pnode.parameter_list.get_arg_map()
     arg_map = None
-    macro_output = macro_function(pnode, arg_map)
+    macro_output = macro_function(pnode, arg_map, self.compiler)
     # fixme: bad place to import, difficult to put at the top due to
     # cyclic dependency
     import spitfire.compiler.util
@@ -331,7 +333,7 @@ class SemanticAnalyzer(object):
     optimized_nodes = []
     for n in node_list:
       # strip optional whitespace by removing the nodes
-      if (self.options.strip_optional_whitespace and
+      if (self.options.ignore_optional_whitespace and
           isinstance(n, OptionalWhitespaceNode)):
         continue
       # collapse adjacent TextNodes so we are calling these buffer writes

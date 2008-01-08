@@ -5,7 +5,7 @@ import os.path
 import sys
 
 from spitfire.compiler import analyzer
-import spitfire.compiler.util
+from spitfire.compiler.util import Compiler, CompilerSettings
 
 def process_file(filename, options):
   def print_output(*args):
@@ -13,8 +13,7 @@ def process_file(filename, options):
       print >> sys.stderr, ' '.join(args)
 
   try:
-    opt = analyzer.optimizer_map[options.optimizer_level]
-    opt.strip_optional_whitespace = options.ignore_optional_whitespace
+    settings = CompilerSettings.settings_from_optparse(options)
     if options.output_file:
       write_file = False
       if options.output_file == '-':
@@ -23,8 +22,8 @@ def process_file(filename, options):
         f = open(options.output_file, 'w')
     else:
       write_file = True
-    src_code = spitfire.compiler.util.compile_file(
-      filename, write_file, options=opt)
+    compiler = Compiler(settings, write_file=write_file)
+    src_code = compiler.compile_file(filename)
     if options.output_file:
       f.write(src_code)
       f.close()
