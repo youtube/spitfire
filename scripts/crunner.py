@@ -38,6 +38,7 @@ def process_file(filename, options):
   opt.update(strip_optional_whitespace=options.ignore_optional_whitespace)
 
   classname = spitfire.compiler.util.filename2classname(filename)
+  spitfire.compiler.util.register_macros()
   try:
     print_output("compile", filename)
     if not options.quiet:
@@ -121,7 +122,6 @@ def process_file(filename, options):
       print >> sys.stderr, '  %s -t' % sys.argv[0], filename
       if raised_exception:
         print >> sys.stderr, current_output
-      
     else:
       print_output('OK')
 

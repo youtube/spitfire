@@ -44,8 +44,13 @@ class TreeVisitor(object):
   def get_text(self):
     root = self.build_text(self.ast_root)[0]
     self.write_visit(root)
-    return self.output.getvalue().encode(self.ast_root.encoding)
-
+    text = self.output.getvalue()
+    try:
+      text = text.encode(self.ast_root.encoding)
+    except AttributeError, e:
+      pass
+    return text
+    
   def generate_text(self, visit_node):
     try:
       return visit_node.node_repr
@@ -102,7 +107,7 @@ class TreeVisitor(object):
 
   visitASTImportNode = visitASTExtendsNode
   visitASTFromNode = visitASTExtendsNode
-
+  
   def visitASTCallFunctionNode(self, node):
     v = self.visitDefault(node)[0]
     v.append(VisitNode('expression', self.build_text(node.expression)))
@@ -202,6 +207,12 @@ class TreeVisitor(object):
       
     return [v]
 
+  def visitASTFragmentNode(self, node):
+    v = self.visitDefault(node)[0]
+    for n in node.child_nodes:
+      v.extend(self.build_text(n))
+      
+    return [v]
   def visitASTLiteralNode(self, node):
     return [VisitNode('%s %s' % (node.__class__.__name__, node.value))]
   
