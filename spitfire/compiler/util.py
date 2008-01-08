@@ -33,6 +33,7 @@ def parse(src_text, rule='goal'):
 
 def parse_file(filename, xhtml=False):
   return parse_template(read_template_file(filename), xhtml=xhtml)
+
 def parse_template(src_text, xhtml=False):
   if xhtml:
     parser = spitfire.compiler.xhtml2ast.XHTML2AST()
@@ -93,50 +94,58 @@ def load_module_from_src(src_code, filename, module_name):
   return module
 
 
-__macro_registry_inited = False
-# register some default macros
-def register_macros():
-  global __macro_registry_inited
-  if __macro_registry_inited:
-    return
-    
-  import spitfire.compiler.macros.i18n
-  spitfire.compiler.analyzer.register_macro(
-    'macro_i18n',
-    spitfire.compiler.macros.i18n.macro_i18n)
-
-  __macro_registry_inited = True
-
-class CompilerSettings(object):
-  setting_names = ['optimizer_level', 'ignore_optional_whitespace']
-  optimizer_level = 0
-  ignore_optional_whitespace = False
+class Compiler(object):
+  setting_names = [
+    'base_extends_package',
+    'extract_message_catalogue',
+    'ignore_optional_whitespace',
+    'locale',
+    'message_catalogue_file',
+    'optimizer_level',
+    'output_directory',
+    ]
 
   @classmethod
-  def settings_from_optparse(cls, options):
-    settings = CompilerSettings()
+  def args_from_optparse(cls, options):
+    settings = {}
     for name in cls.setting_names:
       if hasattr(options, name):
-        setattr(settings, name, getattr(options, name))
+        settings[name] = getattr(options, name)
     return settings
-
-class Compiler(object):
+  
   # settings - arbitrary dictionary of values, probably from the command line
-  def __init__(self, settings=None, **kargs):
+  def __init__(self, **kargs):
     # record transient state of the compiler
     self.src_filename = None
+    self.output_directory = '.'
     self.xhtml_mode = False
-    self.settings = settings
     self.write_file = False
     self.analyzer_options = None
-    if self.settings is not None:
-      self.analyzer_options = analyzer.optimizer_map[settings.optimizer_level]
-      self.analyzer_options.ignore_optional_whitespace = settings.ignore_optional_whitespace
+
+    self.optimizer_level = 0
+    self.ignore_optional_whitespace = False
+
+    self.base_extends_package = None
+    self.message_catalogue = None
+    self.message_catalogue_file = None
+    self.extract_message_catalogue = False
+    self.locale = None
+
+    self.macro_registry = {}
+
     for key, value in kargs.iteritems():
       setattr(self, key, value)
-    # register macros before the first pass by any SemanticAnalyzer
-    register_macros()
     
+    if self.analyzer_options is None:
+      self.analyzer_options = analyzer.optimizer_map[self.optimizer_level]
+      self.analyzer_options.ignore_optional_whitespace = self.ignore_optional_whitespace
+
+    # register macros before the first pass by any SemanticAnalyzer
+    # this is just a default to give an example - it's not totally functional
+    # fixme: nasty time to import - but does break weird cycle
+    import spitfire.compiler.macros.i18n
+    self.register_macro('macro_i18n', spitfire.compiler.macros.i18n.macro_i18n)
+
   # take an AST and generate code from it - this will run the analysis phase
   # this doesn't have the same semantics as python's AST operations
   # it would be good to have a reason for the inconsistency other than
@@ -161,3 +170,14 @@ class Compiler(object):
     if self.write_file:
       write_src_file(src_code, filename)
     return src_code
+
+  # macros could be handy - and they are complex enough that they should be
+  # put somewhere else. this registry allows them to be implemented just about
+  # anywhere.
+  #
+  # macro functions look like:
+  # def macro_handler(macro_node, arg_map)
+  # arg_map is a dictionary of names to values specified as parameters to the
+  # macro by the template source. they are limited to literal values right now.
+  def register_macro(self, name, function):
+    self.macro_registry[name] = function

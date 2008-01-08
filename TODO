@@ -54,6 +54,14 @@ Functionality:
        * creates yet another namespace - but might be the most logical
 
 Optimization:
+ * use ${var|html_escape,javascript_escape} alternate syntax
+   * compile down the filters into a sequence of optimized transformations
+     that take into account safe ordering of potentially conflicting options
+ * functions/placeholders that are used repeatedly should be cached as local
+   variables and references directly - especially items used in an #if and then
+   referenced as a placeholder in the block immediately following
+ * caching directive that tells you to memoize a result based on a function
+   annotation (this could be handy for non-template functions as well)
  * replace functions that only write a string constant with one that just
    returns that constant string - no need for intermediate buffer
    * in some cases, might be able to skip the whole function call too - make
