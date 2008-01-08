@@ -55,6 +55,20 @@ optimizer_map = {
   3: o3_options,
   }
 
+# macros could be handy - and they are complex enough that they should be
+# put somewhere else. this registry allows them to be implemented just about
+# anywhere.
+#
+# macro functions look like:
+# def macro_handler(macro_node, arg_map)
+# arg_map is a dictionary of names to values specified as parameters to the
+# macro by the template source. they are limited to literal values right now.
+macro_registry = {}
+def register_macro(name, function):
+  global macro_registry
+  macro_registry[name] = function
+
+
 # convert the parse tree into something a bit more 'fat' and useful
 # is this an AST? i'm not sure. it will be a tree of some sort
 # this should simplify the codegen stage into a naive traversal
@@ -226,19 +240,14 @@ class SemanticAnalyzer(object):
     self.template.append(function)
     return []
 
-  def macro_i18n(self, macro_node, arg_map=None):
-    # fixme: parse the parameter list into something usable
-    # pnode.parameter_list
-    import spitfire.util
-    # generate a fake translation for now to verify this is working
-    # most apps will have to stub this part out somehow i think
-    macro_content_ast = spitfire.compiler.util.parse(macro_node.value, 'i18n_goal')
-    # print "macro_content_ast", macro_content_ast
-    return spitfire.util.i18n_mangled_message(macro_node.value)
-
   def analyzeMacroNode(self, pnode):
     # fixme: better error handler
-    macro_function = getattr(self, 'macro_%s' % pnode.name, None)
+    macro_handler_name = 'macro_%s' % pnode.name
+    try:
+      macro_function = macro_registry[macro_handler_name]
+    except KeyError:
+      raise SemanticAnalyzerError("no handler registered for '%s'"
+                                  % macro_handler_name)
     # arg_map = pnode.parameter_list.get_arg_map()
     arg_map = None
     macro_output = macro_function(pnode, arg_map)

@@ -90,9 +90,14 @@ class SpitfireParser(Parser):
 
     def i18n_goal(self):
         fragment = FragmentNode()
+        start_pos = 0
         while self._peek('END', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') != 'END':
             text_or_placeholders = self.text_or_placeholders(start=True)
+            end_pos = self._scanner.pos
             fragment.append(text_or_placeholders)
+            text_or_placeholders.start = start_pos
+            text_or_placeholders.end = end_pos
+            start_pos = end_pos
         END = self._scan('END')
         return fragment
 
@@ -352,10 +357,6 @@ class SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             _node_list = NodeList()
             _node_list.append(WhitespaceNode(SPACE))
-            if self._peek('START_DIRECTIVE', 'END', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') == 'START_DIRECTIVE':
-                directive = self.directive()
-                if start: _node_list[-1] = OptionalWhitespaceNode(SPACE)
-                _node_list.append(directive)
             return _node_list
         elif _token_ == 'NEWLINE':
             NEWLINE = self._scan('NEWLINE')
@@ -364,26 +365,18 @@ class SpitfireParser(Parser):
             if self._peek('SPACE', 'END', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') == 'SPACE':
                 SPACE = self._scan('SPACE')
                 _node_list.append(WhitespaceNode(SPACE))
-                if self._peek('START_DIRECTIVE', 'END', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') == 'START_DIRECTIVE':
-                    directive = self.directive()
-                    _node_list[-1] = OptionalWhitespaceNode(SPACE)
-                    _node_list.append(directive)
             return _node_list
         else:# == 'START_PLACEHOLDER'
             START_PLACEHOLDER = self._scan('START_PLACEHOLDER')
             _primary = TextNode(START_PLACEHOLDER)
-            if self._peek('OPEN_BRACE', 'ID', 'END', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') in ['OPEN_BRACE', 'ID']:
-                _token_ = self._peek('OPEN_BRACE', 'ID')
-                if _token_ == 'OPEN_BRACE':
-                    OPEN_BRACE = self._scan('OPEN_BRACE')
-                    placeholder_in_text = self.placeholder_in_text()
-                    CLOSE_BRACE = self._scan('CLOSE_BRACE')
-                    _primary = placeholder_in_text
-                else:# == 'ID'
-                    placeholder_in_text = self.placeholder_in_text()
-                    _primary = placeholder_in_text
-            if type(_primary) != TextNode: return PlaceholderSubstitutionNode(_primary)
-            return _primary
+            if self._peek('OPEN_BRACE', 'END', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') == 'OPEN_BRACE':
+                OPEN_BRACE = self._scan('OPEN_BRACE')
+                placeholder_in_text = self.placeholder_in_text()
+                CLOSE_BRACE = self._scan('CLOSE_BRACE')
+                _primary = placeholder_in_text
+            if type(_primary) == TextNode: return _primary
+            _placeholder_sub = PlaceholderSubstitutionNode(_primary)
+            return _placeholder_sub
 
     def text(self):
         TEXT = self._scan('TEXT')

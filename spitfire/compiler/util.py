@@ -47,6 +47,9 @@ def parse_file(filename, xhtml=False):
 def compile_ast(parse_root,
                 classname,
                 options=spitfire.compiler.analyzer.default_options):
+  # register macros before the first pass by any SemanticAnalyzer - you really
+  # only need to do this once
+  register_macros()
   ast_root = spitfire.compiler.analyzer.SemanticAnalyzer(
     classname, parse_root, options).get_ast()
   spitfire.compiler.optimizer.OptimizationAnalyzer(
@@ -111,3 +114,18 @@ def load_module_from_src(src_code, filename, module_name):
   bytecode = compile(src_code, filename, 'exec')
   exec bytecode in module.__dict__
   return module
+
+
+__macro_registry_inited = False
+# register some default macros
+def register_macros():
+  global __macro_registry_inited
+  if __macro_registry_inited:
+    return
+    
+  import spitfire.compiler.macros.i18n
+  spitfire.compiler.analyzer.register_macro(
+    'macro_i18n',
+    spitfire.compiler.macros.i18n.macro_i18n)
+
+  __macro_registry_inited = True

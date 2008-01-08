@@ -53,7 +53,19 @@ parser SpitfireParser:
 
   rule i18n_goal:
     {{ fragment = FragmentNode() }}
-    ( text_or_placeholders<<start=True>> {{ fragment.append(text_or_placeholders) }} ) *
+    # note: need to put the position start here based on the internals of how
+    # yapps generates the parsing loops
+    {{ start_pos = 0 }}
+    (
+      #{{ print "scan:", self._scanner.pos, "parse:", self._pos }}
+      text_or_placeholders<<start=True>>
+      #{{ print "type:", type(text_or_placeholders), "scan:", self._scanner.pos, "parse:", self._pos, "len:", len(getattr(text_or_placeholders, 'value', '') or '') }}
+      {{ end_pos = self._scanner.pos }}
+      {{ fragment.append(text_or_placeholders) }}
+      {{ text_or_placeholders.start = start_pos }}
+      {{ text_or_placeholders.end = end_pos }}
+      {{ start_pos = end_pos }}
+    ) *
     END {{ return fragment}}
 
   rule statement:
@@ -192,31 +204,23 @@ parser SpitfireParser:
     |
     SPACE {{ _node_list = NodeList() }}
     {{ _node_list.append(WhitespaceNode(SPACE)) }}
-    [ directive {{ if start: _node_list[-1] = OptionalWhitespaceNode(SPACE) }}
-      {{ _node_list.append(directive) }} ]
     {{ return _node_list }}
     |
     NEWLINE {{ _node_list = NodeList() }}
     {{ _node_list.append(NewlineNode(NEWLINE)) }}
     [
       SPACE {{ _node_list.append(WhitespaceNode(SPACE)) }}
-      [
-        directive {{ _node_list[-1] = OptionalWhitespaceNode(SPACE) }}
-        {{ _node_list.append(directive) }}
-        ]
     ]
     {{ return _node_list }}
     |
     START_PLACEHOLDER {{ _primary = TextNode(START_PLACEHOLDER) }}
     [
-      (
-        OPEN_BRACE  placeholder_in_text CLOSE_BRACE {{ _primary = placeholder_in_text }}
-        |
-        placeholder_in_text {{ _primary = placeholder_in_text }}
-      )
+      OPEN_BRACE placeholder_in_text CLOSE_BRACE
+      {{ _primary = placeholder_in_text }}
     ]
-    {{ if type(_primary) != TextNode: return PlaceholderSubstitutionNode(_primary) }}
-    {{ return _primary }}
+    {{ if type(_primary) == TextNode: return _primary }}
+    {{ _placeholder_sub = PlaceholderSubstitutionNode(_primary) }}
+    {{ return _placeholder_sub }}
 
   rule text:
     TEXT {{ return TextNode(TEXT) }}

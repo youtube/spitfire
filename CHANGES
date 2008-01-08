@@ -1,3 +1,10 @@
+0.6.6 - for the i18n macro, added token position tracking so it is possible to
+jump to the original test of placeholder or other future nested directive. made
+some of errors tolerate unicode data (print really should just deal with this
+when you set the default system encoding). split off the i18n macro handler
+into its own file to mimic registering an future macro implementations and
+reduce crazy cyclic imports.
+
 0.6.5 - remove resolve_placeholder call for members of __builtin__ when the
 optimizer is turned on. enable psyco on the compiler itself - yields about
 25% boost. added a new rule to parse the limited contents of an #i18n block.
