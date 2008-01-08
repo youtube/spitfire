@@ -55,19 +55,6 @@ optimizer_map = {
   3: o3_options,
   }
 
-# macros could be handy - and they are complex enough that they should be
-# put somewhere else. this registry allows them to be implemented just about
-# anywhere.
-#
-# macro functions look like:
-# def macro_handler(macro_node, arg_map)
-# arg_map is a dictionary of names to values specified as parameters to the
-# macro by the template source. they are limited to literal values right now.
-macro_registry = {}
-def register_macro(name, function):
-  global macro_registry
-  macro_registry[name] = function
-
 
 # convert the parse tree into something a bit more 'fat' and useful
 # is this an AST? i'm not sure. it will be a tree of some sort
@@ -80,8 +67,7 @@ def register_macro(name, function):
 # the parse tree, so i do them inline here. it's a bit split-brain, but it's
 # seems easier.
 class SemanticAnalyzer(object):
-  def __init__(self, classname, parse_root, options=default_options,
-               compiler=None):
+  def __init__(self, classname, parse_root, options, compiler):
     self.classname = classname
     self.parse_root = parse_root
     self.options = options
@@ -198,12 +184,28 @@ class SemanticAnalyzer(object):
     return []
 
   def analyzeExtendsNode(self, pnode):
-    self.analyzeImportNode(pnode)
+    # an extends directive results in two fairly separate things happening
+    # clone these nodes so we can modify the path struction without mangling
+    # anything else
+    import_node = copy.deepcopy(pnode)
+    extends_node = copy.deepcopy(pnode)
+    if self.compiler.base_extends_package:
+      # this means that extends are supposed to all happen relative to some
+      # other package - this is handy for assuring all templates reference
+      # within a tree, say for localization, where each local might have its
+      # own package
+      package_pieces = [IdentifierNode(module_name) for module_name in
+                        self.compiler.base_extends_package.split('.')]
+      import_node.module_name_list[0:0] = package_pieces
+      extends_node.module_name_list[0:0] = package_pieces
+      
+
+    self.analyzeImportNode(import_node)
 
     # actually want to reference the class within the module name
-    pnode = copy.deepcopy(pnode)
-    pnode.module_name_list.append(pnode.module_name_list[-1])
-    self.template.extends_nodes.append(pnode)
+    # assume we follow the convention of module name == class name
+    extends_node.module_name_list.append(extends_node.module_name_list[-1])
+    self.template.extends_nodes.append(extends_node)
     return []
 
   def analyzeFromNode(self, pnode):
@@ -246,12 +248,12 @@ class SemanticAnalyzer(object):
     # fixme: better error handler
     macro_handler_name = 'macro_%s' % pnode.name
     try:
-      macro_function = macro_registry[macro_handler_name]
+      macro_function = self.compiler.macro_registry[macro_handler_name]
     except KeyError:
       raise SemanticAnalyzerError("no handler registered for '%s'"
                                   % macro_handler_name)
-    # arg_map = pnode.parameter_list.get_arg_map()
-    arg_map = None
+    arg_map = pnode.parameter_list.get_arg_map()
+    #print "analyzeMacroNode", arg_map
     macro_output = macro_function(pnode, arg_map, self.compiler)
     # fixme: bad place to import, difficult to put at the top due to
     # cyclic dependency

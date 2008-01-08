@@ -1,10 +1,15 @@
+0.6.8 - restructure compiler front-end settings passing - it was dopey. moved
+global macro registry to a property of the compiler. re-enabled macro args so
+comments can be passed through the #i18n directive. added a number of new args
+to the compiler script.
+
 0.6.7 - added a compiler front-end to make it easier to pass through state and
 settings to different phases of compilation. this should make it easier to
 communicate variables to non-core functionality like macros.
 
 0.6.6 - for the i18n macro, added token position tracking so it is possible to
-jump to the original test of placeholder or other future nested directive. made
-some of errors tolerate unicode data (print really should just deal with this
+jump to the original text of placeholder or other future nested directive. made
+some errors tolerate unicode data (print really should just deal with this
 when you set the default system encoding). split off the i18n macro handler
 into its own file to mimic registering an future macro implementations and
 reduce crazy cyclic imports.

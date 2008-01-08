@@ -8,7 +8,7 @@ import __builtin__
 builtin_names = vars(__builtin__)
 
 class OptimizationAnalyzer(object):
-  def __init__(self, ast_root, options=default_options, compiler=None):
+  def __init__(self, ast_root, options, compiler):
     self.ast_root = ast_root
     self.options = options
     self.compiler = compiler
