@@ -10,6 +10,9 @@ import spitfire.compiler.analyzer
 import spitfire.compiler.optimizer
 import spitfire.compiler.xhtml2ast
 
+from spitfire.compiler import analyzer
+from spitfire.compiler import codegen
+
 valid_identfier = re.compile('[_a-z]\w*', re.IGNORECASE)
 
 def filename2classname(filename):
@@ -28,50 +31,22 @@ def parse(src_text, rule='goal'):
     spitfire.compiler.scanner.SpitfireScanner(src_text))
   return spitfire.compiler.parser.wrap_error_reporter(parser, rule)
 
-
 def parse_file(filename, xhtml=False):
+  return parse_template(read_template_file(filename), xhtml=xhtml)
+def parse_template(src_text, xhtml=False):
+  if xhtml:
+    parser = spitfire.compiler.xhtml2ast.XHTML2AST()
+    return parser.parse(src_text)
+  else:
+    return parse(src_text)
+
+
+def read_template_file(filename):
   f = open(filename, 'r')
   try:
-    src_text = f.read().decode('utf8')
-    if xhtml:
-      parser = spitfire.compiler.xhtml2ast.XHTML2AST()
-      return parser.parse(src_text)
-    else:
-      return parse(src_text)
+    return f.read().decode('utf8')
   finally:
     f.close()
-
-# take an AST and generate code from it - this will run the analysis phase
-# this doesn't have the same semantics as python's AST operations it would be
-# good to have a reason for the inconsistency other than laziness or stupidity
-def compile_ast(parse_root,
-                classname,
-                options=spitfire.compiler.analyzer.default_options):
-  # register macros before the first pass by any SemanticAnalyzer - you really
-  # only need to do this once
-  register_macros()
-  ast_root = spitfire.compiler.analyzer.SemanticAnalyzer(
-    classname, parse_root, options).get_ast()
-  spitfire.compiler.optimizer.OptimizationAnalyzer(
-    ast_root, options).optimize_ast()
-  code_generator = spitfire.compiler.codegen.CodeGenerator(ast_root, options)
-  return code_generator.get_code()
-
-def compile_template(src_text, classname,
-                     options=spitfire.compiler.analyzer.default_options):
-  
-  return compile_ast(parse(src_text), classname, options)
-
-def compile_file(filename, write_file=False,
-                 options=spitfire.compiler.analyzer.default_options,
-                 xhtml=False):
-  parse_root = parse_file(filename, xhtml=xhtml)
-  src_code = compile_ast(parse_root, filename2classname(filename), options)
-  if write_file:
-    write_src_file(src_code, filename)
-    
-  return src_code
-
 
 def write_src_file(src_code, filename):
   classname = filename2classname(filename)
@@ -88,11 +63,12 @@ def write_src_file(src_code, filename):
 def load_template_file(filename, module_name=None,
                        options=spitfire.compiler.analyzer.default_options,
                        xhtml=False):
+  c = Compiler(analyzer_options=options, xhtml_mode=xhtml)
   class_name = filename2classname(filename)
   if not module_name:
     module_name = class_name
 
-  src_code = compile_file(filename, options=options, xhtml=xhtml)
+  src_code = c.compile_file(filename)
   module = load_module_from_src(src_code, filename, module_name)
   return getattr(module, class_name)
 
@@ -101,12 +77,13 @@ def load_template(template_src, template_name,
   class_name = filename2classname(template_name)
   filename = '<%s>' % class_name
   module_name = class_name
-
-  src_code = compile_template(template_src, class_name, options=options)
+  c = Compiler(analyzer_options=options)
+  src_code = c.compile_template(template_src, class_name)
   module = load_module_from_src(src_code, filename, module_name)
   return getattr(module, class_name)
 
 
+# a helper method to import a template without having to save it to disk
 def load_module_from_src(src_code, filename, module_name):
   module = new.module(module_name)
   sys.modules[module_name] = module
@@ -129,3 +106,58 @@ def register_macros():
     spitfire.compiler.macros.i18n.macro_i18n)
 
   __macro_registry_inited = True
+
+class CompilerSettings(object):
+  setting_names = ['optimizer_level', 'ignore_optional_whitespace']
+  optimizer_level = 0
+  ignore_optional_whitespace = False
+
+  @classmethod
+  def settings_from_optparse(cls, options):
+    settings = CompilerSettings()
+    for name in cls.setting_names:
+      if hasattr(options, name):
+        setattr(settings, name, getattr(options, name))
+    return settings
+
+class Compiler(object):
+  # settings - arbitrary dictionary of values, probably from the command line
+  def __init__(self, settings=None, **kargs):
+    # record transient state of the compiler
+    self.src_filename = None
+    self.xhtml_mode = False
+    self.settings = settings
+    self.write_file = False
+    self.analyzer_options = None
+    if self.settings is not None:
+      self.analyzer_options = analyzer.optimizer_map[settings.optimizer_level]
+      self.analyzer_options.ignore_optional_whitespace = settings.ignore_optional_whitespace
+    for key, value in kargs.iteritems():
+      setattr(self, key, value)
+    # register macros before the first pass by any SemanticAnalyzer
+    register_macros()
+    
+  # take an AST and generate code from it - this will run the analysis phase
+  # this doesn't have the same semantics as python's AST operations
+  # it would be good to have a reason for the inconsistency other than
+  # laziness or stupidity
+  def compile_ast(self, parse_root, classname):
+    ast_root = analyzer.SemanticAnalyzer(
+      classname, parse_root, self.analyzer_options, self).get_ast()
+    spitfire.compiler.optimizer.OptimizationAnalyzer(
+      ast_root, self.analyzer_options, self).optimize_ast()
+    code_generator = codegen.CodeGenerator(ast_root,
+                                           self.analyzer_options)
+    return code_generator.get_code()
+
+  def compile_template(self, src_text, classname):
+    return self.compile_ast(parse_template(src_text, xhtml=self.xhtml_mode),
+                            classname)
+
+  def compile_file(self, filename):
+    self.src_filename = filename
+    src_text = read_template_file(filename)
+    src_code = self.compile_template(src_text, filename2classname(filename))
+    if self.write_file:
+      write_src_file(src_code, filename)
+    return src_code

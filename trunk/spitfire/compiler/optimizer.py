@@ -8,9 +8,10 @@ import __builtin__
 builtin_names = vars(__builtin__)
 
 class OptimizationAnalyzer(object):
-  def __init__(self, ast_root, options=default_options):
+  def __init__(self, ast_root, options=default_options, compiler=None):
     self.ast_root = ast_root
     self.options = options
+    self.compiler = compiler
     self.unoptimized_node_types = set()
     
   def optimize_ast(self):

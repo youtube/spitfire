@@ -42,8 +42,8 @@ def make_i18n_message(raw_msg, macro_ast):
       output.write(spitfire.util.i18n_mangled_message(n.value))
   return output.getvalue()
 
-  
-def macro_i18n(macro_node, arg_map=None):
+
+def macro_i18n(macro_node, arg_map, compiler):
   # fixme: parse the parameter list into something usable
   # macro_node.parameter_list
 
