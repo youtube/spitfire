@@ -4,6 +4,7 @@
 
 from string import join, count, find, rfind
 import re
+import sys
 
 class SyntaxError(Exception):
   """When we run into an unexpected token, this is the exception to use"""
@@ -23,7 +24,7 @@ class NoMoreTokens(Exception):
   pass
 
 
-class Scanner:
+class Scanner(object):
   def __init__(self, patterns, ignore, input):
     """Patterns is [(terminal,regex)...]
     Ignore is [terminal,...];
@@ -108,7 +109,7 @@ class Scanner:
         self.pos = self.pos + best_match
 
 
-class Parser:
+class Parser(object):
   def __init__(self, scanner):
     self._scanner = scanner
     self._pos = 0
@@ -163,7 +164,7 @@ def print_error(input, err, scanner):
     p = p - 7
 
   # Now print the string, along with an indicator
-  print '> ',text
+  print '> ',text.encode(sys.getdefaultencoding())
   print '> ',' '*p + '^'
   print 'List of nearby tokens:', scanner
 

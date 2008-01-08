@@ -12,6 +12,7 @@ class ASTNode(object):
     self.child_nodes = NodeList()
     # optimization annotations
     self.hint_map = {}
+    self.start = self.end = None
 
   def __str__(self):
     if self.value:
