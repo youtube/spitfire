@@ -35,7 +35,7 @@ def process_file(filename, options):
       print >> sys.stderr, ' '.join(args)
 
   opt = analyzer.optimizer_map[options.optimizer_level]
-  opt.update(strip_optional_whitespace=options.ignore_optional_whitespace)
+  opt.update(ignore_optional_whitespace=options.ignore_optional_whitespace)
 
   classname = spitfire.compiler.util.filename2classname(filename)
   spitfire.compiler.util.register_macros()
@@ -122,6 +122,7 @@ def process_file(filename, options):
       print >> sys.stderr, '  %s -t' % sys.argv[0], filename
       if raised_exception:
         print >> sys.stderr, current_output
+        traceback.print_exc(raised_exception)
     else:
       print_output('OK')
 
