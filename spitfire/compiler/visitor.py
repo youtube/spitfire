@@ -85,7 +85,7 @@ class TreeVisitor(object):
         module_code.extend(self.build_text(n))
     if node.extends_nodes:
       for n in node.extends_nodes:
-        module_code.extends_nodes(self.build_text(n))
+        module_code.extend(self.build_text(n))
 
     for n in node.attr_nodes:
       module_code.extend(self.build_text(n))
@@ -107,6 +107,7 @@ class TreeVisitor(object):
 
   visitASTImportNode = visitASTExtendsNode
   visitASTFromNode = visitASTExtendsNode
+  visitASTAbsoluteExtendsNode = visitASTExtendsNode
   
   def visitASTCallFunctionNode(self, node):
     v = self.visitDefault(node)[0]
