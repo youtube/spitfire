@@ -303,6 +303,9 @@ class ImportNode(ASTNode):
 class ExtendsNode(ImportNode):
   pass
 
+class AbsoluteExtendsNode(ExtendsNode):
+  pass
+
 class FromNode(ImportNode):
   def __init__(self, module_name_list, identifier):
     ImportNode.__init__(self, module_name_list)

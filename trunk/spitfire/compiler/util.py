@@ -49,14 +49,6 @@ def read_template_file(filename):
   finally:
     f.close()
 
-def write_src_file(src_code, filename):
-  classname = filename2classname(filename)
-  outfile_name = '%s.py' % classname
-  outfile_path = os.path.join(os.path.dirname(filename), outfile_name)
-  outfile = open(outfile_path, 'w')
-  outfile.write(src_code)
-  outfile.close()
-
 
 # compile a text file into a template object
 # this won't recursively import templates, it's just a convenience in the case
@@ -93,6 +85,8 @@ def load_module_from_src(src_code, filename, module_name):
   exec bytecode in module.__dict__
   return module
 
+class CompilerError(Exception):
+  pass
 
 class Compiler(object):
   setting_names = [
@@ -117,7 +111,7 @@ class Compiler(object):
   def __init__(self, **kargs):
     # record transient state of the compiler
     self.src_filename = None
-    self.output_directory = '.'
+    self.output_directory = ''
     self.xhtml_mode = False
     self.write_file = False
     self.analyzer_options = None
@@ -165,11 +159,24 @@ class Compiler(object):
 
   def compile_file(self, filename):
     self.src_filename = filename
+    self.classname = filename2classname(filename)
     src_text = read_template_file(filename)
-    src_code = self.compile_template(src_text, filename2classname(filename))
+    src_code = self.compile_template(src_text, self.classname)
     if self.write_file:
-      write_src_file(src_code, filename)
+      self.write_src_file(src_code)
     return src_code
+
+  def write_src_file(self, src_code):
+    outfile_name = '%s.py' % self.classname
+    relative_dir = os.path.dirname(self.src_filename)
+    if self.output_directory and os.path.isabs(relative_dir):
+      raise CompilerError("can't mix output_directory and absolute paths")
+    
+    outfile_path = os.path.join(self.output_directory, relative_dir,
+                                outfile_name)
+    outfile = open(outfile_path, 'w')
+    outfile.write(src_code)
+    outfile.close()
 
   # macros could be handy - and they are complex enough that they should be
   # put somewhere else. this registry allows them to be implemented just about
