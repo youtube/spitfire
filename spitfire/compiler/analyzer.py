@@ -187,9 +187,10 @@ class SemanticAnalyzer(object):
     # an extends directive results in two fairly separate things happening
     # clone these nodes so we can modify the path struction without mangling
     # anything else
-    import_node = copy.deepcopy(pnode)
-    extends_node = copy.deepcopy(pnode)
-    if self.compiler.base_extends_package:
+    import_node = ImportNode(pnode.module_name_list[:])
+    extends_node = ExtendsNode(pnode.module_name_list[:])
+    if (type(pnode) != AbsoluteExtendsNode and
+        self.compiler.base_extends_package):
       # this means that extends are supposed to all happen relative to some
       # other package - this is handy for assuring all templates reference
       # within a tree, say for localization, where each local might have its
@@ -207,6 +208,8 @@ class SemanticAnalyzer(object):
     extends_node.module_name_list.append(extends_node.module_name_list[-1])
     self.template.extends_nodes.append(extends_node)
     return []
+
+  analyzeAbsoluteExtendsNode = analyzeExtendsNode
 
   def analyzeFromNode(self, pnode):
     self.template.from_nodes.append(pnode.copy())

@@ -75,7 +75,7 @@ if __name__ == '__main__':
                 action='store_true',
                 help='enable psyco profiler logging')
 
-  op.add_option('--output-directory', default=None,
+  op.add_option('--output-directory', default='',
                 action="callback", callback=validate_path,
                 type="str", nargs=1,
                 help='alternate directory to store compiled templates')

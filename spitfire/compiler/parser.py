@@ -39,6 +39,7 @@ class SpitfireParserScanner(Scanner):
         ("'slurp'", re.compile('slurp')),
         ("'import'", re.compile('import')),
         ("'from'", re.compile('from')),
+        ("'absolute_extends'", re.compile('absolute_extends')),
         ("'extends'", re.compile('extends')),
         ("'implements'", re.compile('implements')),
         ('DOT', re.compile('\\.')),
@@ -102,7 +103,7 @@ class SpitfireParser(Parser):
         return fragment
 
     def statement(self):
-        _token_ = self._peek("'implements'", "'extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'set'")
+        _token_ = self._peek("'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'set'")
         if _token_ == "'implements'":
             self._scan("'implements'")
             SPACE = self._scan('SPACE')
@@ -115,6 +116,12 @@ class SpitfireParser(Parser):
             modulename = self.modulename()
             CLOSE_DIRECTIVE = self._scan('CLOSE_DIRECTIVE')
             return ExtendsNode(modulename)
+        elif _token_ == "'absolute_extends'":
+            self._scan("'absolute_extends'")
+            SPACE = self._scan('SPACE')
+            modulename = self.modulename()
+            CLOSE_DIRECTIVE = self._scan('CLOSE_DIRECTIVE')
+            return AbsoluteExtendsNode(modulename)
         elif _token_ == "'from'":
             self._scan("'from'")
             SPACE = self._scan('SPACE')
@@ -178,7 +185,7 @@ class SpitfireParser(Parser):
     def directive(self):
         START_DIRECTIVE = self._scan('START_DIRECTIVE')
         _node_list = NodeList()
-        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'if'", "'implements'", "'extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'set'", 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
+        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'if'", "'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'set'", 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
         if _token_ == 'SINGLE_LINE_COMMENT':
             SINGLE_LINE_COMMENT = self._scan('SINGLE_LINE_COMMENT')
             _node_list.append(CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT))

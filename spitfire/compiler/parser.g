@@ -73,6 +73,8 @@ parser SpitfireParser:
         |
         'extends' SPACE modulename CLOSE_DIRECTIVE {{ return ExtendsNode(modulename) }}
         |
+        'absolute_extends' SPACE modulename CLOSE_DIRECTIVE {{ return AbsoluteExtendsNode(modulename) }}
+        |
         'from' SPACE modulename SPACE 'import' SPACE identifier CLOSE_DIRECTIVE {{ return FromNode(modulename, identifier) }}
         |
         'import' SPACE modulename CLOSE_DIRECTIVE {{ return ImportNode(modulename) }}

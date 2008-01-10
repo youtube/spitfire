@@ -21,6 +21,7 @@ setup(
                  ],
     packages=["spitfire",
               "spitfire.compiler",
+              "spitfire.compiler.macros",
               "spitfire.runtime",
               ],
     py_modules=['yappsrt'],
