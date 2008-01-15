@@ -356,6 +356,15 @@ class ParameterListNode(_ListNode):
         arg_map[parameter_node.name] = NoParameter
     return arg_map
 
+  def get_arg_node_map(self):
+    arg_map = {}
+    for parameter_node in self.child_nodes:
+      if parameter_node.default:
+        arg_map[parameter_node.name] = parameter_node.default
+      else:
+        arg_map[parameter_node.name] = NoParameter
+    return arg_map
+
 class PlaceholderNode(ASTNode):
   pass
 

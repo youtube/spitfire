@@ -1,3 +1,5 @@
+0.6.12 - added individual filter overrides for placeholders.
+
 0.6.11 - added placeholder substitution filtering. added #filter directive for
 setting the default filter per template. fixed bug in optimizing the implied
 main() method in a template. added decorator for template functions. the 

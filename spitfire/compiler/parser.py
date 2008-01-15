@@ -539,13 +539,22 @@ class SpitfireParser(Parser):
             _parameter_list.append(macro_parameter)
         return _parameter_list
 
+    def literal_or_identifier(self):
+        _token_ = self._peek('"True"', '"False"', '\'"\'', '"\'"', 'NUM', 'ID')
+        if _token_ != 'ID':
+            literal = self.literal()
+            return literal
+        else:# == 'ID'
+            identifier = self.identifier()
+            return identifier
+
     def placeholder_parameter(self):
         identifier = self.identifier()
         _node = ParameterNode(identifier.name)
         if self._peek('ASSIGN_OPERATOR', 'COMMA_DELIMITER', 'CLOSE_BRACE') == 'ASSIGN_OPERATOR':
             ASSIGN_OPERATOR = self._scan('ASSIGN_OPERATOR')
-            literal = self.literal()
-            _node.default = literal
+            literal_or_identifier = self.literal_or_identifier()
+            _node.default = literal_or_identifier
         return _node
 
     def placeholder_parameter_list(self):
@@ -585,7 +594,7 @@ class SpitfireParser(Parser):
         else:# == 'NUM'
             NUM = self._scan('NUM')
             int_part = NUM
-            if self._peek('"\\."', 'CLOSE_DIRECTIVE', 'DOT', 'OPEN_PAREN', 'OPEN_BRACKET', 'COMMA_DELIMITER', "'[ \\t]*\\*[ \\t]*'", 'CLOSE_PAREN', 'CLOSE_BRACE', "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_BRACKET', 'END', "'[ \\t]*:[ \\t]*'", 'ASSIGN_OPERATOR') == '"\\."':
+            if self._peek('"\\."', 'CLOSE_DIRECTIVE', 'DOT', 'OPEN_PAREN', 'OPEN_BRACKET', 'COMMA_DELIMITER', "'[ \\t]*\\*[ \\t]*'", 'CLOSE_PAREN', "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", 'CLOSE_BRACE', "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_BRACKET', 'END', "'[ \\t]*:[ \\t]*'", 'ASSIGN_OPERATOR') == '"\\."':
                 self._scan('"\\."')
                 NUM = self._scan('NUM')
                 return LiteralNode(float('%s.%s' % (int_part, NUM)))

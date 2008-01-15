@@ -334,11 +334,17 @@ parser SpitfireParser:
      macro_parameter {{ _parameter_list.append(macro_parameter) }}
      (COMMA_DELIMITER macro_parameter {{ _parameter_list.append(macro_parameter) }} ) *
      {{ return _parameter_list }}
-     
+   
+
+   rule literal_or_identifier:
+     literal {{ return literal }}
+     |
+     identifier {{ return identifier }}
+
    ## restricted data types for placeholder args
    rule placeholder_parameter:
      identifier {{ _node = ParameterNode(identifier.name) }}
-     [ ASSIGN_OPERATOR literal {{ _node.default = literal }} ]
+     [ ASSIGN_OPERATOR literal_or_identifier {{ _node.default = literal_or_identifier }} ]
      {{ return _node }}
 
    rule placeholder_parameter_list:
