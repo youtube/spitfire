@@ -23,6 +23,7 @@ parser SpitfireParser:
   token CLOSE_BRACKET: '[ \t]*\][ \t]*'
   token OPEN_BRACE: '[ \t]*\{[ \t]*'
   token CLOSE_BRACE: '[ \t]*\}[ \t]*'
+  token PIPE: '[ \t]*\|[ \t]*'
 
   token COMMA_DELIMITER: '[ \t]*,[ \t]*'
 
@@ -59,8 +60,12 @@ parser SpitfireParser:
     (
       #{{ print "scan:", self._scanner.pos, "parse:", self._pos }}
       text_or_placeholders<<start=True>>
-      #{{ print "type:", type(text_or_placeholders), "scan:", self._scanner.pos, "parse:", self._pos, "len:", len(getattr(text_or_placeholders, 'value', '') or '') }}
-      {{ end_pos = self._scanner.pos }}
+      #{{ print "type:", text_or_placeholders.__class__.__name__, "start:", start_pos, "end:", self._scanner.pos, "data: '%s'" % getattr(text_or_placeholders, 'value', ''), "len:", len(getattr(text_or_placeholders, 'value', '') or '') }}
+      #{{ try: print "  token:", self._scanner.tokens[self._pos - 1]}}
+      #{{ except: print "  no token" }}
+      #{{ end_pos = self._scanner.pos }}
+      # try to get the last used index of the input stream
+      {{ end_pos = self._scanner.tokens[self._pos-1][1] }}
       {{ fragment.append(text_or_placeholders) }}
       {{ text_or_placeholders.start = start_pos }}
       {{ text_or_placeholders.end = end_pos }}
@@ -87,6 +92,9 @@ parser SpitfireParser:
         |
         'attr' SPACE placeholder SPACE ASSIGN_OPERATOR SPACE literal CLOSE_DIRECTIVE
         {{ return AttributeNode(placeholder.name, literal) }}
+        |
+        'filter' SPACE identifier CLOSE_DIRECTIVE
+        {{ return AttributeNode('_filter_function', identifier) }}
         |
         'set' SPACE placeholder {{ _lhs = IdentifierNode(placeholder.name) }}
         SPACE ASSIGN_OPERATOR SPACE expression {{ _rhs = expression }}
@@ -190,15 +198,22 @@ parser SpitfireParser:
     ]
     {{ return _node_list }}
     |
+    {{ _parameter_list = None }}
     START_PLACEHOLDER {{ _primary = TextNode(START_PLACEHOLDER) }}
     [
       (
-        OPEN_BRACE  placeholder_in_text CLOSE_BRACE {{ _primary = placeholder_in_text }}
-        |
-        placeholder_in_text {{ _primary = placeholder_in_text }}
+      OPEN_BRACE placeholder_in_text
+      {{ _primary = placeholder_in_text }}
+      [
+        PIPE placeholder_parameter_list
+        {{ _parameter_list = placeholder_parameter_list }}
+      ]
+      CLOSE_BRACE
+      |
+      placeholder_in_text {{ _primary = placeholder_in_text }}
       )
     ]
-    {{ if type(_primary) != TextNode: return PlaceholderSubstitutionNode(_primary) }}
+    {{ if type(_primary) != TextNode: return PlaceholderSubstitutionNode(_primary, _parameter_list) }}
     {{ return _primary }}
     
   rule text_or_placeholders<<start=False>>:
@@ -215,13 +230,23 @@ parser SpitfireParser:
     ]
     {{ return _node_list }}
     |
+    {{ _parameter_list = None }}
     START_PLACEHOLDER {{ _primary = TextNode(START_PLACEHOLDER) }}
     [
-      OPEN_BRACE placeholder_in_text CLOSE_BRACE
+      (
+      OPEN_BRACE placeholder_in_text
       {{ _primary = placeholder_in_text }}
+      [
+        PIPE placeholder_parameter_list
+        {{ _parameter_list = placeholder_parameter_list }}
+      ]
+      CLOSE_BRACE
+      |
+      placeholder_in_text {{ _primary = placeholder_in_text }}
+      )
     ]
     {{ if type(_primary) == TextNode: return _primary }}
-    {{ _placeholder_sub = PlaceholderSubstitutionNode(_primary) }}
+    {{ _placeholder_sub = PlaceholderSubstitutionNode(_primary, _parameter_list) }}
     {{ return _placeholder_sub }}
 
   rule text:
@@ -310,6 +335,17 @@ parser SpitfireParser:
      (COMMA_DELIMITER macro_parameter {{ _parameter_list.append(macro_parameter) }} ) *
      {{ return _parameter_list }}
      
+   ## restricted data types for placeholder args
+   rule placeholder_parameter:
+     identifier {{ _node = ParameterNode(identifier.name) }}
+     [ ASSIGN_OPERATOR literal {{ _node.default = literal }} ]
+     {{ return _node }}
+
+   rule placeholder_parameter_list:
+     {{ _parameter_list = ParameterListNode() }}
+     placeholder_parameter {{ _parameter_list.append(placeholder_parameter) }}
+     (COMMA_DELIMITER placeholder_parameter {{ _parameter_list.append(placeholder_parameter) }} ) *
+     {{ return _parameter_list }}
 
   rule stringliteral:
     '"' DOUBLE_QUOTE_STR '"' {{ return unicode(DOUBLE_QUOTE_STR) }}

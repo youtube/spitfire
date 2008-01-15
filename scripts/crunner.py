@@ -38,9 +38,10 @@ def process_file(filename, options):
   opt.update(ignore_optional_whitespace=options.ignore_optional_whitespace)
 
   classname = spitfire.compiler.util.filename2classname(filename)
+  args = spitfire.compiler.util.Compiler.args_from_optparse(options)
   try:
     print_output("compile", filename)
-    compiler = spitfire.compiler.util.Compiler(analyzer_options=opt)
+    compiler = spitfire.compiler.util.Compiler(analyzer_options=opt, **args)
     if not options.quiet:
       print "parse_root walk"
       parse_root = spitfire.compiler.util.parse_file(filename, options.xhtml)
@@ -142,6 +143,8 @@ if __name__ == '__main__':
           help='preserve leading whitespace before a directive')
   op.add_option('-q', '--quiet', action='store_true', default=False)
   op.add_option('-O', dest='optimizer_level', type='int', default=0)
+  op.add_option('--disable-filters', dest='enable_filters',
+                action='store_false', default=True)
   (options, args) = op.parse_args()
 
   for filename in args:

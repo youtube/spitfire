@@ -110,10 +110,23 @@ class SemanticAnalyzer(object):
   def analyzeTemplateNode(self, pnode):
     self.template = pnode.copy(copy_children=False)
     self.template.classname = self.classname
-    for pn in self.optimize_parsed_nodes(pnode.child_nodes):
-      self.template.main_function.extend(self.build_ast(pn))
 
-    self.template.main_function = self.build_ast(self.template.main_function)[0]
+    main_function_nodes = []
+    for pn in self.optimize_parsed_nodes(pnode.child_nodes):
+      # save a copy so this node doesn't get mangled by the analysis
+      # need this so you can reoptimize the final nodes needed for the implied
+      # main function
+      saved_pn = pn.copy()
+      built_nodes = self.build_ast(pn)
+      if built_nodes:
+        main_function_nodes.append(saved_pn)
+
+    for pn in self.optimize_parsed_nodes(main_function_nodes):
+      built_nodes = self.build_ast(pn)
+      self.template.main_function.extend(built_nodes)
+
+    #self.template.main_function = self.build_ast(
+    #  self.template.main_function)[0]
     return [self.template]
 
   def analyzeForNode(self, pnode):
@@ -279,12 +292,70 @@ class SemanticAnalyzer(object):
     return self.build_ast(p)
 
   # note: we do a copy-thru to force analysis of the child nodes
+  # this function is drastically complicated by the logic for filtering
+  # basically, if you are pulling data from the search_list and writing it
+  # to the output buffer, you want to do some filtering in most cases - at
+  # least when you are doing web stuff.
+  # there are some cases where you want to disable this to prevent double
+  # escaping or to increase performance by avoiding unnecessay work.
+  #
+  # $test_str_function($test_dict)
+  #
+  # self.resolve_placeholder('test_str_function', local_vars=locals(),
+  #   global_vars=_globals)(self.resolve_placeholder('test_dict',
+  #   local_vars=locals(), global_vars=_globals))
+  #
+  # if this section is referenced inside another template-defined function the
+  # data returned should not be double escaped. you can do this by forcing all
+  # template functions to annotate themselves, but you have to do more
+  # cumbersome checks when you are calling arbitrary functions.
+  #
+  # it might be reasonable to put in another node type that indicates a block
+  # of data needs to be filtered.
   def analyzePlaceholderSubstitutionNode(self, pnode):
-    #print "analyzePlaceholderSubstitutionNode", id(pnode), pnode
-    f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
-    f.arg_list.append(BinOpNode('%', LiteralNode('%s'),
-                                self.build_ast(pnode.expression)[0]))
-    return self.build_ast(f)
+    #print "analyzePlaceholderSubstitutionNode", pnode, pnode.parameter_list.get_arg_map()
+    node_list = []
+    ph_expression = pnode.expression
+    #ph_expression = self.build_ast(pnode.expression)[0]
+
+    if self.compiler.enable_filters:
+      if type(ph_expression) == CallFunctionNode:
+        temp_placeholder_function = IdentifierNode('_phf')
+        call_function = ph_expression
+        function_expression = ph_expression.expression
+        assign_node = AssignNode(temp_placeholder_function,
+                                 function_expression)
+        call_function.expression = temp_placeholder_function
+        node_list.append(assign_node)
+      else:
+        temp_placeholder_function = None
+
+      temp_placeholder = IdentifierNode('_ph')
+      assign_node = AssignNode(temp_placeholder, ph_expression)
+
+      filter_function = GetAttrNode(IdentifierNode('self'), 'filter_function')
+      filter_call_node = CallFunctionNode(filter_function)
+      filter_call_node.arg_list.append(temp_placeholder)
+      if temp_placeholder_function is not None:
+        filter_call_node.arg_list.append(temp_placeholder_function)
+        
+      filter_assign_node = AssignNode(
+        temp_placeholder, filter_call_node)
+
+      f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
+      f.arg_list.append(BinOpNode('%', LiteralNode('%s'), temp_placeholder))
+
+      node_list.extend([assign_node, filter_assign_node, f])
+    else:
+      f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
+      f.arg_list.append(BinOpNode('%', LiteralNode('%s'), ph_expression))
+      node_list.append(f)
+
+    analyzed_node_list = []
+    for n in node_list:
+      analyzed_node_list.extend(self.build_ast(n))
+    return analyzed_node_list
+
 
   def analyzePlaceholderNode(self, pnode):
     f = CallFunctionNode(GetAttrNode(IdentifierNode('self'),

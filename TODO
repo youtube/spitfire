@@ -109,6 +109,11 @@ Cleanup:
  * rewrite resolve_placeholder as a module function that happens to take
    'self' as an argument - remove the need to use a bound function, but still
    allows you to search the 'self' object 
+ * make the syntax consistent for argument passing inside a template
+   * right now, $varname is required in placeholders, macros and definitions
+   * $varname should mean 'look this up in the search_list data'
+   * parameter_list, macro_parameter_list and placeholder_parameter_list should
+     be made into one or two variants
 
 Bugs:
  * py:conditional directives that are skipped still output a good amount of
