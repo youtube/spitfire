@@ -91,6 +91,7 @@ class CompilerError(Exception):
 class Compiler(object):
   setting_names = [
     'base_extends_package',
+    'enable_filters',
     'extract_message_catalogue',
     'ignore_optional_whitespace',
     'locale',
@@ -124,6 +125,8 @@ class Compiler(object):
     self.message_catalogue_file = None
     self.extract_message_catalogue = False
     self.locale = None
+
+    self.enable_filters = True
 
     self.macro_registry = {}
 

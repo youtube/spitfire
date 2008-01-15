@@ -2,7 +2,8 @@
 
 #import StringIO
 import cStringIO as StringIO
-import repeater
+import spitfire.runtime.repeater
+import spitfire.runtime.filters
 
 # sentinel class, in case you want to have a default that is None
 class __Unspecified(object):
@@ -15,9 +16,21 @@ class PlaceholderError(KeyError):
 
 
 class SpitfireTemplate(object):
-  def __init__(self, search_list=None):
+  # store a reference to the filter function - this is tricky because of some
+  # python stuff. filter functions look like this:
+  #
+  # def filter_function(template_instance, value):
+  #
+  # when this is assigned to a template instance, accessing this name binds the
+  # function to the current instance. using the name 'template_instance' to
+  # indicate that these functions aren't really related to the template.
+  _filter_function = spitfire.runtime.filters.safe_values
+  
+  def __init__(self, search_list=None, default_filter=None):
     self.search_list = search_list
-    self.repeat = repeater.RepeatTracker()
+    self.repeat = spitfire.runtime.repeater.RepeatTracker()
+    if default_filter is not None:
+      self._filter_function = default_filter
     
   # FIXME: i'm sure this is a little pokey - might be able to speed this up
   # somehow. not sure if it's better to look before leaping or raise.
@@ -92,6 +105,19 @@ class SpitfireTemplate(object):
           return True
     return False
 
+  # wrap the underlying filter call so that items don't get filtered multiple
+  # times (avoids double escaping)
+  # fixme: this could be a hotspot, having to call getattr all the time seems
+  # like it might be a bit pokey
+  def filter_function(self, value, placeholder_function=None):
+    #print "filter_function", placeholder_function, self._filter_function, "value: '%s'" % value
+    if (placeholder_function is not None and
+        getattr(placeholder_function, 'template_method', False)):
+      return value
+    else:
+      value = self._filter_function(value)
+      return value
+    
   @staticmethod
   def new_buffer():
     return StringIO.StringIO()
@@ -106,3 +132,7 @@ def enable_psyco(template_class):
   import psyco
   psyco.bind(SpitfireTemplate)
   psyco.bind(template_class)
+
+def template_method(function):
+  function.template_method = True
+  return function

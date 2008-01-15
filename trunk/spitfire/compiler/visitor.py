@@ -142,7 +142,7 @@ class TreeVisitor(object):
 
   def visitASTAttributeNode(self, node):
     v = self.visitDefault(node)[0]
-    v.extend(self.build_text(n.default))
+    v.extend(self.build_text(node.default))
     return [v]
     
   def visitASTParameterListNode(self, node):

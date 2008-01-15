@@ -93,8 +93,9 @@ class CodeGenerator(object):
     
     module_code.append_line('import spitfire.runtime')
     module_code.append_line('import spitfire.runtime.template')
-    module_code.append_line('import spitfire.runtime.udn')
+
     module_code.append_line('from spitfire.runtime.udn import resolve_udn')
+    module_code.append_line('from spitfire.runtime.template import template_method')
     module_code.append_line('')
 
     class_code = CodeNode(
@@ -273,11 +274,12 @@ class CodeGenerator(object):
     else:
       parameter_list = ''
 
+    decorator_node = CodeNode('@template_method')
     code_node = CodeNode(ASTFunctionNode_tmpl[0] % vars())
     for n in node.child_nodes:
       code_child_nodes = self.build_code(n)
       code_node.extend(code_child_nodes)
-    return [code_node]
+    return [decorator_node, code_node]
   
   # fixme: don't know if i still need this - a 'template function'
   # has an implicit return of the buffer built in - might be simpler
