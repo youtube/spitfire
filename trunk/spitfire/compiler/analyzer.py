@@ -316,7 +316,6 @@ class SemanticAnalyzer(object):
     #print "analyzePlaceholderSubstitutionNode", pnode, pnode.parameter_list.get_arg_map()
     node_list = []
     ph_expression = pnode.expression
-    #ph_expression = self.build_ast(pnode.expression)[0]
 
     if self.compiler.enable_filters:
       if type(ph_expression) == CallFunctionNode:
@@ -332,20 +331,32 @@ class SemanticAnalyzer(object):
 
       temp_placeholder = IdentifierNode('_ph')
       assign_node = AssignNode(temp_placeholder, ph_expression)
+      node_list.append(assign_node)
+      
+      arg_map = pnode.parameter_list.get_arg_map()
+      arg_node_map = pnode.parameter_list.get_arg_node_map()
+      if 'raw' not in arg_map:
+        if 'filter' in arg_node_map:
+          filter_function = arg_node_map['filter']
+        else:
+          filter_function = GetAttrNode(IdentifierNode('self'),
+                                        'filter_function')
+        filter_call_node = CallFunctionNode(filter_function)
+        if 'filter' in arg_node_map:
+          filter_call_node.arg_list.append(IdentifierNode('self'))
+        filter_call_node.arg_list.append(temp_placeholder)
+        if temp_placeholder_function is not None:
+          filter_call_node.arg_list.append(temp_placeholder_function)
 
-      filter_function = GetAttrNode(IdentifierNode('self'), 'filter_function')
-      filter_call_node = CallFunctionNode(filter_function)
-      filter_call_node.arg_list.append(temp_placeholder)
-      if temp_placeholder_function is not None:
-        filter_call_node.arg_list.append(temp_placeholder_function)
+        filter_assign_node = AssignNode(
+          temp_placeholder, filter_call_node)
+        node_list.append(filter_assign_node)
         
-      filter_assign_node = AssignNode(
-        temp_placeholder, filter_call_node)
-
-      f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
-      f.arg_list.append(BinOpNode('%', LiteralNode('%s'), temp_placeholder))
-
-      node_list.extend([assign_node, filter_assign_node, f])
+      write_function = CallFunctionNode(
+        GetAttrNode(IdentifierNode('_buffer'), 'write'))
+      write_function.arg_list.append(
+        BinOpNode('%', LiteralNode('%s'), temp_placeholder))
+      node_list.append(write_function)
     else:
       f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
       f.arg_list.append(BinOpNode('%', LiteralNode('%s'), ph_expression))
