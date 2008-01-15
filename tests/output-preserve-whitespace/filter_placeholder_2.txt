@@ -1,0 +1,12 @@
+
+
+
+<p>
+Demo web safe text: &lt;bad tag&gt;.
+
+Demo web un-safe text: <bad tag>.
+
+Demo explicit filter: {'key1': 1}.
+</p>
+
+
