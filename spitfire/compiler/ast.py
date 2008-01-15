@@ -340,23 +340,37 @@ class ParameterNode(ASTNode):
 class AttributeNode(ParameterNode):
   pass
 
+
+class __NoParameter(object):
+  def __repr__(self):
+    return '<NoParameter>'
+NoParameter = __NoParameter()
+
 class ParameterListNode(_ListNode):
   def get_arg_map(self):
     arg_map = {}
     for parameter_node in self.child_nodes:
-      arg_map[parameter_node.name] = parameter_node.default.value
+      if parameter_node.default:
+        arg_map[parameter_node.name] = parameter_node.default.value
+      else:
+        arg_map[parameter_node.name] = NoParameter
     return arg_map
 
 class PlaceholderNode(ASTNode):
   pass
 
 class PlaceholderSubstitutionNode(ASTNode):
-  def __init__(self, expression):
+  def __init__(self, expression, parameter_list=None):
     ASTNode.__init__(self)
     self.expression = expression
+    if parameter_list is None:
+      self.parameter_list = ParameterListNode()
+    else:
+      self.parameter_list = parameter_list
 
   def __str__(self):
-    return '%s expr:%r' % (self.__class__.__name__, self.expression)
+    return '%s expr:%r %s' % (self.__class__.__name__, self.expression,
+                           self.parameter_list)
 
 class ReturnNode(ASTNode):
   def __init__(self, expression):

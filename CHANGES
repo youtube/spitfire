@@ -1,3 +1,14 @@
+0.6.11 - added placeholder substitution filtering. added #filter directive for
+setting the default filter per template. fixed bug in optimizing the implied
+main() method in a template. added decorator for template functions. the 
+default filter is "safe_values" - meaning it will only print strings and
+numbers - everthing else that might have a wacky string representation is
+replaced by an empty string.
+
+0.6.10 - fixed token position tracking for macros (slight edge case for
+placeholders).  re-enabled simple placeholder syntax inside macros as
+requiring ${} seemed a bit weak.
+
 0.6.9 - implemented output directory option. added #absolute_extends for
 accessing invariant classes. fixed broken setup script.
 
@@ -14,7 +25,7 @@ communicate variables to non-core functionality like macros.
 jump to the original text of placeholder or other future nested directive. made
 some errors tolerate unicode data (print really should just deal with this
 when you set the default system encoding). split off the i18n macro handler
-into its own file to mimic registering an future macro implementations and
+into its own file to mimic registering of future macro implementations and
 reduce crazy cyclic imports.
 
 0.6.5 - remove resolve_placeholder call for members of __builtin__ when the

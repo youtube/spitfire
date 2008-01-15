@@ -75,6 +75,9 @@ if __name__ == '__main__':
                 action='store_true',
                 help='enable psyco profiler logging')
 
+  op.add_option('--disable-filters', dest='enable_filters',
+                action='store_false', default=True)
+
   op.add_option('--output-directory', default='',
                 action="callback", callback=validate_path,
                 type="str", nargs=1,
