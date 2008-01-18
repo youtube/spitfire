@@ -1,0 +1,7 @@
+<html xmlns:pyattr="http://spitfire/attr" xmlns:py="http://spitfire/">
+  <head>
+    <meta name="o1" content="1" />
+    <meta name="o2" content="2" />
+    <meta name="o3" content="3" />
+  </head>
+</html>

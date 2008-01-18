@@ -1,0 +1,19 @@
+<html xmlns:py="http://code.google.com/p/msolo/wiki/spitfire">
+  <head>
+    <title py:content="$test_dict.key1">Title Here</title>
+  </head>
+  <body>
+    <table border="1" width="100%">
+      <tr>
+        <th>#</th><th>Id</th><th>Title</th>
+      </tr>
+      <tr py:repeat="item $test_object_list">
+        <td py:content="$repeat.item.index">#</td>
+        <td py:content="$repeat.item.number">#</td>
+        <td py:content="$item.id">Id</td>
+        <td py:content="$item.name">Title</td>
+      </tr>
+    </table>
+  </body>
+</html>
+

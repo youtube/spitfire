@@ -1,0 +1,20 @@
+#def test_def()
+test no arg
+#end def
+
+#def test_def_1($arg)
+test $arg
+#end def
+
+#def test_def_2($arg1, $arg2)
+test arg1 $arg1, arg2 $arg2
+#end def
+
+$test_def()
+
+$test_def_1(1)
+$test_def_1(1.0)
+$test_def_1("test double quote arg")
+$test_def_1('test single quote arg')
+
+$test_def_2(1, 2)
