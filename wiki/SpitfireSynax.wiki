@@ -1,4 +1,4 @@
-#summary One-sentence summary of this page.
+#summary think cheetah
 
 = Introduction =
 
@@ -17,4 +17,40 @@ There are a few notable places where things diverge and some of this is up for d
 }}}
 
 This is legal in Cheetah, but not Spitfire. The rational is that the servlet or controller code should be doing this. Since the template and servlet are disjoint, slicing in the template is a good way of ensuring that eventually your backend is doing more work than it needs to. Over-fetching data burns resources and should be discouraged.
+
+=== Multiple #extends directives are fine. ===
+
+In Cheetah, multiple inheritance is not allowed by default.  In Spitfire, it's sort of encouraged. The terminology is not ideal - really you are importing the behavior of another template, which happens to be implemented behind the scenes as multiple inheritance.
+
+{{{
+#extends base_html ## sets up a standard html page
+#extends layout.three_column ## sets up some more html and gives you three defined areas
+
+#def column1()
+Hello column one!
+#end def
+}}}
+
+=== Missing Directives ===
+
+There are a number of directives that have been omitted, at least for the time being. The main motivation is that in more than three years of working with Cheetah, I've never used most of these myself. When I see them used, it's usually some hack, not something well thought out - with a few notable exceptions.
+   * #assert
+   * #breakpoint
+   * #cache
+   * #compiler-setttings
+   * #include
+   * #del
+   * #echo
+   * #encoding
+      * everything is internally handled as unicode objects and templates are always considered to be in UTF8
+   * #errorCatcher
+   * #pass
+   * #raise
+   * #repeat
+   * #set global
+   * #silent
+   * #stop
+   * #try ... #except ... #finally ... #end try
+   * #unless
+   * #while
 
