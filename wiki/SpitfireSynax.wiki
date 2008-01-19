@@ -1,0 +1,20 @@
+#summary One-sentence summary of this page.
+
+= Introduction =
+
+Spitfire is syntactically similar to Cheetah. In fact, most basic Cheetah templates should compile with Spitfire with very minor (potentially zero) modifications.
+
+There are a few notable places where things diverge and some of this is up for debate. Most of the differences stem from the basic philosophy that Spitfire is only for rendering text and logic should be minimal.
+
+= Notable Differences =
+
+=== Spitfire does not allow slicing of arrays. ===
+
+{{{
+#for $user in $recent_users[:10]
+...
+#end for
+}}}
+
+This is legal in Cheetah, but not Spitfire. The rational is that the servlet or controller code should be doing this. Since the template and servlet are disjoint, slicing in the template is a good way of ensuring that eventually your backend is doing more work than it needs to. Over-fetching data burns resources and should be discouraged.
+
