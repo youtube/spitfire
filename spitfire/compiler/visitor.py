@@ -156,7 +156,15 @@ class TreeVisitor(object):
   visitASTExpressionListNode = visitASTParameterListNode
   visitASTListLiteralNode = visitASTParameterListNode
   visitASTTupleLiteralNode = visitASTParameterListNode
-  
+
+  def visitASTDictLiteralNode(self, node):
+    v = self.visitDefault(node)[0]
+    for n in node.child_nodes:
+      key_expression, value_expression = n
+      v.extend(self.build_text(key_expression))
+      v.extend(self.build_text(value_expression))
+    return [v]
+
   def visitASTParameterNode(self, node):
     #v = self.visitDefault(node)[0]
     if node.default:

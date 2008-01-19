@@ -200,6 +200,14 @@ class CodeGenerator(object):
       self.generate_python(self.build_code(n)[0])
       for n in node.child_nodes]))]
 
+  def codegenASTDictLiteralNode(self, node):
+    return [
+      CodeNode('{%s}' %
+               ', '.join([
+      '%s: %s' % (self.generate_python(self.build_code(kn)[0]),
+                  self.generate_python(self.build_code(vn)[0]))
+      for kn, vn in node.child_nodes]))]
+  
   def codegenASTParameterNode(self, node):
     if node.default:
       return [CodeNode('%s=%s' % (node.name, self.generate_python(

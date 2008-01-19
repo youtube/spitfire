@@ -1,11 +1,5 @@
 Functionality:
  * macro syntax and substitution system
-   * need to make the parser arbitrarily start on some piece of text and parse
-     it out without assuming a template structure
-     * need this when you are translating a block that doesn't have pure text
-       and contains placeholders that need to be compiled
-   * how to handle something like the #i18n block - it can be evaluated at
-     compile time (mostly complete)
    * want to save an intermediate representation to make it fast to do many
      versions of a single language
      * this may be pretty hard - next-best bet is to generate the parse tree
@@ -13,19 +7,20 @@ Functionality:
    * do you want to allow arbitrary nesting and tagging?
    * should you have a different (shorthand?) syntax for args?
      * could borrow the _() function from gettext
+   * allow #ifdef for compile time
  * how do we do template import?
    * it's really going to be multiple inheritance, but can i make it less
      shady from a designer standpoint? maybe that's how i implement the 
      #include directive - but check at runtime that it's a library?
      * does that check buy you anything?
+   * could do '#reference template' - basically an alias for '#extend template'
  * make #library directive to disambiguate template includes
- * allow #ifdef for compile time
+   * right now, '#implements library' is the syntax, but there is not
+     enforcement - it just doesn't generate a main method.
  * import raw file include?
  * implement array slicing?
  * add native support for 'elif' clause
    * is this a codegen or parsing problem?
- * implement dictionary literals
- * implement support for True/False literals
  * while loop (repeat?) what is the difference?
  * test keyword args to functions with literals and complex placeholders
    * keyword syntax is ambiguous between definition and calling - using $
