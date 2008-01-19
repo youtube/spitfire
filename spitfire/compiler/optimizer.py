@@ -224,7 +224,6 @@ class OptimizationAnalyzer(object):
     self.visit_ast(n.right, n)
 
   analyzeBinOpExpressionNode = analyzeBinOpNode
-  analyzeAssignNode = analyzeBinOpNode
 
   def analyzeUnaryOpNode(self, op_node):
     self.visit_ast(op_node.expression, op_node)
@@ -266,5 +265,3 @@ class OptimizationAnalyzer(object):
 #   def analyzeAttributeNode(self, pnode):
 #     self.template.attr_nodes.append(pnode.copy())
 #     return []
-
-  

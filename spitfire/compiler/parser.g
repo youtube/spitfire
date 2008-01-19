@@ -26,6 +26,7 @@ parser SpitfireParser:
   token PIPE: '[ \t]*\|[ \t]*'
 
   token COMMA_DELIMITER: '[ \t]*,[ \t]*'
+  token COLON_DELIMITER: '[ \t]*:[ \t]*'
 
   token SPACE: '[ \t]+'
   token CLOSE_DIRECTIVE: '[ \t]*[\n#]'
@@ -302,8 +303,6 @@ parser SpitfireParser:
     #[","]
     {{ return _expression_list }}
 
-#    expression {{ _expression_list = [expression] }}
-#    ("," expression {{ _expression_list.append(expression) }} )* [","] 
 
   rule target:
     placeholder {{ return TargetNode(placeholder.name) }}
@@ -373,7 +372,6 @@ parser SpitfireParser:
   rule identifier:
     ID {{ return IdentifierNode(ID) }}
 
-
   rule primary<<in_placeholder_context=False>>:
     (
       placeholder {{ _primary = placeholder }}
@@ -401,12 +399,12 @@ parser SpitfireParser:
       OPEN_BRACE {{ _dict_literal = DictLiteralNode() }}
       [
         expression {{ _key = expression }}
-        '[ \t]*:[ \t]*'
+        COLON_DELIMITER
         expression {{ _dict_literal.append((_key, expression)) }}
         ( COMMA_DELIMITER expression {{ _key = expression }}
-          '[ \t]*:[ \t]*' expression
+          COLON_DELIMITER expression
           {{ _dict_literal.append((_key, expression)) }}
-          ) *
+        ) *
       ]
       CLOSE_BRACE {{ _primary = _dict_literal }}
     )
@@ -458,20 +456,8 @@ parser SpitfireParser:
     {{ if _arg: _pargs.append(_arg) }}
     {{ return ArgListNode(_pargs, _kargs) }}
 
-  rule keyword_arguments:
-    keyword_item {{ _kargs = [keyword_item] }}
-    {{ return _kargs }}
-
-  # fixme: to properly handle this as "identifier=expression" i need to factor
-  # out common prefixes in positional/keyword args
-  rule keyword_item:
-    expression {{ _keyword = expression }}
-    ASSIGN_OPERATOR {{ raise 'crap' }}
-    expression {{ return (_keyword, expression) }}
-
   rule expression:
     or_test {{ return or_test }}
-    # primary {{ return primary }}
 
   rule or_test:
     and_test {{ _test = and_test }}
@@ -493,7 +479,6 @@ parser SpitfireParser:
     |
     '[ \t]*\-[ \t]*' u_expr {{ return UnaryOpNode('-', u_expr) }}
 
-
   rule m_expr:
     u_expr {{ _expr = u_expr }}
     ( '[ \t]*\*[ \t]*' u_expr {{ _expr = BinOpExpressionNode('*', _expr, u_expr) }} ) *
@@ -501,13 +486,11 @@ parser SpitfireParser:
     ( '[ \t]*\%[ \t]*' u_expr {{ _expr = BinOpExpressionNode('%', _expr, u_expr) }} ) *
     {{ return _expr }}
 
-
   rule a_expr:
     m_expr {{ _expr = m_expr }}
     ( '[ \t]*\+[ \t]*' m_expr {{ _expr = BinOpExpressionNode('+', _expr, m_expr) }} ) *
     ( '[ \t]*\-[ \t]*' m_expr {{ _expr = BinOpExpressionNode('-', _expr, m_expr) }} ) *
     {{ return _expr }}
-
 
   rule comparison:
     a_expr {{ _left_side = a_expr }}

@@ -1,3 +1,7 @@
+0.6.13 - added support for dictionary literals. corrected a bug in the
+optimizer which caused it to miss direct access to local variables in some
+cases. pruned some junk from the grammar file too.
+
 0.6.12 - added individual filter overrides for placeholders.
 
 0.6.11 - added placeholder substitution filtering. added #filter directive for
