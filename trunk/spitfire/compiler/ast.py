@@ -97,6 +97,9 @@ class _ListNode(ASTNode):
     if karg_list:
       self.extend(karg_list)
 
+  def __len__(self):
+    return len(self.child_nodes)
+      
   def __iter__(self):
     return iter(self.child_nodes)
     
@@ -174,6 +177,9 @@ class BlockNode(DefNode):
   pass
 
 class MacroNode(DefNode):
+  pass
+
+class DictLiteralNode(ASTNode):
   pass
 
 class ExpressionListNode(_ListNode):
