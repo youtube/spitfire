@@ -54,3 +54,19 @@ There are a number of directives that have been omitted, at least for the time b
    * #unless
    * #while
 
+=== Placeholders and filters should be easier to use in the end. ===
+
+These are handled a little differently internally to avoid issues like double-escaping.  The default filter in Spitfire basically allows int/long, float, str and unicode objects through.  Anything else is replaced with empty string when the output is written.
+
+   * `$hasVar` and `$getVar` are replaced by `$has_var` and `$get_var` - this is slightly an annoyance and there's not a fantastic reason for it, other than internal naming consistency
+   * trivial placeholders should be treated identically
+   * extended placeholders (those wrapped in braces) have other properties
+      * `${placeholder_expression}`
+      * `${placeholder_expression|filter=html_escape}` - override the filter on this instance
+      * `${placeholder_expression|raw}` - don't filter at all
+      * `${placeholder_expression|format_string='%3.3f'}` - use a format string other than `'%s'`
+
+
+=== Filters are implemented differently. ===
+
+The API is very simple, so it's probably just easiest to look at the code.
