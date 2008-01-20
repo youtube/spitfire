@@ -55,8 +55,12 @@ def read_template_file(filename):
 # where you need to create a fresh object directly from raw template file
 def load_template_file(filename, module_name=None,
                        options=spitfire.compiler.analyzer.default_options,
-                       xhtml=False):
+                       xhtml=False,
+                       compiler_options=None):
   c = Compiler(analyzer_options=options, xhtml_mode=xhtml)
+  if compiler_options:
+    for k, v in compiler_options.iteritems():
+      setattr(c, k, v)
   class_name = filename2classname(filename)
   if not module_name:
     module_name = class_name
@@ -66,11 +70,15 @@ def load_template_file(filename, module_name=None,
   return getattr(module, class_name)
 
 def load_template(template_src, template_name,
-                  options=spitfire.compiler.analyzer.default_options):
+                  options=spitfire.compiler.analyzer.default_options,
+                  compiler_options=None):
   class_name = filename2classname(template_name)
   filename = '<%s>' % class_name
   module_name = class_name
   c = Compiler(analyzer_options=options)
+  if compiler_options:
+    for k, v in compiler_options.iteritems():
+      setattr(c, k, v)
   src_code = c.compile_template(template_src, class_name)
   module = load_module_from_src(src_code, filename, module_name)
   return getattr(module, class_name)

@@ -130,18 +130,21 @@ if SpitfireTemplate:
 #end for
 </table>
 """
-
+    enable_filters = False
     spitfire_tmpl = spitfire.compiler.util.load_template(
         spitfire_src, 'spitfire_tmpl')
 
     spitfire_tmpl_o1 = spitfire.compiler.util.load_template(
-        spitfire_src, 'spitfire_tmpl_o1', spitfire.compiler.analyzer.o1_options)
+        spitfire_src, 'spitfire_tmpl_o1', spitfire.compiler.analyzer.o1_options,
+        {'enable_filters':enable_filters})
 
     spitfire_tmpl_o2 = spitfire.compiler.util.load_template(
-        spitfire_src, 'spitfire_tmpl_o2', spitfire.compiler.analyzer.o2_options)
+        spitfire_src, 'spitfire_tmpl_o2', spitfire.compiler.analyzer.o2_options,
+        {'enable_filters':enable_filters})
 
     spitfire_tmpl_o3 = spitfire.compiler.util.load_template(
-        spitfire_src, 'spitfire_tmpl_o3', spitfire.compiler.analyzer.o3_options)
+        spitfire_src, 'spitfire_tmpl_o3', spitfire.compiler.analyzer.o3_options,
+        {'enable_filters':enable_filters})
     # run once to get psyco warmed up
     spitfire_tmpl_o3(search_list=[{'table':table}]).main()
 

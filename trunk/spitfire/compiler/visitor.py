@@ -223,8 +223,10 @@ class TreeVisitor(object):
       
     return [v]
   def visitASTLiteralNode(self, node):
-    return [VisitNode('%s %s' % (node.__class__.__name__, node.value))]
-  
+    return [VisitNode("%s '%r'" % (node.__class__.__name__, node.value))]
+  visitASTTextNode = visitASTLiteralNode  
+  visitASTWhitespaceNode = visitASTLiteralNode  
+  visitASTOptionalWhitespaceNode = visitASTLiteralNode  
   def visitDefault(self, node):
     return [VisitNode('%s %s' % (node.__class__.__name__, node.name))]
 

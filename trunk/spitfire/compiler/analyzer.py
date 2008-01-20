@@ -317,6 +317,8 @@ class SemanticAnalyzer(object):
     node_list = []
     ph_expression = pnode.expression
 
+    arg_map = pnode.parameter_list.get_arg_map()
+    format_string = arg_map.get('format_string', '%s')
     if self.compiler.enable_filters:
       if type(ph_expression) == CallFunctionNode:
         temp_placeholder_function = IdentifierNode('_phf')
@@ -333,7 +335,6 @@ class SemanticAnalyzer(object):
       assign_node = AssignNode(temp_placeholder, ph_expression)
       node_list.append(assign_node)
       
-      arg_map = pnode.parameter_list.get_arg_map()
       arg_node_map = pnode.parameter_list.get_arg_node_map()
       if 'raw' not in arg_map:
         if 'filter' in arg_node_map:
@@ -354,12 +355,13 @@ class SemanticAnalyzer(object):
         
       write_function = CallFunctionNode(
         GetAttrNode(IdentifierNode('_buffer'), 'write'))
+
       write_function.arg_list.append(
-        BinOpNode('%', LiteralNode('%s'), temp_placeholder))
+        BinOpNode('%', LiteralNode(format_string), temp_placeholder))
       node_list.append(write_function)
     else:
       f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
-      f.arg_list.append(BinOpNode('%', LiteralNode('%s'), ph_expression))
+      f.arg_list.append(BinOpNode('%', LiteralNode(format_string), ph_expression))
       node_list.append(f)
 
     analyzed_node_list = []
