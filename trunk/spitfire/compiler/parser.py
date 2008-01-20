@@ -55,6 +55,8 @@ class SpitfireParserScanner(Scanner):
         ('CLOSE_PAREN', re.compile('[ \t]*\\)[ \t]*')),
         ('OPEN_BRACKET', re.compile('[ \t]*\\[[ \t]*')),
         ('CLOSE_BRACKET', re.compile('[ \t]*\\][ \t]*')),
+        ('PLACEHOLDER_OPEN_BRACE', re.compile('\\{[ \t]*')),
+        ('PLACEHOLDER_CLOSE_BRACE', re.compile('[ \t]*\\}')),
         ('OPEN_BRACE', re.compile('[ \t]*\\{[ \t]*')),
         ('CLOSE_BRACE', re.compile('[ \t]*\\}[ \t]*')),
         ('PIPE', re.compile('[ \t]*\\|[ \t]*')),
@@ -351,17 +353,17 @@ class SpitfireParser(Parser):
             _parameter_list = None
             START_PLACEHOLDER = self._scan('START_PLACEHOLDER')
             _primary = TextNode(START_PLACEHOLDER)
-            if self._peek('OPEN_BRACE', 'ID', 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'") in ['OPEN_BRACE', 'ID']:
-                _token_ = self._peek('OPEN_BRACE', 'ID')
-                if _token_ == 'OPEN_BRACE':
-                    OPEN_BRACE = self._scan('OPEN_BRACE')
+            if self._peek('PLACEHOLDER_OPEN_BRACE', 'ID', 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'") in ['PLACEHOLDER_OPEN_BRACE', 'ID']:
+                _token_ = self._peek('PLACEHOLDER_OPEN_BRACE', 'ID')
+                if _token_ == 'PLACEHOLDER_OPEN_BRACE':
+                    PLACEHOLDER_OPEN_BRACE = self._scan('PLACEHOLDER_OPEN_BRACE')
                     placeholder_in_text = self.placeholder_in_text()
                     _primary = placeholder_in_text
-                    if self._peek('PIPE', 'CLOSE_BRACE') == 'PIPE':
+                    if self._peek('PIPE', 'PLACEHOLDER_CLOSE_BRACE') == 'PIPE':
                         PIPE = self._scan('PIPE')
                         placeholder_parameter_list = self.placeholder_parameter_list()
                         _parameter_list = placeholder_parameter_list
-                    CLOSE_BRACE = self._scan('CLOSE_BRACE')
+                    PLACEHOLDER_CLOSE_BRACE = self._scan('PLACEHOLDER_CLOSE_BRACE')
                 else:# == 'ID'
                     placeholder_in_text = self.placeholder_in_text()
                     _primary = placeholder_in_text
@@ -390,17 +392,17 @@ class SpitfireParser(Parser):
             _parameter_list = None
             START_PLACEHOLDER = self._scan('START_PLACEHOLDER')
             _primary = TextNode(START_PLACEHOLDER)
-            if self._peek('OPEN_BRACE', 'ID', 'END', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') in ['OPEN_BRACE', 'ID']:
-                _token_ = self._peek('OPEN_BRACE', 'ID')
-                if _token_ == 'OPEN_BRACE':
-                    OPEN_BRACE = self._scan('OPEN_BRACE')
+            if self._peek('PLACEHOLDER_OPEN_BRACE', 'ID', 'END', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') in ['PLACEHOLDER_OPEN_BRACE', 'ID']:
+                _token_ = self._peek('PLACEHOLDER_OPEN_BRACE', 'ID')
+                if _token_ == 'PLACEHOLDER_OPEN_BRACE':
+                    PLACEHOLDER_OPEN_BRACE = self._scan('PLACEHOLDER_OPEN_BRACE')
                     placeholder_in_text = self.placeholder_in_text()
                     _primary = placeholder_in_text
-                    if self._peek('PIPE', 'CLOSE_BRACE') == 'PIPE':
+                    if self._peek('PIPE', 'PLACEHOLDER_CLOSE_BRACE') == 'PIPE':
                         PIPE = self._scan('PIPE')
                         placeholder_parameter_list = self.placeholder_parameter_list()
                         _parameter_list = placeholder_parameter_list
-                    CLOSE_BRACE = self._scan('CLOSE_BRACE')
+                    PLACEHOLDER_CLOSE_BRACE = self._scan('PLACEHOLDER_CLOSE_BRACE')
                 else:# == 'ID'
                     placeholder_in_text = self.placeholder_in_text()
                     _primary = placeholder_in_text
@@ -415,47 +417,30 @@ class SpitfireParser(Parser):
     def placeholder_in_text(self):
         ID = self._scan('ID')
         _primary = PlaceholderNode(ID)
-        while self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET', 'PIPE', 'CLOSE_BRACE', 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'") in ['DOT', 'OPEN_PAREN', 'OPEN_BRACKET']:
-            _token_ = self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET')
-            if _token_ == 'DOT':
-                DOT = self._scan('DOT')
-                ID = self._scan('ID')
-                _primary = GetUDNNode(_primary, ID)
-            elif _token_ == 'OPEN_PAREN':
-                OPEN_PAREN = self._scan('OPEN_PAREN')
-                _arg_list = None
-                if self._peek('CLOSE_PAREN', '"[ \\t]*not[ \\t]*"', 'START_PLACEHOLDER', 'ID', '"True"', '"False"', '\'"\'', '"\'"', 'NUM', 'OPEN_BRACKET', 'OPEN_PAREN', 'OPEN_BRACE', "'[ \\t]*\\-[ \\t]*'") != 'CLOSE_PAREN':
-                    argument_list = self.argument_list()
-                    _arg_list = argument_list
-                CLOSE_PAREN = self._scan('CLOSE_PAREN')
-                _primary = CallFunctionNode(_primary, _arg_list)
-            else:# == 'OPEN_BRACKET'
-                OPEN_BRACKET = self._scan('OPEN_BRACKET')
-                expression = self.expression()
-                CLOSE_BRACKET = self._scan('CLOSE_BRACKET')
-                _primary = SliceNode(_primary, expression)
+        while self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET', 'PIPE', 'PLACEHOLDER_CLOSE_BRACE', 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'") in ['DOT', 'OPEN_PAREN', 'OPEN_BRACKET']:
+            placeholder_suffix_expression = self.placeholder_suffix_expression(_primary)
+            _primary = placeholder_suffix_expression
         return _primary
 
-    def call(self, in_placeholder_context):
-        primary = self.primary(in_placeholder_context)
-        _primary = primary
-        while self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET') == 'DOT':
+    def placeholder_suffix_expression(self, _previous_primary):
+        _token_ = self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET')
+        if _token_ == 'DOT':
             DOT = self._scan('DOT')
             ID = self._scan('ID')
-            _primary = GetUDNNode(_primary, ID)
-        if self._peek('OPEN_PAREN', 'OPEN_BRACKET') == 'OPEN_PAREN':
+            _primary = GetUDNNode(_previous_primary, ID)
+        elif _token_ == 'OPEN_PAREN':
             OPEN_PAREN = self._scan('OPEN_PAREN')
             _arg_list = None
             if self._peek('CLOSE_PAREN', '"[ \\t]*not[ \\t]*"', 'START_PLACEHOLDER', 'ID', '"True"', '"False"', '\'"\'', '"\'"', 'NUM', 'OPEN_BRACKET', 'OPEN_PAREN', 'OPEN_BRACE', "'[ \\t]*\\-[ \\t]*'") != 'CLOSE_PAREN':
                 argument_list = self.argument_list()
                 _arg_list = argument_list
             CLOSE_PAREN = self._scan('CLOSE_PAREN')
-            _primary = CallFunctionNode(_primary, _arg_list)
-        if 1:
+            _primary = CallFunctionNode(_previous_primary, _arg_list)
+        else:# == 'OPEN_BRACKET'
             OPEN_BRACKET = self._scan('OPEN_BRACKET')
             expression = self.expression()
+            _primary = SliceNode(_previous_primary, expression)
             CLOSE_BRACKET = self._scan('CLOSE_BRACKET')
-            _primary = SliceNode(_primary, expression)
         return _primary
 
     def placeholder(self):
@@ -551,7 +536,7 @@ class SpitfireParser(Parser):
     def placeholder_parameter(self):
         identifier = self.identifier()
         _node = ParameterNode(identifier.name)
-        if self._peek('ASSIGN_OPERATOR', 'COMMA_DELIMITER', 'CLOSE_BRACE') == 'ASSIGN_OPERATOR':
+        if self._peek('ASSIGN_OPERATOR', 'COMMA_DELIMITER', 'PLACEHOLDER_CLOSE_BRACE') == 'ASSIGN_OPERATOR':
             ASSIGN_OPERATOR = self._scan('ASSIGN_OPERATOR')
             literal_or_identifier = self.literal_or_identifier()
             _node.default = literal_or_identifier
@@ -561,7 +546,7 @@ class SpitfireParser(Parser):
         _parameter_list = ParameterListNode()
         placeholder_parameter = self.placeholder_parameter()
         _parameter_list.append(placeholder_parameter)
-        while self._peek('COMMA_DELIMITER', 'CLOSE_BRACE') == 'COMMA_DELIMITER':
+        while self._peek('COMMA_DELIMITER', 'PLACEHOLDER_CLOSE_BRACE') == 'COMMA_DELIMITER':
             COMMA_DELIMITER = self._scan('COMMA_DELIMITER')
             placeholder_parameter = self.placeholder_parameter()
             _parameter_list.append(placeholder_parameter)
@@ -594,7 +579,7 @@ class SpitfireParser(Parser):
         else:# == 'NUM'
             NUM = self._scan('NUM')
             int_part = NUM
-            if self._peek('"\\."', 'CLOSE_DIRECTIVE', 'DOT', 'OPEN_PAREN', 'OPEN_BRACKET', 'COMMA_DELIMITER', "'[ \\t]*\\*[ \\t]*'", 'CLOSE_PAREN', "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", 'CLOSE_BRACE', "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_BRACKET', 'END', 'COLON_DELIMITER', 'ASSIGN_OPERATOR') == '"\\."':
+            if self._peek('"\\."', 'CLOSE_DIRECTIVE', 'DOT', 'OPEN_PAREN', 'OPEN_BRACKET', 'COMMA_DELIMITER', "'[ \\t]*\\*[ \\t]*'", 'CLOSE_PAREN', "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", 'PLACEHOLDER_CLOSE_BRACE', "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'END', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_BRACE') == '"\\."':
                 self._scan('"\\."')
                 NUM = self._scan('NUM')
                 return LiteralNode(float('%s.%s' % (int_part, NUM)))
@@ -658,25 +643,9 @@ class SpitfireParser(Parser):
                     _dict_literal.append((_key, expression))
             CLOSE_BRACE = self._scan('CLOSE_BRACE')
             _primary = _dict_literal
-        while self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET', "'[ \\t]*\\*[ \\t]*'", "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'CLOSE_BRACKET', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') in ['DOT', 'OPEN_PAREN', 'OPEN_BRACKET']:
-            _token_ = self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET')
-            if _token_ == 'DOT':
-                DOT = self._scan('DOT')
-                ID = self._scan('ID')
-                _primary = GetUDNNode(_primary, ID)
-            elif _token_ == 'OPEN_PAREN':
-                OPEN_PAREN = self._scan('OPEN_PAREN')
-                _arg_list = None
-                if self._peek('CLOSE_PAREN', '"[ \\t]*not[ \\t]*"', 'START_PLACEHOLDER', 'ID', '"True"', '"False"', '\'"\'', '"\'"', 'NUM', 'OPEN_BRACKET', 'OPEN_PAREN', 'OPEN_BRACE', "'[ \\t]*\\-[ \\t]*'") != 'CLOSE_PAREN':
-                    argument_list = self.argument_list()
-                    _arg_list = argument_list
-                CLOSE_PAREN = self._scan('CLOSE_PAREN')
-                _primary = CallFunctionNode(_primary, _arg_list)
-            else:# == 'OPEN_BRACKET'
-                OPEN_BRACKET = self._scan('OPEN_BRACKET')
-                expression = self.expression()
-                CLOSE_BRACKET = self._scan('CLOSE_BRACKET')
-                _primary = SliceNode(_primary, expression)
+        while self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET', "'[ \\t]*\\*[ \\t]*'", "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') in ['DOT', 'OPEN_PAREN', 'OPEN_BRACKET']:
+            placeholder_suffix_expression = self.placeholder_suffix_expression(_primary)
+            _primary = placeholder_suffix_expression
         return _primary
 
     def define_list(self):
@@ -724,7 +693,7 @@ class SpitfireParser(Parser):
     def or_test(self):
         and_test = self.and_test()
         _test = and_test
-        while self._peek("'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'CLOSE_BRACKET', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*or[ \\t]*'":
+        while self._peek("'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*or[ \\t]*'":
             self._scan("'[ \\t]*or[ \\t]*'")
             and_test = self.and_test()
             _test = BinOpExpressionNode('or', _test, and_test)
@@ -733,7 +702,7 @@ class SpitfireParser(Parser):
     def and_test(self):
         not_test = self.not_test()
         _test = not_test
-        while self._peek("'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'CLOSE_BRACKET', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*and[ \\t]*'":
+        while self._peek("'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*and[ \\t]*'":
             self._scan("'[ \\t]*and[ \\t]*'")
             not_test = self.not_test()
             _test = BinOpExpressionNode('and', _test, not_test)
@@ -762,15 +731,15 @@ class SpitfireParser(Parser):
     def m_expr(self):
         u_expr = self.u_expr()
         _expr = u_expr
-        while self._peek("'[ \\t]*\\*[ \\t]*'", "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'CLOSE_BRACKET', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\*[ \\t]*'":
+        while self._peek("'[ \\t]*\\*[ \\t]*'", "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\*[ \\t]*'":
             self._scan("'[ \\t]*\\*[ \\t]*'")
             u_expr = self.u_expr()
             _expr = BinOpExpressionNode('*', _expr, u_expr)
-        while self._peek("'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'CLOSE_BRACKET', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\/[ \\t]*'":
+        while self._peek("'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\/[ \\t]*'":
             self._scan("'[ \\t]*\\/[ \\t]*'")
             u_expr = self.u_expr()
-            _expr = BinOpExpressionNode('\\', _expr, u_expr)
-        while self._peek("'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'CLOSE_BRACKET', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\%[ \\t]*'":
+            _expr = BinOpExpressionNode('/', _expr, u_expr)
+        while self._peek("'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\%[ \\t]*'":
             self._scan("'[ \\t]*\\%[ \\t]*'")
             u_expr = self.u_expr()
             _expr = BinOpExpressionNode('%', _expr, u_expr)
@@ -779,11 +748,11 @@ class SpitfireParser(Parser):
     def a_expr(self):
         m_expr = self.m_expr()
         _expr = m_expr
-        while self._peek("'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'CLOSE_BRACKET', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\+[ \\t]*'":
+        while self._peek("'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\+[ \\t]*'":
             self._scan("'[ \\t]*\\+[ \\t]*'")
             m_expr = self.m_expr()
             _expr = BinOpExpressionNode('+', _expr, m_expr)
-        while self._peek("'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'CLOSE_BRACKET', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\-[ \\t]*'":
+        while self._peek("'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == "'[ \\t]*\\-[ \\t]*'":
             self._scan("'[ \\t]*\\-[ \\t]*'")
             m_expr = self.m_expr()
             _expr = BinOpExpressionNode('-', _expr, m_expr)
@@ -792,7 +761,7 @@ class SpitfireParser(Parser):
     def comparison(self):
         a_expr = self.a_expr()
         _left_side = a_expr
-        while self._peek('COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'CLOSE_BRACKET', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == 'COMP_OPERATOR':
+        while self._peek('COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE') == 'COMP_OPERATOR':
             COMP_OPERATOR = self._scan('COMP_OPERATOR')
             a_expr = self.a_expr()
             _left_side = BinOpExpressionNode(COMP_OPERATOR.strip(), _left_side, a_expr)

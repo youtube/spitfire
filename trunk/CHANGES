@@ -1,7 +1,10 @@
 0.6.14 - reimplemented resolve_placeholder in few different ways to test and
 improve performance. there is no clear winner in all cases, but the new default
-should be much better in typical workloads. added optional format_string argument to 
-placeholders. this makes it convenient to do numeric formatting like '%3.3f' etc.
+should be much better in typical workloads. added optional format_string
+argument to placeholders. this makes it convenient to do numeric formatting
+using '%3.3f' etc. fixed a bug which was mangling whitespace between adjacent
+placeholder using the extended notation with {}. fixed division operator. added
+a few new test cases to cover these bugs.
 
 0.6.13 - added support for dictionary literals. corrected a bug in the
 optimizer which caused it to miss direct access to local variables in some
