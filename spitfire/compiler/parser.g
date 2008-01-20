@@ -21,6 +21,8 @@ parser SpitfireParser:
   token CLOSE_PAREN: '[ \t]*\)[ \t]*'
   token OPEN_BRACKET: '[ \t]*\[[ \t]*'
   token CLOSE_BRACKET: '[ \t]*\][ \t]*'
+  token PLACEHOLDER_OPEN_BRACE: '\{[ \t]*'
+  token PLACEHOLDER_CLOSE_BRACE: '[ \t]*\}'
   token OPEN_BRACE: '[ \t]*\{[ \t]*'
   token CLOSE_BRACE: '[ \t]*\}[ \t]*'
   token PIPE: '[ \t]*\|[ \t]*'
@@ -203,13 +205,13 @@ parser SpitfireParser:
     START_PLACEHOLDER {{ _primary = TextNode(START_PLACEHOLDER) }}
     [
       (
-      OPEN_BRACE placeholder_in_text
+      PLACEHOLDER_OPEN_BRACE placeholder_in_text
       {{ _primary = placeholder_in_text }}
       [
         PIPE placeholder_parameter_list
         {{ _parameter_list = placeholder_parameter_list }}
       ]
-      CLOSE_BRACE
+      PLACEHOLDER_CLOSE_BRACE
       |
       placeholder_in_text {{ _primary = placeholder_in_text }}
       )
@@ -235,13 +237,13 @@ parser SpitfireParser:
     START_PLACEHOLDER {{ _primary = TextNode(START_PLACEHOLDER) }}
     [
       (
-      OPEN_BRACE placeholder_in_text
+      PLACEHOLDER_OPEN_BRACE placeholder_in_text
       {{ _primary = placeholder_in_text }}
       [
         PIPE placeholder_parameter_list
         {{ _parameter_list = placeholder_parameter_list }}
       ]
-      CLOSE_BRACE
+      PLACEHOLDER_CLOSE_BRACE
       |
       placeholder_in_text {{ _primary = placeholder_in_text }}
       )
@@ -256,36 +258,32 @@ parser SpitfireParser:
   rule placeholder_in_text:
     ID {{ _primary = PlaceholderNode(ID) }}
     (
-        DOT ID {{ _primary = GetUDNNode(_primary, ID) }}
-        |
-        OPEN_PAREN {{ _arg_list = None }}
-        [ argument_list {{ _arg_list = argument_list }} ]
-        CLOSE_PAREN {{ _primary = CallFunctionNode(_primary, _arg_list) }}
-        |
-        OPEN_BRACKET expression CLOSE_BRACKET {{ _primary = SliceNode(_primary, expression) }}
-        ) *
+      placeholder_suffix_expression<<_primary>>
+      {{ _primary = placeholder_suffix_expression }}
+    ) *
     {{ return _primary }}
 
-  rule call<<in_placeholder_context>>:
-    # identifier {{ _placeholder = PlaceholderNode(identifier) }}
-    primary<<in_placeholder_context>> {{ _primary = primary }}
-      ( DOT ID {{ _primary = GetUDNNode(_primary, ID) }} ) *
-      [
-        OPEN_PAREN {{ _arg_list = None }}
-        [ argument_list {{ _arg_list = argument_list }} ]
-        CLOSE_PAREN {{ _primary = CallFunctionNode(_primary, _arg_list) }}
-      ]
-      [
-        OPEN_BRACKET expression CLOSE_BRACKET {{ _primary = SliceNode(_primary, expression) }}
-      ]
+  rule placeholder_suffix_expression<<_previous_primary>>:
+    (
+      DOT ID {{ _primary = GetUDNNode(_previous_primary, ID) }}
+      |
+      OPEN_PAREN {{ _arg_list = None }}
+      [ argument_list {{ _arg_list = argument_list }} ]
+      CLOSE_PAREN {{ _primary = CallFunctionNode(_previous_primary, _arg_list) }}
+      |
+      OPEN_BRACKET
+      (
+        expression 
+        {{ _primary = SliceNode(_previous_primary, expression) }}
+      )
+      CLOSE_BRACKET
+    )
     {{ return _primary }}
-
 
   rule placeholder:
     START_PLACEHOLDER
     [ ID {{ return PlaceholderNode(ID) }} ]
     {{ return TextNode(START_PLACEHOLDER) }}
-
 
   rule target_list:
     {{ _target_list = TargetListNode() }}
@@ -409,15 +407,8 @@ parser SpitfireParser:
       CLOSE_BRACE {{ _primary = _dict_literal }}
     )
     (
-      # fixme: this chunk here is shared with the main loop for handling
-      # placeholder parsing
-      DOT ID {{ _primary = GetUDNNode(_primary, ID) }}
-      |
-      OPEN_PAREN {{ _arg_list = None }}
-      [ argument_list {{ _arg_list = argument_list }} ]
-      CLOSE_PAREN {{ _primary = CallFunctionNode(_primary, _arg_list) }}
-      |
-      OPEN_BRACKET expression CLOSE_BRACKET {{ _primary = SliceNode(_primary, expression) }}
+      placeholder_suffix_expression<<_primary>>
+      {{ _primary = placeholder_suffix_expression }}
     ) *
     {{ return _primary }}
 
@@ -482,7 +473,7 @@ parser SpitfireParser:
   rule m_expr:
     u_expr {{ _expr = u_expr }}
     ( '[ \t]*\*[ \t]*' u_expr {{ _expr = BinOpExpressionNode('*', _expr, u_expr) }} ) *
-    ( '[ \t]*\/[ \t]*' u_expr {{ _expr = BinOpExpressionNode('\\', _expr, u_expr) }} ) *
+    ( '[ \t]*\/[ \t]*' u_expr {{ _expr = BinOpExpressionNode('/', _expr, u_expr) }} ) *
     ( '[ \t]*\%[ \t]*' u_expr {{ _expr = BinOpExpressionNode('%', _expr, u_expr) }} ) *
     {{ return _expr }}
 

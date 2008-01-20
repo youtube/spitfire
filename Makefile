@@ -52,7 +52,7 @@ tests: no_whitespace_tests whitespace_tests
 
 
 .PHONY : clean
-clean:
+clean: clean_tests
 	@find . -name '*.pyc' -exec rm {} \;
 	@rm -f spitfire/compiler/parser.py
 	@rm -rf build
