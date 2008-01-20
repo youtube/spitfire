@@ -1,0 +1,10 @@
+#def test_def($arg='default arg', $arg2=None, $arg3=None)
+test_def output arg list: $arg, $arg2, $arg3
+#end def
+
+default: $test_def()
+
+keyword: $test_def(arg="test keyword arg", arg2="mcshittle")
+
+keyword expression: $test_def(arg="test keyword arg" + "my extra string")
+

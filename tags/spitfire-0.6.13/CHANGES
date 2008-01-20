@@ -1,0 +1,220 @@
+0.6.13 - added support for dictionary literals. corrected a bug in the
+optimizer which caused it to miss direct access to local variables in some
+cases. pruned some junk from the grammar file too.
+
+0.6.12 - added individual filter overrides for placeholders.
+
+0.6.11 - added placeholder substitution filtering. added #filter directive for
+setting the default filter per template. fixed bug in optimizing the implied
+main() method in a template. added decorator for template functions. the 
+default filter is "safe_values" - meaning it will only print strings and
+numbers - everthing else that might have a wacky string representation is
+replaced by an empty string.
+
+0.6.10 - fixed token position tracking for macros (slight edge case for
+placeholders).  re-enabled simple placeholder syntax inside macros as
+requiring ${} seemed a bit weak.
+
+0.6.9 - implemented output directory option. added #absolute_extends for
+accessing invariant classes. fixed broken setup script.
+
+0.6.8 - restructure compiler front-end settings passing - it was dopey. moved
+global macro registry to a property of the compiler. re-enabled macro args so
+comments can be passed through the #i18n directive. added a number of new args
+to the compiler script.
+
+0.6.7 - added a compiler front-end to make it easier to pass through state and
+settings to different phases of compilation. this should make it easier to
+communicate variables to non-core functionality like macros.
+
+0.6.6 - for the i18n macro, added token position tracking so it is possible to
+jump to the original text of placeholder or other future nested directive. made
+some errors tolerate unicode data (print really should just deal with this
+when you set the default system encoding). split off the i18n macro handler
+into its own file to mimic registering of future macro implementations and
+reduce crazy cyclic imports.
+
+0.6.5 - remove resolve_placeholder call for members of __builtin__ when the
+optimizer is turned on. enable psyco on the compiler itself - yields about
+25% boost. added a new rule to parse the limited contents of an #i18n block.
+removed some stale lines from codegen.
+
+0.6.4 - added restricted variable set for macros and easy accessor function to
+turn literal args into a nice dictionary. fixed keyword argument parsing to
+correctly accept multiple keywords args. fixed macros so that they result in a
+new tree fragment rather than a template. standardized the comma delimiter to
+fix a few parse errors.
+
+0.6.3 - further optimized calls to resolve_placeholder via calculating
+globals() in advance and removed spurious calls to locals().
+
+0.6.2 - caved and added #set directive. added True and False as literals.
+expanded optimizer to handle unary operators and placeholder substitutions.
+added more cases to get_local_identifiers().
+
+0.6.1 - initial support for macros. special macro case for i18n. needs more
+fleshing out, but can more or less handle the naive use cases. operating theory
+is that each translation will get its own compiled template.
+
+0.6.0 - spitfire/sparrow parity
+
+
+0.5.10 - renamed from 'sparrow' to 'spitfire' - i wonder if i can make it out
+of 0.6 without another rename.
+
+0.5.9 - added support for omit-tag. this required quite a bit of internal
+restructuring and begins to show some of the limitations of stream-based
+templates in a DOM-oriented world. it works, but it feels a little unclean.
+tweaked some of the repeat code and added sketchy EatPrevious node to allow
+ex-post-facto AST cleanup. this also feels unclean. this might be better
+solved by making the dom parser look ahead 1 or 2 nodes to determine the
+significance of whitespace. that's a bit more involved and depends on your
+allegiance to xhtml and your notion of preserving whitespace.
+
+0.5.8 - expressions for repeat/define/content/replace are now properly parsed
+rather than hacked. added support for emulating TAL behavior when a repeat
+node has no content/replacement/children. added py-define - not sure i like
+the syntax - the dollar sign is not required for the assignment variable, but
+i'm not sure that's really consistent.
+
+0.5.7 - formalizing the xhtml parsing extensions. added very basic tests for
+the current functionality. starting to work on precedence. altered parser to
+allow a new production for py:define - not sure if i like it. there is a bug
+in -O2 mode - I've disabled testing until that becomes important.
+
+0.5.6 - added globals() resolution to resolve_placeholder. added list arg
+analysis.
+
+0.5.5 - continued on the optimization. analysis and optimization are now two
+distinct operations. optimization occurs inline and modifies the tree
+structure in place. to effectively optimize, i need to be able to crawl up the
+tree to find out scope information. added the 'replace' function to simplify
+altering the AST during optimization - only partially implemented.
+
+0.5.4 - added more parse-to-abstract tree conversion. this means that little
+nuggets of code that bridge the template content and the runtime get tricky to
+express as a tree fragment. the goal is making the AST as AST-like as possible
+before sending off the tree to the analyzer. the increasingly annoying part is
+the amount of code required to 'visit' the tree properly. the next phase is to
+separate out the parse tree conversion and the performance analysis and
+optimization phases. the other annoying thing is the sheer number of node
+copies made during this phase -- compile is a one-time operation, but it feels
+like it's getting ridiculous. this emits some partially optimized code, and
+although the tests pass, I wouldn't use it at the moment.
+
+0.5.3 - share more code between the crunner and sparrow compile. rework the
+code for handling dynamic template compile and loading. added a basic demo of
+an attribute language like TAL or Kid. mostly proves that the AST can support
+another syntax without much effort.
+
+0.5.2 - implemented optional whitespace and adjacent text node collapsing in
+the analyzer (instead of codegen). added corresponding tests for -01 mode.
+
+0.5.1 - renamed from 'cheeter' to 'sparrow'
+
+0.5 - reorganized all of the code as a proper package layout.
+
+
+0.4.6 - added optional brace syntax for disambiguating complex placeholders.
+
+0.4.5 - fix optional whitespace when single line directive syntax is used.
+talking about the 1 line #if mostly. this required a fair amount of hacking on
+the parser side of things, but it removed the hack during analysis - on
+balance I think this is probably better. removed a bit of dead code hanging
+out.
+
+0.4.4 - fix optional whitespace bug following between a directive and comment.
+
+0.4.3 - new testing for preserving and optional whitespace.
+
+0.4.2 - added optional whitespace parsing. right now this is a nasty
+combination of parser and semantic analysis stuff. the reason is that the end
+directive parsing doesn't recursively scan for individual tokens. so, leading
+whitespace before a directive start gets tagged in the parser, but if the last
+child node in a directive is a whitespace node, we tag it as optional. the
+know problem at this stage is that whitespace between # marks gets marked as
+optional as well.
+
+0.4.1 - trying to remove leading whitespace in directives on a newline.
+
+0.4 - factor out a lot of code -- there is now one common node structure
+between the parser and semantic analyzer. still kept the 'build 2 trees'
+approach because it somewhat simplifies the analysis step, since nodes can
+move. might have to change the node to know its parent. removed dopey
+autowalk_child_nodes attribute in ASTNodes - if you want to walk the tree,
+you've got to specify how in code.
+
+
+0.3.12 - added #attr directive.
+
+0.3.11 - improve support for unicode/utf-8. at this point, templates should be
+in utf-8 only. no support for specifying the source encoding directive yet.
+the output of a template is a unicode object. add support for break/continue
+statements. added get_var/has_var functions which necessitated rewriting the
+parsing of argument lists. compiler phase has to do more code injection to
+support these functions, which is a little ugly.
+
+0.3.10 - implement template inheritance. clean up from/import to actually
+parse out and reconstruct statements. supports multiple inheritance with no
+arbitration. the average case for multiple inheritance is using functions like
+a library. i added support for '#implements library' which indicates that no
+main function will be produced - only the functions explicitly defined in the
+template will be generated. currently the syntax for multiple inheritance is
+specifying multiple #extends directives.
+
+0.3.9 - added proper recursive handling for udn, calling and item access in
+function and placeholder context. it seems annoying that i need to chunks of
+code to make this work - i should be able to factor out the common syntax.
+
+0.3.8 - added item lookup ([] access to __getitem__). restructure some of the
+optional whitespace handling inside for loops (might eventually be relevant
+elsewhere too). Tricky because fundamentally python ignores whitespace, yet
+cheeter respects it.
+
+0.3.7 - removed the 'python expression' hack in the for block. i can now
+properly parse out python lists and tuple literals, so this should be fine.
+this also means i can properly use placeholders as the source for a loop.
+unified some of the "parens" parsing. if you have two patterns that aren't
+identical but can match the same piece of text, you end up misinterpreting
+certain tokens. i will probably have to do this to brackets and commas as
+well.
+
+0.3.6 - add support for filling the search list from a python file or a
+pickled object. added simple support of unified-dotted-notation - seems to
+work for one level. retooled the crunner.py test rig - something funky about
+exec'ing code in your own namespace. placeholder context switching
+(text-to-placeholder) is still problematic from time to time. implementation
+feels messy.
+
+0.3.5 - added binary op support for math and comparisons. unary negation also
+works.
+
+0.3.4 - added if, else and elif directives. elif is cosmetically ugly - it
+doesn't emit nice python - if you have a huge block of elif clauses, it will
+nest fairly deeply, but it is functional.
+
+0.3.3 - handle bare $$ situation
+
+0.3.2 - added proper arg handling for function declaration and calling. fixed
+basic literal handling - no complex types yet (dict, list, tuple)
+
+0.3.1 - restructure function calling, placeholder parsing and substitution to
+be more tree-like. started using a richer node structure modeled after
+Python's AST node classes. having some struggle as to how much Python i really
+want to be parseable in a template. erring on the side of less is probably
+better. reduced complexity should be fine as long as the basic building blocks
+are functional and reliable.
+
+0.3 - first version using a tree-like python code generator instead of trying
+to magically write code and keep track of indenting
+
+
+0.2.3 - added placeholder substitution and proper expression unpacking
+
+0.2.2 - added basic for loop
+
+0.2 - added test case runner and a few simple template modifiers (import,
+from, slurp)
+
+
+0.1 - first working version - simple text, blocks and definitions
