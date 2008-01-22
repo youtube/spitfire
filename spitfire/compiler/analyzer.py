@@ -2,7 +2,7 @@ import copy
 import os.path
 
 from spitfire.compiler.ast import *
-
+from spitfire.util import normalize_whitespace
 
 def tree_walker(node):
   yield node
@@ -22,6 +22,9 @@ class AnalyzerOptions(object):
 
     # adjacent text nodes become one single node
     self.collapse_adjacent_text = False
+
+    # runs of whitespace characters are replace with one space
+    self.normalize_whitespace = False
     
     # expensive dotted notations are aliased to a local variable for faster
     # lookups: write = self.buffer.write
@@ -238,7 +241,10 @@ class SemanticAnalyzer(object):
     if pnode.child_nodes:
       raise SemanticAnalyzerError("TextNode can't have children")
     f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
-    f.arg_list.append(LiteralNode(pnode.value))
+    text = pnode.value
+    if self.options.normalize_whitespace:
+      text = normalize_whitespace(text)
+    f.arg_list.append(LiteralNode(text))
     return [f]
 
   analyzeOptionalWhitespaceNode = analyzeTextNode
