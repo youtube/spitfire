@@ -11,6 +11,7 @@ import timeit
 import StringIO
 import cStringIO
 try:
+    import genshi
     from genshi.builder import tag
     from genshi.template import MarkupTemplate
     from genshi.template import TextTemplate as NewTextTemplate
@@ -65,7 +66,7 @@ except ImportError:
 table = [dict(a=1,b=2,c=3,d=4,e=5,f=6,g=7,h=8,i=9,j=10)
           for x in range(1000)]
 
-if MakoTemplate:
+if MarkupTemplate:
     genshi_tmpl = MarkupTemplate("""
 <table xmlns:py="http://genshi.edgewall.org/">
 <tr py:for="row in table">

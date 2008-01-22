@@ -15,6 +15,16 @@ class PlaceholderError(KeyError):
   pass
 
 
+# NOTE: in some instances, this is faster than using cStringIO
+# this is slightly counter intuitive and probably means there is more here than
+# meets the eye. 
+class BufferIO(list):
+  write = list.append
+
+  def getvalue(self):
+    return ''.join(self)
+
+
 class SpitfireTemplate(object):
   # store a reference to the filter function - this is tricky because of some
   # python stuff. filter functions look like this:
@@ -120,7 +130,7 @@ class SpitfireTemplate(object):
     
   @staticmethod
   def new_buffer():
-    return StringIO.StringIO()
+    return BufferIO()
 
 def get_available_placeholders(scope):
   if isinstance(scope, dict):
