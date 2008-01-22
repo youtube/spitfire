@@ -56,6 +56,10 @@ Optimization:
    variables and references directly - especially items used in an #if and then
    referenced as a placeholder in the block immediately following
    * there are some subtleties here
+ * no need to cache placeholders when they are already references to local
+   scope variables (see bigtable test)
+ * do a better job of hoisting loop-invariant code (see filter function
+   resolution in bigtable test)
  * caching directive that tells you to memoize a result based on a function
    annotation (this could be handy for non-template functions as well)
  * replace functions that only write a string constant with one that just
