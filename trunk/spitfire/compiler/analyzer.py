@@ -32,6 +32,11 @@ class AnalyzerOptions(object):
     # know that this local variable will always resolve first
     self.directly_access_defined_variables = False
 
+    # once a placeholder is resolved in a given scope, cache it in a local
+    # reference for faster subsequent retrieval
+    self.cache_resolved_placeholders = False
+
+
     self.enable_psyco = False
     
     self.__dict__.update(kargs)
@@ -45,6 +50,7 @@ o1_options.collapse_adjacent_text = True
 o2_options = copy.copy(o1_options)
 o2_options.alias_invariants = True
 o2_options.directly_access_defined_variables = True
+o2_options.cache_resolved_placeholders = True
 o3_options = copy.copy(o2_options)
 o3_options.enable_psyco = True
 

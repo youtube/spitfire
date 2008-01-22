@@ -55,6 +55,7 @@ Optimization:
  * functions/placeholders that are used repeatedly should be cached as local
    variables and references directly - especially items used in an #if and then
    referenced as a placeholder in the block immediately following
+   * there are some subtleties here
  * caching directive that tells you to memoize a result based on a function
    annotation (this could be handy for non-template functions as well)
  * replace functions that only write a string constant with one that just
