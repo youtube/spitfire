@@ -1,3 +1,4 @@
+import re
 import string
 import unicodedata
 
@@ -66,3 +67,7 @@ char_map = dict(zip(normal_characters, [unicodedata.lookup(name)
 def i18n_mangled_message(msg):
   return ''.join([char_map.get(c, c) for c in msg])
 
+
+whitespace_regex = re.compile('\s+', re.UNICODE)
+def normalize_whitespace(text):
+  return whitespace_regex.sub(' ', text)
