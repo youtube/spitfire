@@ -4,7 +4,12 @@ should be much better in typical workloads. added optional format_string
 argument to placeholders. this makes it convenient to do numeric formatting
 using '%3.3f' etc. fixed a bug which was mangling whitespace between adjacent
 placeholder using the extended notation with {}. fixed division operator. added
-a few new test cases to cover these bugs.
+a few new test cases to cover these bugs. added a new optimization to locally
+cache references to resolved placeholders. it's enabled by default, but it may
+not yield that much gain - a better optimization would be caching references to
+complete UDN expressions. fixed a nasty bug in the __eq__/__hash__ overrides in
+the ast module - this was causing some optimized code to end up in funky
+locations.
 
 0.6.13 - added support for dictionary literals. corrected a bug in the
 optimizer which caused it to miss direct access to local variables in some

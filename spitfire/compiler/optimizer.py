@@ -63,7 +63,10 @@ class OptimizationAnalyzer(object):
     _identifier = IdentifierNode(node.left.name)
     function = self.get_parent_function(node)
     function.local_identifiers.append(_identifier)
-    self.visit_ast(node.right, node)
+    # note: this hack is here so you can partially ananlyze alias nodes
+    # without double-processing
+    if node.right:
+      self.visit_ast(node.right, node)
 
   def analyzeExpressionListNode(self, expression_list_node):
     for n in expression_list_node:
@@ -93,16 +96,39 @@ class OptimizationAnalyzer(object):
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
     if self.options.directly_access_defined_variables:
-      try:
-        local_var = function_call.hint_map['resolve_placeholder']
+      # when the analyzer finds a PlaceholderNode and generates a function
+      # call out of it, i annotate an IdentifierNode with the original
+      # placeholder name
+      local_var = function_call.hint_map.get('resolve_placeholder', None)
+      if local_var is not None:
+        cached_placeholder = IdentifierNode('_rph_%s' % local_var.name)
         local_identifiers = self.get_local_identifiers(function_call)
+        # print "local_identifiers", local_identifiers
         if local_var in local_identifiers:
           function_call.parent.replace(function_call, local_var)
+        elif cached_placeholder in local_identifiers:
+          function_call.parent.replace(function_call, cached_placeholder)
         elif local_var.name in builtin_names:
           function_call.parent.replace(function_call,
                                        IdentifierNode(local_var.name))
-      except KeyError:
-        pass
+        elif self.options.cache_resolved_placeholders:
+          insert_scope, insert_marker = self.get_insert_block_and_point(
+            function_call)
+          # note: this is sketchy enough that it requires some explanation
+          # basically, you need to visit the node for the parent function to
+          # get the memo that this value is aliased. unfortunately, the naive
+          # case of just calling visit_ast blows up since it tries to double
+          # analyze a certain set of nodes. you only really need to analyze
+          # that the assignment took place, then you can safely alias the
+          # actual function call. definitely sketchy, but it does seem to work
+          assign_rph = AssignNode(cached_placeholder, None)
+          #print "optimize scope:", insert_scope
+          #print "optimize marker:", insert_marker
+          insert_scope.insert_before(
+            insert_marker, assign_rph)
+          self.visit_ast(assign_rph, insert_scope)
+          assign_rph.right = function_call
+          function_call.parent.replace(function_call, cached_placeholder)
       
   def analyzePlaceholderSubstitutionNode(self, placeholder_substitution):
     self.visit_ast(placeholder_substitution.expression,
@@ -130,7 +156,8 @@ class OptimizationAnalyzer(object):
     node = node.parent
     while node is not None:
       if isinstance(node, (FunctionNode, ForNode)):
-        return node, insert_marker
+        if insert_marker in node.child_nodes:
+          return node, insert_marker
       elif isinstance(node, (IfNode,)):
         if original_node in node.child_nodes:
           return node, insert_marker
@@ -250,7 +277,7 @@ class OptimizationAnalyzer(object):
         local_identifiers.extend(node.local_identifiers)
         break
       node = node.parent
-    return local_identifiers
+    return frozenset(local_identifiers)
   
   def analyzeGetUDNNode(self, node):
     self.visit_ast(node.expression, node)
