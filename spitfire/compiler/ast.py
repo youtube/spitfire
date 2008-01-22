@@ -30,7 +30,8 @@ class ASTNode(object):
 
   def __hash__(self):
     return hash('%s%s%s%s' %
-                (type(self), self.name, self.value, hash(tuple(self.child_nodes))))
+                (type(self), self.name, self.value,
+                 hash(tuple(self.child_nodes))))
 
   def getChildNodes(self):
     return [n for n in self.child_nodes if isinstance(n, ASTNode)]
@@ -58,6 +59,7 @@ class ASTNode(object):
 
   def insert_before(self, marker_node, insert_node):
     idx = self.child_nodes.index(marker_node)
+    # print "insert_before", idx, id(self), self, id(marker_node), marker_node
     self.child_nodes.insert(idx, insert_node)
 
   def replace(self, marker_node, insert_node_list):
@@ -87,7 +89,7 @@ class NodeList(list):
       self.extend(node)
     else:
       list.append(self, node)
-  
+
 
 class _ListNode(ASTNode):
   def __init__(self, parg_list=None, karg_list=None):
@@ -128,6 +130,16 @@ class BinOpNode(ASTNode):
   def __str__(self):
     return '%s (%s %s %s)' % (
       self.__class__.__name__, self.left, self.operator, self.right)
+
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.operator == node.operator and
+                self.left == node.left and
+                self.right == node.right)
+
+  def __hash__(self):
+    return hash('%s%s%s%s%s' %
+                (type(self), self.name, self.operator, hash(self.left), hash(self.right)))
 
 class BinOpExpressionNode(BinOpNode):
   pass
@@ -228,8 +240,8 @@ class FunctionNode(ASTNode):
     self.child_nodes.insert(-1, node)
 
   def __str__(self):
-    return '%s parameter_list:%r' % (
-      self.__class__.__name__, self.parameter_list)
+    return '%s %s parameter_list:%r' % (
+      self.__class__.__name__, self.name, self.parameter_list)
 
 
 class GetAttrNode(ASTNode):
