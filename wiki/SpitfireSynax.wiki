@@ -8,6 +8,10 @@ There are a few notable places where things diverge and some of this is up for d
 
 = Notable Differences =
 
+=== Spitfire does not do autocalling. ===
+
+If you want to call a function, you must explicitly do so. This is the opposite of Cheetah's default behavior.  The default filter in Spitfire will replace references to function objects with empty strings.
+
 === Spitfire does not allow slicing of arrays. ===
 
 {{{
