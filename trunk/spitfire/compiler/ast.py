@@ -313,6 +313,14 @@ class ImportNode(ASTNode):
     ASTNode.__init__(self)
     self.module_name_list = module_name_list
 
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.module_name_list == node.module_name_list)
+
+  def __hash__(self):
+    return hash('%s%s' %
+                (type(self), hash(tuple(self.module_name_list))))
+
   def __str__(self):
     return ('%s module_name_list:%r' %
         (self.__class__.__name__, self.module_name_list))
@@ -329,6 +337,16 @@ class FromNode(ImportNode):
     ImportNode.__init__(self, module_name_list)
     self.identifier = identifier
     
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.module_name_list == node.module_name_list and
+                self.identifier == node.identifier)
+
+  def __hash__(self):
+    return hash('%s%s%s' %
+                (type(self), hash(tuple(self.module_name_list)),
+                 self.identifier))
+
   def __str__(self):
     return ('%s module_name_list:%r identifier:%s' %
         (self.__class__.__name__, self.module_name_list,

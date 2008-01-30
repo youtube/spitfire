@@ -62,11 +62,17 @@ Optimization:
    resolution in bigtable test)
  * caching directive that tells you to memoize a result based on a function
    annotation (this could be handy for non-template functions as well)
+   * add syntax to allow you to 'bless' a cache region's variables - this means
+     you could nix the cache if you found new, rogue values. the motivation
+     here is to prevent caching user data accidentally.
  * replace functions that only write a string constant with one that just
    returns that constant string - no need for intermediate buffer
    * in some cases, might be able to skip the whole function call too - make
      the value an attribute? hard to do if this is used by a subclass
  * expose imports as globals vars that don't need to be resolved at runtime
+ * allow a function registry of names that should be injected into the globals
+   for template modules. this would let common functions from python get fast
+   lookups without going through resolve_placeholder each time.
  * factor out common sub-expressions during resolve_udn
  * only store local variables called more than once?
 Variant 1:
