@@ -52,7 +52,7 @@ class SpitfireParserScanner(Scanner):
         ('ASSIGN_OPERATOR', re.compile('=')),
         ('COMP_OPERATOR', re.compile('[ \t]*(<=|>=|==|>|<|!=)[ \t]*')),
         ('OPEN_PAREN', re.compile('[ \t]*\\([ \t]*')),
-        ('CLOSE_PAREN', re.compile('[ \t]*\\)[ \t]*')),
+        ('CLOSE_PAREN', re.compile('[ \t]*\\)')),
         ('OPEN_BRACKET', re.compile('[ \t]*\\[[ \t]*')),
         ('CLOSE_BRACKET', re.compile('[ \t]*\\][ \t]*')),
         ('PLACEHOLDER_OPEN_BRACE', re.compile('\\{[ \t]*')),

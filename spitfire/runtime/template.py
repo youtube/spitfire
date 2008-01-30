@@ -1,6 +1,7 @@
 # an 'abstract' base class for a template, seems like a good idea for now
 
 #import StringIO
+import __builtin__
 import cStringIO as StringIO
 import spitfire.runtime.repeater
 import spitfire.runtime.filters
@@ -10,6 +11,9 @@ class __Unspecified(object):
   pass
 Unspecified = __Unspecified()
 
+class __UnresolvedPlaceholder(object):
+  pass
+UnresolvedPlaceholder = __UnresolvedPlaceholder()
 
 class PlaceholderError(KeyError):
   pass
@@ -56,15 +60,6 @@ class SpitfireTemplate(object):
       except KeyError:
         pass
 
-    if global_vars is not None:
-      try:
-        return global_vars[name]
-      except TypeError:
-        raise PlaceholderError('unexpected type for global_vars: %s' %
-                               type(global_vars))
-      except KeyError:
-        pass
-
     try:
       return getattr(self, name)
     except AttributeError:
@@ -84,6 +79,19 @@ class SpitfireTemplate(object):
         except AttributeError:
           pass
 
+    if global_vars is not None:
+      try:
+        return global_vars[name]
+      except TypeError:
+        raise PlaceholderError('unexpected type for global_vars: %s' %
+                               type(global_vars))
+      except KeyError:
+        pass
+
+    # fixme: finally try to resolve builtins - this should be configurable
+    # if you compile optimized modes, this isn't necessary
+    default = getattr(__builtin__, name, default)
+
     if default is not Unspecified:
       return default
     else:
@@ -98,22 +106,31 @@ class SpitfireTemplate(object):
                                     global_vars=global_vars,
                                     default=default)
 
+
   def has_var(self, name, local_vars=None, global_vars=None):
-    if local_vars is not None and name in local_vars:
-      return True
-    if global_vars is not None and name in global_vars:
-      return True
+    var = self.get_var(name, default=UnresolvedPlaceholder,
+                       local_vars=local_vars, global_vars=global_vars) 
+    return var is not UnresolvedPlaceholder
+      
 
-    if hasattr(self, name):
-      return True
+# this function has some problems - better to just use consistent logic to
+# resolve this
+#   def has_var(self, name, local_vars=None, global_vars=None):
+#     if local_vars is not None and name in local_vars:
+#       return True
+#     if global_vars is not None and name in global_vars:
+#       return True
 
-    if self.search_list is not None:
-      for scope in self.search_list:
-        if name in scope:
-          return True
-        if hasattr(scope, name):
-          return True
-    return False
+#     if hasattr(self, name):
+#       return True
+
+#     if self.search_list is not None:
+#       for scope in self.search_list:
+#         if name in scope:
+#           return True
+#         if hasattr(scope, name):
+#           return True
+#     return False
 
   # wrap the underlying filter call so that items don't get filtered multiple
   # times (avoids double escaping)
