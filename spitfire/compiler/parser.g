@@ -18,7 +18,10 @@ parser SpitfireParser:
   token ASSIGN_OPERATOR: '='
   token COMP_OPERATOR: '[ \t]*(<=|>=|==|>|<|!=)[ \t]*'
   token OPEN_PAREN: '[ \t]*\([ \t]*'
-  token CLOSE_PAREN: '[ \t]*\)[ \t]*'
+  #token CLOSE_PAREN: '[ \t]*\)[ \t]*'
+  # changing this to not gobble trailing whitespace - important for placeholder
+  # functions in text
+  token CLOSE_PAREN: '[ \t]*\)'
   token OPEN_BRACKET: '[ \t]*\[[ \t]*'
   token CLOSE_BRACKET: '[ \t]*\][ \t]*'
   token PLACEHOLDER_OPEN_BRACE: '\{[ \t]*'
@@ -269,6 +272,8 @@ parser SpitfireParser:
       |
       OPEN_PAREN {{ _arg_list = None }}
       [ argument_list {{ _arg_list = argument_list }} ]
+      # need this expression here to make a bare placeholder in text not
+      # gobble trailing white space
       CLOSE_PAREN {{ _primary = CallFunctionNode(_previous_primary, _arg_list) }}
       |
       OPEN_BRACKET

@@ -202,7 +202,8 @@ class SemanticAnalyzer(object):
 
   def analyzeImportNode(self, pnode):
     node = ImportNode([self.build_ast(n)[0] for n in pnode.module_name_list])
-    self.template.import_nodes.append(node)
+    if node not in self.template.import_nodes:
+      self.template.import_nodes.append(node)
     return []
 
   def analyzeExtendsNode(self, pnode):
@@ -234,7 +235,8 @@ class SemanticAnalyzer(object):
   analyzeAbsoluteExtendsNode = analyzeExtendsNode
 
   def analyzeFromNode(self, pnode):
-    self.template.from_nodes.append(pnode.copy())
+    if pnode not in self.template.from_nodes:
+      self.template.from_nodes.append(pnode.copy())
     return []
 
   def analyzeTextNode(self, pnode):

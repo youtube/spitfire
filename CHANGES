@@ -7,7 +7,8 @@ added optional format_string argument to placeholders. this makes it convenient
 to do numeric formatting using '%3.3f' etc.
 
 fixed a bug which was mangling whitespace between adjacent placeholder using
-the extended notation with {}.
+the extended notation with {}. also changed the parens pattern so that
+whitespace after a bare placeholder function call is preserved properly.
 
 fixed division operator.
 
@@ -21,6 +22,14 @@ fixed a nasty bug in the __eq__/__hash__ overrides in the ast module. this was
 causing some optimized code to end up in funky locations.
 
 added altenate BufferIO class for a very mild boost in performance. (< 10%)
+
+implement has_var as get_var - perusing the code, it looked wrong in a few
+cases. probably better to just tune up the implementation of
+resolve_placeholder if we need more speed.
+
+collapse redundant imports in the template module.
+
+added support for builtin variables
 
 0.6.13 - added support for dictionary literals. corrected a bug in the
 optimizer which caused it to miss direct access to local variables in some
