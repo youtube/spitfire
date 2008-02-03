@@ -165,7 +165,7 @@ class SemanticAnalyzer(object):
     if_node.test_expression = self.build_ast(pnode.test_expression)[0]
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
       if_node.extend(self.build_ast(pn))
-    for pn in self.optimize_parsed_nodes(pnode.else_):
+    for pn in self.optimize_parsed_nodes(pnode.else_.child_nodes):
       if_node.else_.extend(self.build_ast(pn))
     return [if_node]
 
@@ -197,7 +197,8 @@ class SemanticAnalyzer(object):
     if pnode.name == 'library':
       self.template.library = True
     else:
-      self.template.main_function.name = pnode.name      
+      self.template.main_function.name = pnode.name
+      self.template.implements = True
     return []
 
   def analyzeImportNode(self, pnode):
