@@ -307,7 +307,7 @@ class SpitfireParser(Parser):
                 while self._peek('START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT', 'END_DIRECTIVE') != 'END_DIRECTIVE':
                     block = self.block(start)
                     _last_condition_node.else_.append(block)
-                make_optional(_last_condition_node.else_)
+                make_optional(_last_condition_node.else_.child_nodes)
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'if'")

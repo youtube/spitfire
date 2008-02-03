@@ -104,6 +104,7 @@ class Compiler(object):
     'ignore_optional_whitespace',
     'locale',
     'message_catalogue_file',
+    'normalize_whitespace',
     'optimizer_level',
     'output_directory',
     ]
@@ -127,7 +128,8 @@ class Compiler(object):
 
     self.optimizer_level = 0
     self.ignore_optional_whitespace = False
-
+    self.normalize_whitespace = False
+    
     self.base_extends_package = None
     self.message_catalogue = None
     self.message_catalogue_file = None
@@ -144,6 +146,7 @@ class Compiler(object):
     if self.analyzer_options is None:
       self.analyzer_options = analyzer.optimizer_map[self.optimizer_level]
       self.analyzer_options.ignore_optional_whitespace = self.ignore_optional_whitespace
+      self.analyzer_options.normalize_whitespace = self.normalize_whitespace
 
     # register macros before the first pass by any SemanticAnalyzer
     # this is just a default to give an example - it's not totally functional

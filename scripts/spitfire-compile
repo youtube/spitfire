@@ -65,6 +65,9 @@ if __name__ == '__main__':
   op.add_option('--preserve-optional-whitespace', action='store_false',
                 default=True, dest='ignore_optional_whitespace',
                 help='preserve leading whitespace before a directive')
+  op.add_option('--normalize-whitespace', action='store_true',
+                default=False,
+                help='normalize all runs of whitespace to one character')
   op.add_option('-v', '--verbose', action='store_true', default=False)
   op.add_option('-O', dest='optimizer_level', type='int', default=0)
   op.add_option('-o', '--output-file',  dest='output_file', default=None)

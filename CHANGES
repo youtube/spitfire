@@ -1,4 +1,4 @@
-0.6.14 - 2008-01-21
+0.6.14 - 2008-02-02
 reimplemented resolve_placeholder in few different ways to test and
 improve performance. there is no clear winner in all cases, but the new default
 should be much better in typical workloads.
@@ -30,6 +30,27 @@ resolve_placeholder if we need more speed.
 collapse redundant imports in the template module.
 
 added support for builtin variables
+
+added new Scope class to encapsulate optimization state - needed for tricky
+situations in if/else blocks. also added an explicit ElseNode to represent the
+source tree more accurately.
+
+allow the "implements" keywork to override the ban on "main" methods when a
+template inherits from another.
+
+analyze the individual paramters of a placeholder - this allows placesholders
+with args to run with the minimum overhead.
+
+fixed the equivalence definition for the CallFunctionNode
+
+added a new compiler option to enable the whitespace normalizer. hopefully this
+proves to be useful. it is a slight hack the way it is activated right now.
+
+added a new @skip_filter decorator so that various formatting functions,
+presumably coded in python, can skip this filter if they are outputting html.
+this is mostly just and added level of convenience in case typing "|raw" at the
+of every placeholder is a pain. actually, specifying raw output is mildly
+faster, especially in aggregate, so it may pay to not use this in the long run.
 
 0.6.13 - added support for dictionary literals. corrected a bug in the
 optimizer which caused it to miss direct access to local variables in some
