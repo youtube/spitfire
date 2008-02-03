@@ -229,9 +229,13 @@ class OptimizationAnalyzer(object):
       alias_name = alias_format % (node.expression.name, node.name)
       if alias_name in scope.alias_name_set:
         print "duplicate alias_name", alias_name
+        print "scope", scope
+        print "scope.alias_name_set", scope.alias_name_set
+        print "scope.aliased_expression_map", scope.aliased_expression_map
         return
       
       alias = IdentifierNode(alias_name)
+      scope.alias_name_set.add(alias_name)
       scope.aliased_expression_map[node] = alias
       assign_alias = AssignNode(alias, node)
       parent_loop = self.get_parent_loop(node)
@@ -258,6 +262,32 @@ class OptimizationAnalyzer(object):
 
     for n in if_node.else_.child_nodes:
       self.visit_ast(n, if_node.else_)
+
+    # once both branches are optimized, walk the scopes for any variables that
+    # are defined in both places. those will be promoted to function scope
+    # since it is safe to assume that those will defined
+    # fixme: this feels like a bit of hack - but not sure how to do this
+    # correctly without reverting to slower performance for almost all calls to
+    # resolve_placeholder.
+    if if_node.else_.child_nodes:
+      if_scope_vars = set(if_node.scope.local_identifiers)
+      common_local_identifiers = list(if_scope_vars.intersection(
+        if_node.else_.scope.local_identifiers))
+      common_alias_name_set = if_node.scope.alias_name_set.union(
+        if_node.else_.scope.alias_name_set)
+      common_aliased_expression_map = {}
+      for key, val in if_node.scope.aliased_expression_map.iteritems():
+        if key in if_node.else_.scope.aliased_expression_map:
+          common_aliased_expression_map[key] = val
+    else:
+      common_local_identifiers = if_node.scope.local_identifiers
+      common_alias_name_set = if_node.scope.alias_name_set
+      common_aliased_expression_map = if_node.scope.aliased_expression_map
+      
+    scope = self.get_parent_scope(if_node)
+    scope.local_identifiers.extend(common_local_identifiers)
+    scope.alias_name_set.update(common_alias_name_set)
+    scope.aliased_expression_map.update(common_aliased_expression_map)
 
   def analyzeBinOpNode(self, n):
     self.visit_ast(n.left, n)
