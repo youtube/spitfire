@@ -1,0 +1,4 @@
+#set $x = 1.0
+#set $y = 4 / 3.0
+
+${x|format_string='%1.0f'} ${y|format_string='%1.3f'}

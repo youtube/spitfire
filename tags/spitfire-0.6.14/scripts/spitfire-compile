@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+
+import logging
+import os.path
+import sys
+
+from spitfire.compiler import analyzer
+from spitfire.compiler.util import Compiler
+
+
+def process_file(compiler, filename, options):
+  def print_output(*args):
+    if options.verbose:
+      print >> sys.stderr, ' '.join(args)
+
+  try:
+    if options.output_file:
+      compiler.write_file = False
+      if options.output_file == '-':
+        f = sys.stdout
+      else:
+        f = open(options.output_file, 'w')
+    else:
+      compiler.write_file = True
+    src_code = compiler.compile_file(filename)
+    if options.output_file:
+      f.write(src_code)
+      f.close()
+  except Exception, e:
+    print >> sys.stderr, 'FAILED:', filename, e
+    raise
+
+# selectively enable psyco on import methods
+def init_psyco(options):
+  if options.x_psyco:
+    try:
+      import psyco
+    except ImportError:
+      print >> sys.stderr, 'WARNING: unable to import psyco'
+      return
+    
+    import re
+    psyco.cannotcompile(re.compile)
+
+    if options.x_psyco_profile:
+      psyco.log()
+      psyco.profile()
+    else:
+      import spitfire.compiler.scanner
+      psyco.bind(spitfire.compiler.scanner.SpitfireScanner.scan)
+      import copy
+      psyco.bind(copy.deepcopy)
+      import yappsrt
+      psyco.bind(yappsrt.Scanner.token)
+      import spitfire.compiler.ast
+      psyco.bind(spitfire.compiler.ast.NodeList.__iter__)
+  
+def validate_path(option, opt_str, value, parser):
+  path = os.path.abspath(os.path.expanduser(path))
+  setattr(parser.values, option.dest, path)
+
+if __name__ == '__main__':
+  from optparse import OptionParser
+  op = OptionParser()
+  op.add_option('--preserve-optional-whitespace', action='store_false',
+                default=True, dest='ignore_optional_whitespace',
+                help='preserve leading whitespace before a directive')
+  op.add_option('--normalize-whitespace', action='store_true',
+                default=False,
+                help='normalize all runs of whitespace to one character')
+  op.add_option('-v', '--verbose', action='store_true', default=False)
+  op.add_option('-O', dest='optimizer_level', type='int', default=0)
+  op.add_option('-o', '--output-file',  dest='output_file', default=None)
+  op.add_option('--x-disable-psyco', dest='x_psyco', default=True,
+                action='store_false',
+                help='disable psyco')
+  op.add_option('--x-psyco-profile',
+                action='store_true',
+                help='enable psyco profiler logging')
+
+  op.add_option('--disable-filters', dest='enable_filters',
+                action='store_false', default=True)
+
+  op.add_option('--output-directory', default='',
+                action="callback", callback=validate_path,
+                type="str", nargs=1,
+                help='alternate directory to store compiled templates')
+
+  op.add_option('--base-extends-package', default=None)
+  op.add_option('--extract-message-catalogue', action='store_true',
+                default=False)
+  op.add_option('--message-catalogue-file', default=None,
+                action="callback", callback=validate_path,
+                type="str", nargs=1,
+                help='file to use as the message catalogue')
+  op.add_option('--locale', default='')
+
+  (options, args) = op.parse_args()
+
+  init_psyco(options)
+
+  compiler_args = Compiler.args_from_optparse(options)
+  compiler = Compiler(**compiler_args)
+  
+  for filename in args:
+    process_file(compiler, filename, options)
