@@ -7,6 +7,7 @@ from spitfire.compiler.analyzer import *
 import __builtin__
 builtin_names = vars(__builtin__)
 
+
 class OptimizationAnalyzer(object):
   def __init__(self, ast_root, options, compiler):
     self.ast_root = ast_root
@@ -32,11 +33,15 @@ class OptimizationAnalyzer(object):
     return
   analyzeLiteralNode = skip_analyze_node
   analyzeIdentifierNode = skip_analyze_node
-  analyzeTargetNode = skip_analyze_node
+  an3alyzeTargetNode = skip_analyze_node
   
   def default_optimize_node(self, node):
-    #print "default_optimize_node", type(node)
+    # print "default_optimize_node", type(node)
     self.unoptimized_node_types.add(type(node))
+    return
+
+  def analyzeParameterNode(self, parameter):
+    self.visit_ast(parameter.default, parameter)
     return
   
   def analyzeTemplateNode(self, template):
@@ -61,9 +66,9 @@ class OptimizationAnalyzer(object):
 
   def analyzeAssignNode(self, node):
     _identifier = IdentifierNode(node.left.name)
-    function = self.get_parent_function(node)
-    function.local_identifiers.append(_identifier)
-    # note: this hack is here so you can partially ananlyze alias nodes
+    scope = self.get_parent_scope(node)
+    scope.local_identifiers.append(_identifier)
+    # note: this hack is here so you can partially analyze alias nodes
     # without double-processing
     if node.right:
       self.visit_ast(node.right, node)
@@ -142,11 +147,21 @@ class OptimizationAnalyzer(object):
       node = node.parent
     return None
 
-  def get_parent_function(self, node):
+  def get_parent_scope(self, node):
+    node_stack = [node]
     node = node.parent
     while node is not None:
       if type(node) == FunctionNode:
         return node
+      elif type(node) == IfNode:
+        # elements of the test clause need to reference the next scope
+        # "up" - usually the function
+        # fixme: if we ever implement "elif" this will have to get fixed up
+        if node_stack[-1] != node.test_expression:
+          return node.scope
+      elif type(node) == ElseNode:
+        return node.scope
+      node_stack.append(node)
       node = node.parent
     raise SemanticAnalyzerError("expected a parent function")
 
@@ -155,13 +170,10 @@ class OptimizationAnalyzer(object):
     insert_marker = node
     node = node.parent
     while node is not None:
-      if isinstance(node, (FunctionNode, ForNode)):
+      if isinstance(node, (FunctionNode, ForNode, IfNode, ElseNode)):
         if insert_marker in node.child_nodes:
           return node, insert_marker
-      elif isinstance(node, (IfNode,)):
-        if original_node in node.child_nodes:
-          return node, insert_marker
-        
+          
       insert_marker = node
       node = node.parent
     raise SemanticAnalyzerError("expected a parent block")
@@ -207,20 +219,20 @@ class OptimizationAnalyzer(object):
     if type(node.expression) != IdentifierNode:
       return
     
-    function = self.get_parent_function(node)
-    alias = function.aliased_expression_map.get(node)
+    scope = self.get_parent_scope(node)
+    alias = scope.aliased_expression_map.get(node)
     if not alias:
       if node.expression.name[0] != '_':
         alias_format = '_%s_%s'
       else:
         alias_format = '%s_%s'
       alias_name = alias_format % (node.expression.name, node.name)
-      if alias_name in function.alias_name_set:
+      if alias_name in scope.alias_name_set:
         print "duplicate alias_name", alias_name
         return
       
       alias = IdentifierNode(alias_name)
-      function.aliased_expression_map[node] = alias
+      scope.aliased_expression_map[node] = alias
       assign_alias = AssignNode(alias, node)
       parent_loop = self.get_parent_loop(node)
       # fixme: check to see if this expression is loop-invariant
@@ -243,8 +255,9 @@ class OptimizationAnalyzer(object):
     self.visit_ast(if_node.test_expression, if_node)
     for n in if_node.child_nodes:
       self.visit_ast(n, if_node)
-    for n in if_node.else_:
-      self.visit_ast(n, if_node)
+
+    for n in if_node.else_.child_nodes:
+      self.visit_ast(n, if_node.else_)
 
   def analyzeBinOpNode(self, n):
     self.visit_ast(n.left, n)

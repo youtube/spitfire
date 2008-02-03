@@ -139,7 +139,7 @@ class SpitfireTemplate(object):
   def filter_function(self, value, placeholder_function=None):
     #print "filter_function", placeholder_function, self._filter_function, "value: '%s'" % value
     if (placeholder_function is not None and
-        getattr(placeholder_function, 'template_method', False)):
+        getattr(placeholder_function, 'skip_filter', False)):
       return value
     else:
       value = self._filter_function(value)
@@ -162,4 +162,5 @@ def enable_psyco(template_class):
 
 def template_method(function):
   function.template_method = True
+  function.skip_filter = True
   return function

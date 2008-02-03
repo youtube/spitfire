@@ -133,9 +133,9 @@ class TreeVisitor(object):
     for n in node.child_nodes:
       if_node.extend(self.build_text(n))
     visit_nodes = [if_node]
-    if node.else_:
+    if node.else_.child_nodes:
       else_visit_node = VisitNode('else')
-      for n in node.else_:
+      for n in node.else_.child_nodes:
         else_visit_node.extend(self.build_text(n))
       visit_nodes.append(else_visit_node)
     return visit_nodes

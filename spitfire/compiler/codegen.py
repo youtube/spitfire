@@ -110,7 +110,7 @@ class CodeGenerator(object):
       class_code.append_line('')
 
     # if we aren't extending a template, build out the main function
-    if not node.extends_nodes and not node.library:
+    if (not node.extends_nodes and not node.library) or node.implements:
       class_code.extend(self.build_code(node.main_function))
 
 
@@ -173,9 +173,9 @@ class CodeGenerator(object):
     for n in node.child_nodes:
       if_code_node.extend(self.build_code(n))
     code_nodes = [if_code_node]
-    if node.else_:
+    if node.else_.child_nodes:
       else_code_node = CodeNode('else:')
-      for n in node.else_:
+      for n in node.else_.child_nodes:
         else_code_node.extend(self.build_code(n))
       code_nodes.append(else_code_node)
     return code_nodes

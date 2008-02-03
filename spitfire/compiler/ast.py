@@ -165,6 +165,17 @@ class CallFunctionNode(ASTNode):
       self.expression = replacement_node
     else:
       raise Exception("expression doesn't mactch replacement")
+
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.expression == node.expression and
+                self.arg_list == node.arg_list and
+                self.child_nodes == node.child_nodes)
+
+  def __hash__(self):
+    return hash('%s%s%s%s' %
+                (type(self), hash(self.expression), hash(self.arg_list),
+                 hash(tuple(self.child_nodes))))
     
   def __str__(self):
     return '%s expr:%s arg_list:%s' % (
@@ -214,9 +225,6 @@ class ForNode(ASTNode):
     return ('%s target_list:%s expr_list:%s' %
             (self.__class__.__name__, self.target_list, self.expression_list))
 
-# fixme: why is this necessary?
-class FunctionInitNode(ASTNode):
-  pass
 
 class FunctionNode(ASTNode):
   def __init__(self, *pargs, **kargs):
@@ -293,7 +301,8 @@ class IfNode(ASTNode):
   def __init__(self, test_expression=None):
     ASTNode.__init__(self)
     self.test_expression = test_expression
-    self.else_ = NodeList()
+    self.else_ = ElseNode(self)
+    self.scope = Scope()
 
   def replace(self, node, replacement_node):
     if self.test_expression is node:
@@ -304,6 +313,12 @@ class IfNode(ASTNode):
   def __str__(self):
     return '%s test_expr:%s\nelse:\n  %s' % (
       self.__class__.__name__, self.test_expression, self.else_)
+
+class ElseNode(ASTNode):
+  def __init__(self, parent=None):
+    ASTNode.__init__(self)
+    self.parent = parent
+    self.scope = Scope()
 
 class ImplementsNode(ASTNode):
   pass
@@ -465,7 +480,6 @@ class FragmentNode(ASTNode):
   pass
 
 class TemplateNode(ASTNode):
-  library = False
   def __init__(self, classname=None, **kargs):
     ASTNode.__init__(self, **kargs)
     # fixme: need to get the classname from somewhere else
@@ -478,6 +492,9 @@ class TemplateNode(ASTNode):
     self.import_nodes = NodeList()
     self.from_nodes = NodeList()
     self.attr_nodes = NodeList()
+    self.library = False
+    self.implements = False
+
   
   def __str__(self):
     return '%s\nimport:%s\nfrom:%s\nextends:%s\nmain:%s' % (
@@ -501,6 +518,21 @@ class UnaryOpNode(ASTNode):
       self.expression = replacement_node
     else:
       raise Exception("expression does not match target")
+
+
+# save state related to scoping rules for code blocks
+# this is kind of a hack. i am semi-emulating python scoping rules, which are
+# a bit funky. probably, i should have defined a set of scope rules for
+# templates and shoe-horned that into python
+class Scope(object):
+  def __init__(self, name=None):
+    self.name = name
+    self.local_identifiers = []
+    self.aliased_expression_map = {}
+    self.alias_name_set = set()
+
+  def __str__(self):
+    return "<Scope %s>" % self.name
 
 # this is sort of a hack to support optional white space nodes inside the
 # parse tree.  the reality is that this probably requires a more complex

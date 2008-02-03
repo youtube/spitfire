@@ -58,6 +58,8 @@ Optimization:
    * there are some subtleties here
  * no need to cache placeholders when they are already references to local
    scope variables (see bigtable test)
+ * when caching a resolved placeholder inside an if block, hoist it up to the
+   parent scope if is independent of the test expression
  * do a better job of hoisting loop-invariant code (see filter function
    resolution in bigtable test)
  * caching directive that tells you to memoize a result based on a function
@@ -120,6 +122,10 @@ Cleanup:
    * $varname should mean 'look this up in the search_list data'
    * parameter_list, macro_parameter_list and placeholder_parameter_list should
      be made into one or two variants
+ * fix FunctionNode so that it uses Scope object
+ * possibly change self.resolve_placeholder so that it is an ASTNode that makes
+   it through analysis and optimization and has a custom code generator. that
+   might simplify certain things.
 
 Bugs:
  * py:conditional directives that are skipped still output a good amount of

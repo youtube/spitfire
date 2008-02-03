@@ -168,7 +168,7 @@ parser SpitfireParser:
         [ '#else' CLOSE_DIRECTIVE
           {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
           ( block<<start>> {{ _last_condition_node.else_.append(block) }} ) *
-          {{ make_optional(_last_condition_node.else_) }}
+          {{ make_optional(_last_condition_node.else_.child_nodes) }}
         ]
         END_DIRECTIVE SPACE 'if' CLOSE_DIRECTIVE {{ _node_list.append(_if_node) }}
         |
