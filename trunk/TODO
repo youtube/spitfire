@@ -141,3 +141,5 @@ test line $x.id : $x.name
 #end for
 
  * Can't have a literal '#' inside a macro block
+ * tests don't seem to run under Python 2.5.x for some reason. looks like some
+   sort of issue with the import functionality.

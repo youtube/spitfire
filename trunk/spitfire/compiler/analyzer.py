@@ -39,9 +39,7 @@ class AnalyzerOptions(object):
     # reference for faster subsequent retrieval
     self.cache_resolved_placeholders = False
 
-
     self.enable_psyco = False
-    
     self.__dict__.update(kargs)
 
   def update(self, **kargs):
@@ -50,10 +48,12 @@ class AnalyzerOptions(object):
 default_options = AnalyzerOptions()
 o1_options = copy.copy(default_options)
 o1_options.collapse_adjacent_text = True
+
 o2_options = copy.copy(o1_options)
 o2_options.alias_invariants = True
 o2_options.directly_access_defined_variables = True
 o2_options.cache_resolved_placeholders = True
+
 o3_options = copy.copy(o2_options)
 o3_options.enable_psyco = True
 
@@ -107,7 +107,7 @@ class SemanticAnalyzer(object):
     return ast_node_list
 
   def default_analyze_node(self, pnode):
-    #print "default_analyze_node", type(pnode)
+    # print "default_analyze_node", type(pnode)
     return [pnode.copy()]
 
   # some nodes just don't need analysis
@@ -180,6 +180,12 @@ class SemanticAnalyzer(object):
     for n in pnode:
       list_node.extend(self.build_ast(n))
     return [list_node]
+
+  def analyzeTupleLiteralNode(self, pnode):
+    tuple_node = TupleLiteralNode()
+    for n in pnode.child_nodes:
+      tuple_node.extend(self.build_ast(n))
+    return [tuple_node]
 
   def analyzeParameterNode(self, pnode):
     param = pnode.copy()
@@ -386,6 +392,8 @@ class SemanticAnalyzer(object):
 
 
   def analyzePlaceholderNode(self, pnode):
+    return [pnode]
+  
     f = CallFunctionNode(GetAttrNode(IdentifierNode('self'),
                                      'resolve_placeholder'))
     f.arg_list.append(LiteralNode(pnode.name))

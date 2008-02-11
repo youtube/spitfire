@@ -97,43 +97,48 @@ class OptimizationAnalyzer(object):
     for n in arg_list_node:
       self.visit_ast(n, arg_list_node)
 
+  def analyzeTupleLiteralNode(self, tuple_literal_node):
+    for n in tuple_literal_node.child_nodes:
+      self.visit_ast(n, tuple_literal_node)
+
   def analyzeCallFunctionNode(self, function_call):
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
+
+  def analyzePlaceholderNode(self, placeholder):
     if self.options.directly_access_defined_variables:
       # when the analyzer finds a PlaceholderNode and generates a function
       # call out of it, i annotate an IdentifierNode with the original
       # placeholder name
-      local_var = function_call.hint_map.get('resolve_placeholder', None)
-      if local_var is not None:
-        cached_placeholder = IdentifierNode('_rph_%s' % local_var.name)
-        local_identifiers = self.get_local_identifiers(function_call)
-        # print "local_identifiers", local_identifiers
-        if local_var in local_identifiers:
-          function_call.parent.replace(function_call, local_var)
-        elif cached_placeholder in local_identifiers:
-          function_call.parent.replace(function_call, cached_placeholder)
-        elif local_var.name in builtin_names:
-          function_call.parent.replace(function_call,
-                                       IdentifierNode(local_var.name))
-        elif self.options.cache_resolved_placeholders:
-          insert_scope, insert_marker = self.get_insert_block_and_point(
-            function_call)
-          # note: this is sketchy enough that it requires some explanation
-          # basically, you need to visit the node for the parent function to
-          # get the memo that this value is aliased. unfortunately, the naive
-          # case of just calling visit_ast blows up since it tries to double
-          # analyze a certain set of nodes. you only really need to analyze
-          # that the assignment took place, then you can safely alias the
-          # actual function call. definitely sketchy, but it does seem to work
-          assign_rph = AssignNode(cached_placeholder, None)
-          #print "optimize scope:", insert_scope
-          #print "optimize marker:", insert_marker
-          insert_scope.insert_before(
-            insert_marker, assign_rph)
-          self.visit_ast(assign_rph, insert_scope)
-          assign_rph.right = function_call
-          function_call.parent.replace(function_call, cached_placeholder)
+      local_var = IdentifierNode(placeholder.name)
+      cached_placeholder = IdentifierNode('_rph_%s' % local_var.name)
+      local_identifiers = self.get_local_identifiers(placeholder)
+      # print "local_identifiers", local_identifiers
+      if local_var in local_identifiers:
+        placeholder.parent.replace(placeholder, local_var)
+      elif cached_placeholder in local_identifiers:
+        placeholder.parent.replace(placeholder, cached_placeholder)
+      elif local_var.name in builtin_names:
+        placeholder.parent.replace(placeholder,
+                                   IdentifierNode(local_var.name))
+      elif self.options.cache_resolved_placeholders:
+        insert_scope, insert_marker = self.get_insert_block_and_point(
+          placeholder)
+        # note: this is sketchy enough that it requires some explanation
+        # basically, you need to visit the node for the parent function to
+        # get the memo that this value is aliased. unfortunately, the naive
+        # case of just calling visit_ast blows up since it tries to double
+        # analyze a certain set of nodes. you only really need to analyze
+        # that the assignment took place, then you can safely alias the
+        # actual function call. definitely sketchy, but it does seem to work
+        assign_rph = AssignNode(cached_placeholder, None)
+        #print "optimize scope:", insert_scope
+        #print "optimize marker:", insert_marker
+        insert_scope.insert_before(
+          insert_marker, assign_rph)
+        self.visit_ast(assign_rph, insert_scope)
+        assign_rph.right = placeholder
+        placeholder.parent.replace(placeholder, cached_placeholder)    
       
   def analyzePlaceholderSubstitutionNode(self, placeholder_substitution):
     self.visit_ast(placeholder_substitution.expression,
