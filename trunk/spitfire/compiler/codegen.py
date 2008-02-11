@@ -31,7 +31,8 @@ class CodeNode(object):
 class CodeGenerator(object):
   indent_str = '  '
   indent_level = 0
-  
+
+  # options - an AnalyzerOptions object
   def __init__(self, ast_root, options=None):
     self.ast_root = ast_root
     self.options = options
@@ -94,6 +95,7 @@ class CodeGenerator(object):
     module_code.append_line('import spitfire.runtime')
     module_code.append_line('import spitfire.runtime.template')
 
+    module_code.append_line('from spitfire.runtime.udn import resolve_placeholder')
     module_code.append_line('from spitfire.runtime.udn import resolve_udn')
     module_code.append_line('from spitfire.runtime.template import template_method')
     module_code.append_line('')
@@ -239,9 +241,13 @@ class CodeGenerator(object):
     name = node.name
     if name in ('has_var', 'get_var'):
       return [CodeNode("self.%(name)s" % vars())]
+    elif self.options and self.options.directly_access_defined_variables:
+      return [CodeNode(
+        "resolve_placeholder('%(name)s', template=self, global_vars=_globals)"
+        % vars())]
     else:
       return [CodeNode(
-        "self.resolve_placeholder('%(name)s', local_vars=locals(), global_vars=globals())"
+        "resolve_placeholder('%(name)s', template=self, local_vars=locals(), global_vars=_globals)"
         % vars())]
 
   def codegenASTReturnNode(self, node):

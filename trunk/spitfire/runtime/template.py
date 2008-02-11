@@ -1,22 +1,12 @@
 # an 'abstract' base class for a template, seems like a good idea for now
 
 #import StringIO
-import __builtin__
 import cStringIO as StringIO
-import spitfire.runtime.repeater
 import spitfire.runtime.filters
+import spitfire.runtime.repeater
 
-# sentinel class, in case you want to have a default that is None
-class __Unspecified(object):
-  pass
-Unspecified = __Unspecified()
-
-class __UnresolvedPlaceholder(object):
-  pass
-UnresolvedPlaceholder = __UnresolvedPlaceholder()
-
-class PlaceholderError(KeyError):
-  pass
+from spitfire.runtime.udn import (
+  resolve_placeholder, Unspecified, UnresolvedPlaceholder)
 
 
 # NOTE: in some instances, this is faster than using cStringIO
@@ -46,65 +36,12 @@ class SpitfireTemplate(object):
     if default_filter is not None:
       self._filter_function = default_filter
     
-  # FIXME: i'm sure this is a little pokey - might be able to speed this up
-  # somehow. not sure if it's better to look before leaping or raise.
-  # might also want to let users tune whether to prefer keys or attributes
-  def resolve_placeholder(self, name, local_vars=None, global_vars=None,
-                          default=Unspecified):
-    if local_vars is not None:
-      try:
-        return local_vars[name]
-      except TypeError:
-        raise PlaceholderError('unexpected type for local_vars: %s' %
-                               type(local_vars))
-      except KeyError:
-        pass
-
-    try:
-      return getattr(self, name)
-    except AttributeError:
-      pass
-
-    if self.search_list is not None:
-      for scope in self.search_list:
-        try:
-          return scope[name]
-#           raise PlaceholderError('unexpected type: %s %s' %
-#                                  (type(scope), vars(scope)))
-        except (TypeError, KeyError):
-          pass
-        
-        try:
-          return getattr(scope, name)
-        except AttributeError:
-          pass
-
-    if global_vars is not None:
-      try:
-        return global_vars[name]
-      except TypeError:
-        raise PlaceholderError('unexpected type for global_vars: %s' %
-                               type(global_vars))
-      except KeyError:
-        pass
-
-    # fixme: finally try to resolve builtins - this should be configurable
-    # if you compile optimized modes, this isn't necessary
-    default = getattr(__builtin__, name, default)
-
-    if default is not Unspecified:
-      return default
-    else:
-      raise PlaceholderError(name,
-                             [get_available_placeholders(scope)
-                              for scope in self.search_list])
 
   # fixme: this function seems kind of like a mess, arg ordering etc
   def get_var(self, name, default=Unspecified, local_vars=None,
               global_vars=None):
-    return self.resolve_placeholder(name, local_vars=local_vars,
-                                    global_vars=global_vars,
-                                    default=default)
+    return resolve_placeholder(name, template=self, local_vars=local_vars,
+                               global_vars=global_vars, default=default)
 
 
   def has_var(self, name, local_vars=None, global_vars=None):
