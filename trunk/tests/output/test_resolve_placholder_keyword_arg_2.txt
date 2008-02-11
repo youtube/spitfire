@@ -1,0 +1,11 @@
+
+crap: local value 0 0
+
+crap: local value 1 1
+
+crap: local value 2 2
+
+crap: local value 3 3
+
+crap: local value 4 4
+
