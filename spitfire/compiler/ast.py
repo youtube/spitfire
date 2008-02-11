@@ -63,7 +63,10 @@ class ASTNode(object):
     self.child_nodes.insert(idx, insert_node)
 
   def replace(self, marker_node, insert_node_list):
-    idx = self.child_nodes.index(marker_node)
+    try:
+      idx = self.child_nodes.index(marker_node)
+    except ValueError:
+      raise ValueError("can't find child node %s in %s" % (marker_node, self))
     try:
       for n in reversed(insert_node_list):
         self.child_nodes.insert(idx, n)
@@ -384,6 +387,12 @@ class ParameterNode(ASTNode):
   def __init__(self, name, default=None):
     ASTNode.__init__(self, name)
     self.default = default
+
+  def replace(self, node, replacement_node):
+    if self.default is node:
+      self.default = replacement_node
+    else:
+      raise Exception("default expression does not match target")
 
   def __str__(self):
     return '%s %s' % (ASTNode.__str__(self), self.default)

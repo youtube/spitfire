@@ -1,0 +1,8 @@
+#def crap($value=None)
+crap: $value
+#end def
+
+#for $i, $j in enumerate(range(5))
+#set $test_value = 'local value %s %s' % ($i, $j)
+$crap(value=$test_value)
+#end for

@@ -235,6 +235,15 @@ class CodeGenerator(object):
     name = node.name
     return [CodeNode("resolve_udn(%(expression)s, '%(name)s')" % vars())]
 
+  def codegenASTPlaceholderNode(self, node):
+    name = node.name
+    if name in ('has_var', 'get_var'):
+      return [CodeNode("self.%(name)s" % vars())]
+    else:
+      return [CodeNode(
+        "self.resolve_placeholder('%(name)s', local_vars=locals(), global_vars=globals())"
+        % vars())]
+
   def codegenASTReturnNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
     return [CodeNode("return %(expression)s" % vars())]
