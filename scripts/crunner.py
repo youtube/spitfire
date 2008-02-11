@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import imp
+import logging
 import os.path
 import sys
 import traceback
@@ -34,6 +35,7 @@ def process_file(filename, options):
     else:
       print >> sys.stderr, ' '.join(args)
 
+  print_output("processing", filename)
   opt = analyzer.optimizer_map[options.optimizer_level]
   opt.update(ignore_optional_whitespace=options.ignore_optional_whitespace)
 
@@ -46,7 +48,7 @@ def process_file(filename, options):
       print "parse_root walk"
       parse_root = spitfire.compiler.util.parse_file(filename, options.xhtml)
       #print_tree_walk(parse_root)
-      #print_tree(parse_root)
+      print_tree(parse_root)
     
     if not options.quiet:
       print "ast_root walk"
@@ -82,12 +84,16 @@ def process_file(filename, options):
       
     raised_exception = False
     try:
+      # fixme: this import line seems to fix some dopey issue with python 2.5
+      #import tests
       module_name='tests.%s' % classname
       class_object = spitfire.compiler.util.load_template_file(
         filename, module_name, options=opt, xhtml=options.xhtml)
       template = class_object(search_list=search_list)
       current_output = template.main().encode('utf8')
     except Exception, e:
+      if not options.quiet:
+        logging.exception("test error:")
       current_output = str(e)
       raised_exception = True
 
