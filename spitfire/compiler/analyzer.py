@@ -424,17 +424,6 @@ class SemanticAnalyzer(object):
   def analyzeCallFunctionNode(self, pnode):
     # print "analyzeCallFunctionNode", pnode.expression.name
     fn = pnode.copy()
-    # fixme: the problem here is that this means that some fallout
-    # from python code generation is percolating into the semantic
-    # analysis phase. i think that's wrong - but i'm not 100% sure
-    if (isinstance(fn.expression, PlaceholderNode) and
-        fn.expression.name in ('get_var', 'has_var')):
-      # fixme: total cheat here, also clouding the optimization layer
-      method_name = fn.expression.name
-      fn.expression = GetAttrNode(IdentifierNode('self'), method_name)
-      if not self.options.directly_access_defined_variables:
-        fn.arg_list.append(t_local_vars())
-      fn.arg_list.append(t_global_vars())
     fn.expression = self.build_ast(fn.expression)[0]
     fn.arg_list = self.build_ast(fn.arg_list)[0]
     return [fn]

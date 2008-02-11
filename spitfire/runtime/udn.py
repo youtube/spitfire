@@ -1,16 +1,32 @@
-# resolve unified-dotted-notation
+# resolve unified-dotted-notation and placeholders
 # this means search objects and dictionaries in the same way
 # using attribute-like syntax from python
 # syntactically, 'name' will always be a valid identifier - so you won't get
 # name='my attribute' - it must be a legal python identifier
+
+import __builtin__
+
 
 # create a sentinel value for missing attributes
 class __MissingAttr(object):
   pass
 MissingAttr = __MissingAttr()
 
+# sentinel class, in case you want to have a default that is None
+class __Unspecified(object):
+  pass
+Unspecified = __Unspecified()
+
+class __UnresolvedPlaceholder(object):
+  pass
+UnresolvedPlaceholder = __UnresolvedPlaceholder()
+
+class PlaceholderError(KeyError):
+  pass
+
 class UDNResolveError(Exception):
   pass
+
 
 # TODO - optimize performance
 def resolve_udn_prefer_attr(_object, name):
@@ -53,5 +69,63 @@ def resolve_udn_prefer_attr3(_object, name):
     return _object[name]
   except (KeyError, TypeError):
     raise UDNResolveError(name, dir(_object))
+
+# FIXME: i'm sure this is a little pokey - might be able to speed this up
+# somehow. not sure if it's better to look before leaping or raise.
+# might also want to let users tune whether to prefer keys or attributes
+def resolve_placeholder(name, template=None, local_vars=None, global_vars=None,
+                        default=Unspecified):
+  if local_vars is not None:
+    try:
+      return local_vars[name]
+    except TypeError:
+      raise PlaceholderError('unexpected type for local_vars: %s' %
+                             type(local_vars))
+    except KeyError:
+      pass
+
+  try:
+    return getattr(template, name)
+  except AttributeError:
+    pass
+
+  if template.search_list is not None:
+    for scope in template.search_list:
+      try:
+        return scope[name]
+      except (TypeError, KeyError):
+        pass
+
+      try:
+        return getattr(scope, name)
+      except AttributeError:
+        pass
+
+  if global_vars is not None:
+    try:
+      return global_vars[name]
+    except TypeError:
+      raise PlaceholderError('unexpected type for global_vars: %s' %
+                             type(global_vars))
+    except KeyError:
+      pass
+
+  # fixme: finally try to resolve builtins - this should be configurable
+  # if you compile optimized modes, this isn't necessary
+  default = getattr(__builtin__, name, default)
+
+  if default is not Unspecified:
+    return default
+  else:
+    raise PlaceholderError(name,
+                           [get_available_placeholders(scope)
+                            for scope in template.search_list])
+
+def get_available_placeholders(scope):
+  if isinstance(scope, dict):
+    return scope.keys()
+  else:
+    return dir(scope)
+
 
 resolve_udn = resolve_udn_prefer_attr3

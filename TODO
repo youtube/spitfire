@@ -94,6 +94,11 @@ Variant 2:
    * Variant 2 is universally the slowest
 
 Cleanup:
+ * get_var/has_var seem to work in some cases, but not others. i think to be
+   correct, i should reimplement along the lines of resolve_placeholder and
+   explicitly pass in the variables needed for context.
+   * need to add tests for doing get_var on something defined in the local
+     scope via a #set directive.
  * revisit all uses of default_analyze_node - usually this is where
    unimplemented functionality lurks
  * front-end mode is a bit annoying - need to better detect xhtml vs text mode
@@ -104,8 +109,6 @@ Cleanup:
    * how many times to I really have to make a copy of a node?
      * should I just modify inline after doing a tree-wise deep copy?
  * make the grammar file as simple as possible
- * why do i have 'code gen' in the semantic analysis phase? passing around
-   variables etc for get_var/has_var seems ugly.
  * crunner is a bit foul - might be better to have separate front end for tests
    * borrow more code from spitfire-compile
  * EatPrevious node is a vile thing - make the DOM scanner look ahead 1 or 2
@@ -114,18 +117,12 @@ Cleanup:
  * ideally, analysis and optimization should be distinct steps and code paths.
    i added an optimization for direct variable access that taints the analysis
    module, but it was much easier to do it there for the time being.
- * rewrite resolve_placeholder as a module function that happens to take
-   'self' as an argument - remove the need to use a bound function, but still
-   allows you to search the 'self' object 
  * make the syntax consistent for argument passing inside a template
    * right now, $varname is required in placeholders, macros and definitions
    * $varname should mean 'look this up in the search_list data'
    * parameter_list, macro_parameter_list and placeholder_parameter_list should
      be made into one or two variants
  * fix FunctionNode so that it uses Scope object
- * possibly change self.resolve_placeholder so that it is an ASTNode that makes
-   it through analysis and optimization and has a custom code generator. that
-   might simplify certain things.
 
 Bugs:
  * py:conditional directives that are skipped still output a good amount of

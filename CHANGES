@@ -3,7 +3,14 @@ changed placeholder handling during the analysis/optimization/codegen process.
 this more closely match how GetUDNNode works and it actually greatly simplifies
 a few parts of the optimizer. overall a win and fixes a couple of subtle bugs.
 
-fixed optimization for keyword argument values.
+fixed optimization for keyword argument values and literal tuples.  probably a
+literal tuple in a template should not be encouraged, but it does have value.
+added some tests for this as well naturally.
+
+reimplement resolve_placeholder as a module function to make it as similar to
+resolve_udn as possible. also fixed a slight performance regression in the
+generated code for resolve_placeholder.
+
 
 0.6.14 - 2008-02-02
 reimplemented resolve_placeholder in few different ways to test and
