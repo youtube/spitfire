@@ -19,9 +19,12 @@ Functionality:
      enforcement - it just doesn't generate a main method.
  * import raw file include?
  * implement array slicing?
+   * probably not - this is something that usually indicates wasted work on
+     the backend, so maybe it's best not to encourage that
  * add native support for 'elif' clause
    * is this a codegen or parsing problem?
  * while loop (repeat?) what is the difference?
+   * add repeat syntax and do the clever repeat object from TAL
  * test keyword args to functions with literals and complex placeholders
    * keyword syntax is ambiguous between definition and calling - using $
      should be more consistent. right now you must have it in the def, but you
@@ -94,11 +97,6 @@ Variant 2:
    * Variant 2 is universally the slowest
 
 Cleanup:
- * get_var/has_var seem to work in some cases, but not others. i think to be
-   correct, i should reimplement along the lines of resolve_placeholder and
-   explicitly pass in the variables needed for context.
-   * need to add tests for doing get_var on something defined in the local
-     scope via a #set directive.
  * revisit all uses of default_analyze_node - usually this is where
    unimplemented functionality lurks
  * front-end mode is a bit annoying - need to better detect xhtml vs text mode
@@ -114,9 +112,6 @@ Cleanup:
  * EatPrevious node is a vile thing - make the DOM scanner look ahead 1 or 2
    nodes and determine what to do with optional whitespace nodes before
    processing them
- * ideally, analysis and optimization should be distinct steps and code paths.
-   i added an optimization for direct variable access that taints the analysis
-   module, but it was much easier to do it there for the time being.
  * make the syntax consistent for argument passing inside a template
    * right now, $varname is required in placeholders, macros and definitions
    * $varname should mean 'look this up in the search_list data'
