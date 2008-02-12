@@ -9,7 +9,10 @@ added some tests for this as well naturally.
 
 reimplement resolve_placeholder as a module function to make it as similar to
 resolve_udn as possible. also fixed a slight performance regression in the
-generated code for resolve_placeholder.
+generated code for resolve_placeholder. 
+
+fixed up get_var/has_var to be consistent with Cheetah and have a sane list of
+arguments.
 
 
 0.6.14 - 2008-02-02

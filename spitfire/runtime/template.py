@@ -6,7 +6,7 @@ import spitfire.runtime.filters
 import spitfire.runtime.repeater
 
 from spitfire.runtime.udn import (
-  resolve_placeholder, Unspecified, UnresolvedPlaceholder)
+  get_var_from_search_list, resolve_placeholder, UnresolvedPlaceholder)
 
 
 # NOTE: in some instances, this is faster than using cStringIO
@@ -37,38 +37,19 @@ class SpitfireTemplate(object):
       self._filter_function = default_filter
     
 
-  # fixme: this function seems kind of like a mess, arg ordering etc
-  def get_var(self, name, default=Unspecified, local_vars=None,
-              global_vars=None):
-    return resolve_placeholder(name, template=self, local_vars=local_vars,
-                               global_vars=global_vars, default=default)
+  def get_var(self, name, default=None):
+    if self.search_list is not None:
+      ph = get_var_from_search_list(name, self.search_list)
+      if ph is not UnresolvedPlaceholder:
+        return ph
+    return default
 
 
-  def has_var(self, name, local_vars=None, global_vars=None):
-    var = self.get_var(name, default=UnresolvedPlaceholder,
-                       local_vars=local_vars, global_vars=global_vars) 
+  def has_var(self, name):
+    var = self.get_var(name, default=UnresolvedPlaceholder) 
     return var is not UnresolvedPlaceholder
-      
 
-# this function has some problems - better to just use consistent logic to
-# resolve this
-#   def has_var(self, name, local_vars=None, global_vars=None):
-#     if local_vars is not None and name in local_vars:
-#       return True
-#     if global_vars is not None and name in global_vars:
-#       return True
-
-#     if hasattr(self, name):
-#       return True
-
-#     if self.search_list is not None:
-#       for scope in self.search_list:
-#         if name in scope:
-#           return True
-#         if hasattr(scope, name):
-#           return True
-#     return False
-
+  
   # wrap the underlying filter call so that items don't get filtered multiple
   # times (avoids double escaping)
   # fixme: this could be a hotspot, having to call getattr all the time seems
@@ -86,11 +67,6 @@ class SpitfireTemplate(object):
   def new_buffer():
     return BufferIO()
 
-def get_available_placeholders(scope):
-  if isinstance(scope, dict):
-    return scope.keys()
-  else:
-    return dir(scope)
 
 def enable_psyco(template_class):
   import psyco

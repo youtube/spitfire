@@ -84,22 +84,16 @@ def resolve_placeholder(name, template=None, local_vars=None, global_vars=None,
     except KeyError:
       pass
 
-  try:
-    return getattr(template, name)
-  except AttributeError:
-    pass
+  if template is not None:
+    try:
+      return getattr(template, name)
+    except AttributeError:
+      pass
 
   if template.search_list is not None:
-    for scope in template.search_list:
-      try:
-        return scope[name]
-      except (TypeError, KeyError):
-        pass
-
-      try:
-        return getattr(scope, name)
-      except AttributeError:
-        pass
+    ph = get_var_from_search_list(name, template.search_list)
+    if ph is not UnresolvedPlaceholder:
+      return ph
 
   if global_vars is not None:
     try:
@@ -120,6 +114,20 @@ def resolve_placeholder(name, template=None, local_vars=None, global_vars=None,
     raise PlaceholderError(name,
                            [get_available_placeholders(scope)
                             for scope in template.search_list])
+
+def get_var_from_search_list(name, search_list):
+  for scope in search_list:
+    try:
+      return scope[name]
+    except (TypeError, KeyError):
+      pass
+
+    try:
+      return getattr(scope, name)
+    except AttributeError:
+      pass
+  return UnresolvedPlaceholder
+
 
 def get_available_placeholders(scope):
   if isinstance(scope, dict):
