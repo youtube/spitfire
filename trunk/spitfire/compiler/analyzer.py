@@ -393,16 +393,6 @@ class SemanticAnalyzer(object):
 
   def analyzePlaceholderNode(self, pnode):
     return [pnode]
-  
-    f = CallFunctionNode(GetAttrNode(IdentifierNode('self'),
-                                     'resolve_placeholder'))
-    f.arg_list.append(LiteralNode(pnode.name))
-    # fixme: clouding the optimization layer
-    if not self.options.directly_access_defined_variables:
-      f.arg_list.append(t_local_vars())
-    f.arg_list.append(t_global_vars())
-    f.hint_map['resolve_placeholder'] = IdentifierNode(pnode.name)
-    return self.build_ast(f)
 
   def analyzeBinOpNode(self, pnode):
     n = pnode.copy()
