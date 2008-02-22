@@ -1,4 +1,5 @@
 #summary a real-world Spitfire template
+#labels Featured
 
 This is a basic search template that I use a few hundred times a day in my desktop search tool.
 
