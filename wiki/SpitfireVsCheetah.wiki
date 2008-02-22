@@ -1,4 +1,5 @@
 #summary think cheetah
+#labels Featured
 
 = Introduction =
 
