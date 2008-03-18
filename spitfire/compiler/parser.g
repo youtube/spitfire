@@ -287,7 +287,14 @@ parser SpitfireParser:
 
   rule placeholder:
     START_PLACEHOLDER
-    [ ID {{ return PlaceholderNode(ID) }} ]
+    {{ _token_ = self._peek('ID') }}
+    {{ if _token_ == 'ID': return PlaceholderNode(self._scan('ID')) }}
+    # I had to manually hack this up - there is a problem in the parser
+    # generator (or my understanding of it) where the optional clause
+    # causes the parser to 'peek' at a bunch of extra tokens in what appears
+    # to be a context-insensitive way. this causes a problem with with the
+    # "ambiguous-in" test case.
+    # [ ID {{ return PlaceholderNode(ID) }} ]
     {{ return TextNode(START_PLACEHOLDER) }}
 
   rule target_list:
