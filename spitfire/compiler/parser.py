@@ -445,9 +445,8 @@ class SpitfireParser(Parser):
 
     def placeholder(self):
         START_PLACEHOLDER = self._scan('START_PLACEHOLDER')
-        if self._peek('ID', 'SPACE', 'ASSIGN_OPERATOR', 'DOT', 'OPEN_PAREN', 'OPEN_BRACKET', 'COMMA_DELIMITER', "'[ \\t]*in[ \\t]*'", 'CLOSE_PAREN', 'CLOSE_BRACKET', "'[ \\t]*\\*[ \\t]*'", "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'CLOSE_DIRECTIVE', 'END', 'COLON_DELIMITER', 'CLOSE_BRACE') == 'ID':
-            ID = self._scan('ID')
-            return PlaceholderNode(ID)
+        _token_ = self._peek('ID')
+        if _token_ == 'ID': return PlaceholderNode(self._scan('ID'))
         return TextNode(START_PLACEHOLDER)
 
     def target_list(self):
