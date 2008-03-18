@@ -1,3 +1,13 @@
+0.6.16 - 2008-03-18
+changed the placeholder grammar and added a test case for a particularly
+annoying ambiguity. it looks like it could be an error in either yapps2 or my
+understanding of how yapps2 handles optional clauses.  the temporary fix is to
+embed some python directly in the grammar to handle this case specially. there
+is a detailed comment there and the original code for the grammar is left
+commented out until such time as i can arrive at a satisfactory understanding
+of the core problem.
+
+
 0.6.15 - 2008-02-10
 changed placeholder handling during the analysis/optimization/codegen process.
 this more closely match how GetUDNNode works and it actually greatly simplifies
