@@ -33,7 +33,7 @@ class OptimizationAnalyzer(object):
     return
   analyzeLiteralNode = skip_analyze_node
   analyzeIdentifierNode = skip_analyze_node
-  an3alyzeTargetNode = skip_analyze_node
+  analyzeTargetNode = skip_analyze_node
   
   def default_optimize_node(self, node):
     # print "default_optimize_node", type(node)
