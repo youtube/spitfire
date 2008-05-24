@@ -1,3 +1,12 @@
+0.6.17 - 2008-05-24
+found a bug in the optimizer due to some half-baked techniques in the IfNode.
+the best fix is to disable this type of optimization (which I've done). the
+code emitted is now functional, but not optimal.  I've added an exermintal
+optimization type to -03 which uses a second pass on function blocks to hoist
+invariant aliases.  although this works in terms of a prototype, the initial
+code is iterative rather than recursive, so this is a problem for completeness.
+added a covering test case for the specific bug.
+
 0.6.16 - 2008-03-18
 changed the placeholder grammar and added a test case for a particularly
 annoying ambiguity. it looks like it could be an error in either yapps2 or my

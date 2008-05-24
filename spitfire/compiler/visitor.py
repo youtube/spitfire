@@ -128,8 +128,10 @@ class TreeVisitor(object):
 
   def visitASTIfNode(self, node):
     if_node = self.visitDefault(node)[0]
-    test_expression = VisitNode('test_expression', self.build_text(node.test_expression))
+    test_expression = VisitNode('test_expression',
+                                self.build_text(node.test_expression))
     if_node.append(test_expression)
+    #if_node.append(VisitNode(str(node.scope)))
     for n in node.child_nodes:
       if_node.extend(self.build_text(n))
     visit_nodes = [if_node]
@@ -210,6 +212,7 @@ class TreeVisitor(object):
     v = self.visitDefault(node)[0]
     if node.parameter_list:
       v.extend(self.build_text(node.parameter_list))
+    #v.append(VisitNode(str(node.scope)))
 
     for n in node.child_nodes:
       v.extend(self.build_text(n))

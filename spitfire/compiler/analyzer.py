@@ -39,6 +39,12 @@ class AnalyzerOptions(object):
     # reference for faster subsequent retrieval
     self.cache_resolved_placeholders = False
 
+    # if an alias has been generated in a conditional scope and it is also
+    # defined in the parent scope, hoist it above the conditional. this
+    # requires a two-pass optimization on functions, which adds time and
+    # complexity
+    self.hoist_conditional_aliases = False
+
     self.enable_psyco = False
     self.__dict__.update(kargs)
 
@@ -55,6 +61,7 @@ o2_options.directly_access_defined_variables = True
 o2_options.cache_resolved_placeholders = True
 
 o3_options = copy.copy(o2_options)
+o3_options.hoist_conditional_aliases = True
 o3_options.enable_psyco = True
 
 optimizer_map = {
