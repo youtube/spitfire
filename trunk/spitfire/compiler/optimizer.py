@@ -50,12 +50,52 @@ class OptimizationAnalyzer(object):
       self.visit_ast(n, template)
 
   def analyzeFunctionNode(self, function):
-    function.aliased_expression_map = {}
-    function.alias_name_set = set()
-    function.local_identifiers = [IdentifierNode(n.name)
-                                  for n in function.parameter_list]
+    function.scope.local_identifiers.extend([IdentifierNode(n.name)
+                                             for n in function.parameter_list])
     for n in function.child_nodes:
       self.visit_ast(n, function)
+
+    if not self.options.hoist_conditional_aliases:
+      return
+    
+    # do a second pass to hoist up invariants
+    # fixme: do i need to loop over a copy of the child nodes?
+    for n in function.child_nodes:
+      if type(n) == IfNode:
+        self.reanalyzeConditionalNode(n, function)
+        self.reanalyzeConditionalNode(n.else_, function)
+
+  def reanalyzeConditionalNode(self, conditional_node, function):
+    scope = getattr(conditional_node, 'scope', None)
+    if scope:
+      for alias_node, alias in scope.aliased_expression_map.iteritems():
+        assign_alias = AssignNode(alias, alias_node)
+        if alias_node in function.scope.aliased_expression_map:
+          # prune the implementation in the nested block
+          #print "prune", alias_node
+          #print "function", function.scope.aliased_expression_map
+          conditional_node.child_nodes.remove(assign_alias)
+          # if we've already hoisted an assignment, don't do it again
+          if alias_node not in function.hoisted_aliases:
+            # prune the original implementation in the current block and
+            # reinsert the alias before it's first potential usage if it
+            # is needed earlier in the execution path.
+            # when a variable aliased in both the if and
+            # else blocks is promoted to the parent scope
+            # the implementation isn't actually hoisted (should it be?)
+            # inline with the IfNode optimization so we need to check if the
+            # node is already here
+            if assign_alias in function.child_nodes:
+              current_pos = function.child_nodes.index(assign_alias)
+              needed_pos = function.child_nodes.index(conditional_node) - 1
+              if needed_pos < current_pos:
+                function.child_nodes.remove(assign_alias)
+                function.insert_before(conditional_node, assign_alias)
+            else:
+              # still need to insert the alias
+              function.insert_before(conditional_node, assign_alias)
+            function.hoisted_aliases.append(alias_node)
+    
 
   def analyzeForNode(self, for_node):
     self.visit_ast(for_node.target_list, for_node)
@@ -122,7 +162,7 @@ class OptimizationAnalyzer(object):
         placeholder.parent.replace(placeholder,
                                    IdentifierNode(local_var.name))
       elif self.options.cache_resolved_placeholders:
-        insert_scope, insert_marker = self.get_insert_block_and_point(
+        insert_block, insert_marker = self.get_insert_block_and_point(
           placeholder)
         # note: this is sketchy enough that it requires some explanation
         # basically, you need to visit the node for the parent function to
@@ -132,11 +172,11 @@ class OptimizationAnalyzer(object):
         # that the assignment took place, then you can safely alias the
         # actual function call. definitely sketchy, but it does seem to work
         assign_rph = AssignNode(cached_placeholder, None)
-        #print "optimize scope:", insert_scope
+        #print "optimize scope:", insert_block
         #print "optimize marker:", insert_marker
-        insert_scope.insert_before(
+        insert_block.insert_before(
           insert_marker, assign_rph)
-        self.visit_ast(assign_rph, insert_scope)
+        self.visit_ast(assign_rph, insert_block)
         assign_rph.right = placeholder
         placeholder.parent.replace(placeholder, cached_placeholder)    
       
@@ -152,12 +192,20 @@ class OptimizationAnalyzer(object):
       node = node.parent
     return None
 
+  def get_parent_function(self, node):
+    node = node.parent
+    while node is not None:
+      if type(node) == FunctionNode:
+        return node
+      node = node.parent
+    return None
+
   def get_parent_scope(self, node):
     node_stack = [node]
     node = node.parent
     while node is not None:
       if type(node) == FunctionNode:
-        return node
+        return node.scope
       elif type(node) == IfNode:
         # elements of the test clause need to reference the next scope
         # "up" - usually the function
@@ -268,12 +316,21 @@ class OptimizationAnalyzer(object):
     for n in if_node.else_.child_nodes:
       self.visit_ast(n, if_node.else_)
 
+    parent_scope = self.get_parent_scope(if_node)
+    
     # once both branches are optimized, walk the scopes for any variables that
     # are defined in both places. those will be promoted to function scope
     # since it is safe to assume that those will defined
     # fixme: this feels like a bit of hack - but not sure how to do this
     # correctly without reverting to slower performance for almost all calls to
     # resolve_placeholder.
+    #
+    # it seems like certain optimizations need
+    # to be hoisted up to the parent scope. this is particularly the case when
+    # you are aliasing common functions that are likely to occur in the parent
+    # scope after the conditional block. you *need* to hoist those, or you will
+    # have errors when the branch fails. essentially you have to detect and
+    # hoist 'branch invariant' optimizations.
     if if_node.else_.child_nodes:
       if_scope_vars = set(if_node.scope.local_identifiers)
       common_local_identifiers = list(if_scope_vars.intersection(
@@ -284,15 +341,27 @@ class OptimizationAnalyzer(object):
       for key, val in if_node.scope.aliased_expression_map.iteritems():
         if key in if_node.else_.scope.aliased_expression_map:
           common_aliased_expression_map[key] = val
+
+      parent_scope.local_identifiers.extend(common_local_identifiers)
+      parent_scope.alias_name_set.update(common_alias_name_set)
+      parent_scope.aliased_expression_map.update(common_aliased_expression_map)
     else:
-      common_local_identifiers = if_node.scope.local_identifiers
-      common_alias_name_set = if_node.scope.alias_name_set
-      common_aliased_expression_map = if_node.scope.aliased_expression_map
+      # we can try to hoist up invariants if they don't depend on the
+      # condition. this is somewhat hard to know, so the best way to do so
+      # without multiple passes of the optimizer is to hoist only things that
+      # were already defined in the parent scope - like _buffer, or things on
+      # self.
+      pass
       
-    scope = self.get_parent_scope(if_node)
-    scope.local_identifiers.extend(common_local_identifiers)
-    scope.alias_name_set.update(common_alias_name_set)
-    scope.aliased_expression_map.update(common_aliased_expression_map)
+#     else:
+#       common_local_identifiers = if_node.scope.local_identifiers
+#       common_alias_name_set = if_node.scope.alias_name_set
+#       common_aliased_expression_map = if_node.scope.aliased_expression_map
+      
+#     scope = self.get_parent_scope(if_node)
+#     scope.local_identifiers.extend(common_local_identifiers)
+#     scope.alias_name_set.update(common_alias_name_set)
+#     scope.aliased_expression_map.update(common_aliased_expression_map)
 
   def analyzeBinOpNode(self, n):
     self.visit_ast(n.left, n)
@@ -322,7 +391,7 @@ class OptimizationAnalyzer(object):
       if isinstance(node, ForNode):
         local_identifiers.extend(node.loop_variant_set)
       elif isinstance(node, FunctionNode):
-        local_identifiers.extend(node.local_identifiers)
+        local_identifiers.extend(node.scope.local_identifiers)
         break
       node = node.parent
     return frozenset(local_identifiers)

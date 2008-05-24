@@ -246,6 +246,8 @@ class FunctionNode(ASTNode):
         CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'getvalue'))),
       ])
     self.parameter_list = ParameterListNode()
+    self.scope = Scope()
+    self.hoisted_aliases = []
     
   def append(self, node):
     self.child_nodes.insert(-1, node)
@@ -314,8 +316,8 @@ class IfNode(ASTNode):
       ASTNode.replace(self, node, replacement_node)
     
   def __str__(self):
-    return '%s test_expr:%s\nelse:\n  %s' % (
-      self.__class__.__name__, self.test_expression, self.else_)
+    return '%s test_expr:%s\nScope:%s\nelse:\n  %s' % (
+      self.__class__.__name__, self.test_expression, self.scope, self.else_)
 
 class ElseNode(ASTNode):
   def __init__(self, parent=None):
@@ -541,7 +543,7 @@ class Scope(object):
     self.alias_name_set = set()
 
   def __str__(self):
-    return "<Scope %s>" % self.name
+    return "<Scope %(name)s> %(alias_name_set)s" % vars(self)
 
 # this is sort of a hack to support optional white space nodes inside the
 # parse tree.  the reality is that this probably requires a more complex

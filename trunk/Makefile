@@ -37,10 +37,10 @@ whitespace_tests: clean_tests parser
 
 .PHONY : opt_tests
 opt_tests: clean_tests parser
-	$(COMPILER) -O2 tests/*txt tests/*tmpl
-	$(CRUNNER) -O2 --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
-	$(COMPILER) -O2 --preserve-optional-whitespace tests/*txt tests/*tmpl
-	$(CRUNNER) -O2 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
+	$(COMPILER) -O3 tests/*txt tests/*tmpl
+	$(CRUNNER) -O3 --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
+	$(COMPILER) -O3 --preserve-optional-whitespace tests/*txt tests/*tmpl
+	$(CRUNNER) -O3 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
 
 .PHONY : xhtml_tests
 xhtml_tests: clean_tests parser
