@@ -2,10 +2,15 @@
 found a bug in the optimizer due to some half-baked techniques in the IfNode.
 the best fix is to disable this type of optimization (which I've done). the
 code emitted is now functional, but not optimal.  I've added an exermintal
-optimization type to -03 which uses a second pass on function blocks to hoist
-invariant aliases.  although this works in terms of a prototype, the initial
-code is iterative rather than recursive, so this is a problem for completeness.
-added a covering test case for the specific bug.
+optimization type to -03 which uses a second pass over the optimized ast to 
+hoist branch and look invariant aliases. this required a number of sensitive
+changes to the 'scoping' code, especially with loops. overally, i think the
+extra pass over the optimized ast keeps the code a little more simple, but it
+still feels like it should not be necessary.
+
+i added a number of new tests to check these optimizations. some of these are
+currently expected to fail. added a bunch more debugging code to the testing 
+front end script to make it easier to diagnose problems as they show up.
 
 0.6.16 - 2008-03-18
 changed the placeholder grammar and added a test case for a particularly
