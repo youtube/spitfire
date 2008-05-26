@@ -223,7 +223,8 @@ class ForNode(ASTNode):
       self.expression_list = expression_list
     else:
       self.expression_list = ExpressionListNode()
-
+    self.scope = Scope('ForNode')
+    
   def __str__(self):
     return ('%s target_list:%s expr_list:%s' %
             (self.__class__.__name__, self.target_list, self.expression_list))
@@ -246,8 +247,7 @@ class FunctionNode(ASTNode):
         CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'getvalue'))),
       ])
     self.parameter_list = ParameterListNode()
-    self.scope = Scope()
-    self.hoisted_aliases = []
+    self.scope = Scope('Function')
     
   def append(self, node):
     self.child_nodes.insert(-1, node)
@@ -307,7 +307,7 @@ class IfNode(ASTNode):
     ASTNode.__init__(self)
     self.test_expression = test_expression
     self.else_ = ElseNode(self)
-    self.scope = Scope()
+    self.scope = Scope('If')
 
   def replace(self, node, replacement_node):
     if self.test_expression is node:
@@ -323,7 +323,7 @@ class ElseNode(ASTNode):
   def __init__(self, parent=None):
     ASTNode.__init__(self)
     self.parent = parent
-    self.scope = Scope()
+    self.scope = Scope('Else')
 
 class ImplementsNode(ASTNode):
   pass
@@ -537,10 +537,14 @@ class UnaryOpNode(ASTNode):
 # templates and shoe-horned that into python
 class Scope(object):
   def __init__(self, name=None):
-    self.name = name
+    if name:
+      self.name = name
+    else:
+      self.name = hex(id(self))
     self.local_identifiers = []
     self.aliased_expression_map = {}
     self.alias_name_set = set()
+    self.hoisted_aliases = []
 
   def __str__(self):
     return "<Scope %(name)s> %(alias_name_set)s" % vars(self)

@@ -30,7 +30,7 @@ Functionality:
      should be more consistent. right now you must have it in the def, but you
      can't have it when you do the calling.
  * add #encoding directive
- * add a build time/version attribute?
+ * add a build time/version/runtime_version attribute?
  * xhtml-oriented front end
    * emulate virtual odd/even var in loops (partially implemented Repeater)
  * Attribute Language - (like TAL and Kid)
@@ -92,6 +92,9 @@ Variant 1.1:
 
 Variant 2:
         write(u"""<td>%s</td>\n""" % column)
+
+Varian 2.1: (UNTESTED)
+        write(u"""<td>""" + "%s" % column + u"""</td>\n""")
 
    * optimization of this loop is dependent on the python version (2.4 vs 2.5)
    * Variant 2 is universally the slowest

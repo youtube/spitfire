@@ -1,3 +1,4 @@
+import logging
 import new
 import os.path
 import re
@@ -106,6 +107,8 @@ class Compiler(object):
     'message_catalogue_file',
     'normalize_whitespace',
     'optimizer_level',
+    'optimizer_flags',
+    'debug_flags',
     'output_directory',
     ]
 
@@ -127,6 +130,8 @@ class Compiler(object):
     self.analyzer_options = None
 
     self.optimizer_level = 0
+    self.optimizer_flags = []
+    self.debug_flags = []
     self.ignore_optional_whitespace = False
     self.normalize_whitespace = False
     
@@ -148,6 +153,20 @@ class Compiler(object):
       self.analyzer_options.ignore_optional_whitespace = self.ignore_optional_whitespace
       self.analyzer_options.normalize_whitespace = self.normalize_whitespace
 
+    # slightly crappy code to support turning flags on and off from the
+    # command line - probably should go in analyzer options?
+    for flag_name in self.optimizer_flags:
+      flag_name = flag_name.lower().replace('-', '_')
+      flag_value = True
+      if flag_name.startswith('no_'):
+        flag_name = flag_name[3:]
+        flag_value = False
+      if type(getattr(self.analyzer_options, flag_name, None)) == bool:
+        setattr(self.analyzer_options, flag_name, flag_value)
+      else:
+        logging.warning('unknown optimizer flag: %s', flag_name)
+        
+
     # register macros before the first pass by any SemanticAnalyzer
     # this is just a default to give an example - it's not totally functional
     # fixme: nasty time to import - but does break weird cycle
@@ -163,6 +182,9 @@ class Compiler(object):
       classname, parse_root, self.analyzer_options, self).get_ast()
     spitfire.compiler.optimizer.OptimizationAnalyzer(
       ast_root, self.analyzer_options, self).optimize_ast()
+    spitfire.compiler.optimizer.FinalPassAnalyzer(
+      ast_root, self.analyzer_options, self).optimize_ast()
+    
     code_generator = codegen.CodeGenerator(ast_root,
                                            self.analyzer_options)
     return code_generator.get_code()
