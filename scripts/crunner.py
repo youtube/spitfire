@@ -19,6 +19,28 @@ analyzer = spitfire.compiler.analyzer
 import spitfire.runtime.runner
 
 
+# this class let's me check if placeholder caching is working properly by
+# tracking the number of accesses for a single key
+class ResolveCounter(object):
+  def _get_item(self, key):
+    if key in self.__dict__:
+      self.__dict__[key] += 1
+    else:
+      self.__dict__[key] = 1
+
+    return '%s%s' % (key, self.__dict__[key])
+  
+  def __getitem__(self, key):
+    if not key.startswith('resolve'):
+      raise KeyError(key)
+    return self._get_item(key)
+    
+  def __getattr__(self, key):
+    if not key.startswith('resolve'):
+      raise AttributeError(key)
+    return self._get_item(key)
+
+
 def print_tree_walk(node, indent=0):
   if indent > 5:
     raise 'error'
@@ -45,30 +67,34 @@ def process_file(filename, options):
     print_output("compile", filename)
     compiler = spitfire.compiler.util.Compiler(analyzer_options=opt, **args)
     if not options.quiet:
-      print "parse_root walk"
       parse_root = spitfire.compiler.util.parse_file(filename, options.xhtml)
-      #print_tree_walk(parse_root)
-      print_tree(parse_root)
+      if 'parse_tree' in options.debug_flags:
+        print "parse_root walk"
+        print_tree(parse_root)
     
     if not options.quiet:
-      print "ast_root walk"
       ast_root = spitfire.compiler.analyzer.SemanticAnalyzer(
         classname, parse_root, opt, compiler).get_ast()
-      print_tree(ast_root)
+      if 'ast' in options.debug_flags:
+        print "ast_root walk"
+        print_tree(ast_root)
 
     if not options.quiet:
-      print "optimized ast_root walk"
       spitfire.compiler.optimizer.OptimizationAnalyzer(
         ast_root, opt, compiler).optimize_ast()
-      print_tree(ast_root)
-
+      spitfire.compiler.optimizer.FinalPassAnalyzer(
+        ast_root, opt, compiler).optimize_ast()
+      if 'optimized_ast' in options.debug_flags:
+        print "optimized ast_root walk"
+        print_tree(ast_root)
+      
     if not options.quiet:
-      print "src_code"
       src_code = spitfire.compiler.codegen.CodeGenerator(
         ast_root, opt).get_code()
-      #src_code = spitfire.compiler.util.compile_file(filename, options=opt)
-      for i, line in enumerate(src_code.split('\n')):
-        print '% 3s' % (i + 1), line
+      if 'codegen' in options.debug_flags:
+        print "src_code"
+        for i, line in enumerate(src_code.split('\n')):
+          print '% 3s' % (i + 1), line
   except Exception, e:
     print >> sys.stderr, "FAILED:", classname, e
     raise
@@ -78,7 +104,10 @@ def process_file(filename, options):
 
     if options.test_input:
       search_list = [
-        spitfire.runtime.runner.load_search_list(options.test_input)]
+        spitfire.runtime.runner.load_search_list(options.test_input),
+        ResolveCounter(),
+        {'nested_resolver':ResolveCounter()},
+        ]
     else:
       search_list = []
       
@@ -151,7 +180,16 @@ if __name__ == '__main__':
   op.add_option('-O', dest='optimizer_level', type='int', default=0)
   op.add_option('--disable-filters', dest='enable_filters',
                 action='store_false', default=True)
+  help = ', '.join([x.replace('_', '-')
+                    for x in dir(analyzer.AnalyzerOptions())
+                    if not x.startswith('__')])
+  op.add_option('-X', dest='optimizer_flags', action='append', default=[],
+                help=(analyzer.AnalyzerOptions.get_help()))
+  op.add_option('-D', dest='debug_flags', action='store',
+                default='ast,optimized_ast,codegen',
+                help='parse_tree, ast, optimized_ast, codegen'
+                )
   (options, args) = op.parse_args()
-
+  setattr(options, 'debug_flags', getattr(options, 'debug_flags').split(','))
   for filename in args:
     process_file(filename, options)

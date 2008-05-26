@@ -94,6 +94,8 @@ if __name__ == '__main__':
                 type="str", nargs=1,
                 help='file to use as the message catalogue')
   op.add_option('--locale', default='')
+  op.add_option('-X', dest='optimizer_flags', action='append', default=[],
+                help=analyzer.AnalyzerOptions.get_help())
 
   (options, args) = op.parse_args()
 

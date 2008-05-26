@@ -38,18 +38,31 @@ class AnalyzerOptions(object):
     # once a placeholder is resolved in a given scope, cache it in a local
     # reference for faster subsequent retrieval
     self.cache_resolved_placeholders = False
+    
+    # when adding an alias, detect if the alias is loop invariant and hoist
+    # right there on the spot.  this has probably been superceded by
+    # hoist_loop_invariant_aliases, but does have the advantage of not needing
+    # another pass over the tree
+    self.inline_hoist_loop_invariant_aliases = False
 
     # if an alias has been generated in a conditional scope and it is also
     # defined in the parent scope, hoist it above the conditional. this
     # requires a two-pass optimization on functions, which adds time and
     # complexity
     self.hoist_conditional_aliases = False
+    self.hoist_loop_invariant_aliases = False
 
     self.enable_psyco = False
     self.__dict__.update(kargs)
 
   def update(self, **kargs):
     self.__dict__.update(kargs)
+
+  @classmethod
+  def get_help(cls):
+    return ', '.join(['[no-]' + name.replace('_', '-')
+                    for name, value in vars(cls()).iteritems()
+                    if not name.startswith('__') and type(value) == bool])
   
 default_options = AnalyzerOptions()
 o1_options = copy.copy(default_options)
@@ -59,9 +72,12 @@ o2_options = copy.copy(o1_options)
 o2_options.alias_invariants = True
 o2_options.directly_access_defined_variables = True
 o2_options.cache_resolved_placeholders = True
+o2_options.inline_hoist_loop_invariant_aliases = True
 
 o3_options = copy.copy(o2_options)
+o3_options.inline_hoist_loop_invariant_aliases = False
 o3_options.hoist_conditional_aliases = True
+o3_options.hoist_loop_invariant_aliases = True
 o3_options.enable_psyco = True
 
 optimizer_map = {
