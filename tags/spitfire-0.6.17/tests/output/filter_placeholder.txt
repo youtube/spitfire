@@ -1,0 +1,12 @@
+
+
+
+<p>
+Demo block of internationalized text with &lt;bad tag&gt;.
+
+Demo block of internationalized text with .
+
+Demo block of internationalized text with {'key1': 1}.
+</p>
+
+
