@@ -175,9 +175,11 @@ class SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             placeholder = self.placeholder()
             _lhs = IdentifierNode(placeholder.name)
-            SPACE = self._scan('SPACE')
+            if self._peek('SPACE', 'ASSIGN_OPERATOR') == 'SPACE':
+                SPACE = self._scan('SPACE')
             ASSIGN_OPERATOR = self._scan('ASSIGN_OPERATOR')
-            SPACE = self._scan('SPACE')
+            if self._peek('SPACE', '"[ \\t]*not[ \\t]*"', 'START_PLACEHOLDER', 'ID', '"True"', '"False"', '\'"\'', '"\'"', 'NUM', 'OPEN_BRACKET', 'OPEN_PAREN', 'OPEN_BRACE', "'[ \\t]*\\-[ \\t]*'") == 'SPACE':
+                SPACE = self._scan('SPACE')
             expression = self.expression()
             _rhs = expression
             CLOSE_DIRECTIVE = self._scan('CLOSE_DIRECTIVE')

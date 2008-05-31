@@ -103,7 +103,7 @@ parser SpitfireParser:
         {{ return AttributeNode('_filter_function', identifier) }}
         |
         'set' SPACE placeholder {{ _lhs = IdentifierNode(placeholder.name) }}
-        SPACE ASSIGN_OPERATOR SPACE expression {{ _rhs = expression }}
+        [ SPACE ] ASSIGN_OPERATOR [ SPACE ] expression {{ _rhs = expression }}
         CLOSE_DIRECTIVE {{ return AssignNode(_lhs, _rhs) }}
         
   rule modulename:
