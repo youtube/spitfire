@@ -78,13 +78,16 @@ o3_options = copy.copy(o2_options)
 o3_options.inline_hoist_loop_invariant_aliases = False
 o3_options.hoist_conditional_aliases = True
 o3_options.hoist_loop_invariant_aliases = True
-o3_options.enable_psyco = True
+
+o4_options = copy.copy(o3_options)
+o4_options.enable_psyco = True
 
 optimizer_map = {
   0: default_options,
   1: o1_options,
   2: o2_options,
   3: o3_options,
+  4: o4_options,
   }
 
 
