@@ -138,10 +138,16 @@ class CodeGenerator(object):
     from_clause = '.'.join([
       self.generate_python(self.build_code(n)[0])
       for n in node.module_name_list])
-    import_clause = self.generate_python(
-      self.build_code(node.identifier)[0])
-    return [CodeNode(
-      'from %(from_clause)s import %(import_clause)s' % vars())]
+    import_clause = self.generate_python(self.build_code(node.identifier)[0])
+
+    if node.alias:
+      alias_clause = self.generate_python(self.build_code(node.alias)[0])
+      return [CodeNode(
+        'from %(from_clause)s import %(import_clause)s as %(alias_clause)s'
+        % vars())]
+    else:
+      return [CodeNode(
+        'from %(from_clause)s import %(import_clause)s' % vars())]
 
   def codegenASTPlaceholderSubstitutionNode(self, node):
     placeholder = self.generate_python(

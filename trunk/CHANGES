@@ -1,3 +1,10 @@
+0.6.18 - 2008-05-29
+added a function registry - functions that should be available to all
+templates are resolved at compile time and accessed as globals, reducing a
+couple of function calls. it is implemented with 'import ... as ...' statements
+that are automatically injected by the compiler, after parsing. there is no
+dependency on the target code base until the template is imported.
+
 0.6.17 - 2008-05-24
 found a bug in the optimizer due to some half-baked techniques in the IfNode.
 the best fix is to disable this type of optimization (which I've done). the

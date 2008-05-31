@@ -77,3 +77,16 @@ def template_method(function):
   function.template_method = True
   function.skip_filter = True
   return function
+
+# map template function names to python function names
+# inject them into a module so they run as globals
+def register_functions(module, template_function_map):
+  for t_name, f_name in template_function_map.iteritems():
+    f_name_parts = f_name.split('.')
+    f_module_name = '.'.join(f_name_parts[:-1])
+    f_function_name = f_name_parts[-1]
+    f_module = __import__(
+      f_module_name, globals(), locals(), [f_function_name])
+    f_func = getattr(f_module_name, f_function_name)
+    setattr(module, t_name, f_func)
+    

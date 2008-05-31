@@ -460,15 +460,3 @@ class SemanticAnalyzer(object):
         optimized_nodes.append(n)
     #print "optimized_nodes", node_list, optimized_nodes
     return optimized_nodes
-
-
-# template objects for certain common subcomponents
-def t_local_vars():
-  t = ParameterNode('local_vars',
-                    CallFunctionNode(IdentifierNode('locals')))
-  return t
-
-def t_global_vars():
-  t = ParameterNode('global_vars',
-                    IdentifierNode('_globals'))
-  return t
