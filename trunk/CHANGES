@@ -5,6 +5,13 @@ couple of function calls. it is implemented with 'import ... as ...' statements
 that are automatically injected by the compiler, after parsing. there is no
 dependency on the target code base until the template is imported.
 
+changed the grammar to be more forgiving of whitespace in #set directive
+
+substantially refactored the test runner to reuse more of the compiler core
+and commmand line arguments. fixed a number of issues with importing and 
+improved the perfomance of the test suite by about 100%.
+
+
 0.6.17 - 2008-05-24
 found a bug in the optimizer due to some half-baked techniques in the IfNode.
 the best fix is to disable this type of optimization (which I've done). the
@@ -18,6 +25,7 @@ still feels like it should not be necessary.
 i added a number of new tests to check these optimizations. some of these are
 currently expected to fail. added a bunch more debugging code to the testing 
 front end script to make it easier to diagnose problems as they show up.
+
 
 0.6.16 - 2008-03-18
 changed the placeholder grammar and added a test case for a particularly

@@ -1,0 +1,5 @@
+#def escape_html($var)
+resolved escape_html
+#end def
+
+$escape_html('<bad html>')

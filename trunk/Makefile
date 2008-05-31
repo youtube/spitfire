@@ -16,6 +16,9 @@ parser: spitfire/compiler/parser.py
 
 all: parser
 
+.PHONY : test_function_registry
+test_function_registry: parser
+	$(CRUNNER) -O3 --compile --test-input tests/input/search_list_data.pye -qt tests/test-function-registry.txtx --function-registry-file tests/test-function-registry.cnf
 
 .PHONY : no_whitespace_tests
 no_whitespace_tests: clean_tests parser
@@ -27,6 +30,8 @@ no_whitespace_tests: clean_tests parser
 	$(CRUNNER) -O2 --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
 	$(COMPILER) -O3 tests/*txt tests/*tmpl
 	$(CRUNNER) -O3 --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
+	$(COMPILER) -O4 tests/*txt tests/*tmpl
+	$(CRUNNER) -O4 --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
 
 .PHONY : whitespace_tests
 whitespace_tests: clean_tests parser
@@ -38,6 +43,8 @@ whitespace_tests: clean_tests parser
 	$(CRUNNER) -O2 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
 	$(COMPILER) -O3 --preserve-optional-whitespace tests/*txt tests/*tmpl
 	$(CRUNNER) -O3 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
+	$(COMPILER) -O4 --preserve-optional-whitespace tests/*txt tests/*tmpl
+	$(CRUNNER) -O4 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
 
 .PHONY : xhtml_tests
 xhtml_tests: clean_tests parser
@@ -45,7 +52,7 @@ xhtml_tests: clean_tests parser
 	$(CRUNNER) --xhtml --test-input tests/input/search_list_data.pye --test-output output-xhtml -qt tests/*.xhtml
 
 .PHONY : tests
-tests: no_whitespace_tests whitespace_tests
+tests: no_whitespace_tests whitespace_tests test_function_registry
 
 
 .PHONY : clean

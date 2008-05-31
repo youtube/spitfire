@@ -1,3 +1,4 @@
+import copy
 import logging
 import new
 import os.path
@@ -168,6 +169,11 @@ class Compiler(object):
     self.function_name_registry = {}
     self.macro_registry = {}
 
+    self._parse_tree = None
+    self._analyzed_tree = None
+    self._optimized_tree = None
+    self._source_code = None
+
     for key, value in kargs.iteritems():
       setattr(self, key, value)
     
@@ -203,31 +209,40 @@ class Compiler(object):
   # this doesn't have the same semantics as python's AST operations
   # it would be good to have a reason for the inconsistency other than
   # laziness or stupidity
-  def compile_ast(self, parse_root, classname):
-    ast_root = analyzer.SemanticAnalyzer(
+  def _compile_ast(self, parse_root, classname):
+    self._analyzed_tree = analyzer.SemanticAnalyzer(
       classname, parse_root, self.analyzer_options, self).get_ast()
 
     # at this point, if we have a function registry, add in the nodes before we
     # begin optimizing
     for alias, fq_name in self.function_name_registry.iteritems():
       fq_name_parts = fq_name.split('.')
-      ast_root.from_nodes.append(ast.FromNode(
+      self._analyzed_tree.from_nodes.append(ast.FromNode(
         [ast.IdentifierNode(x) for x in fq_name_parts[:-1]],
         ast.IdentifierNode(fq_name_parts[-1]),
         ast.IdentifierNode(alias)))
-    
-    spitfire.compiler.optimizer.OptimizationAnalyzer(
-      ast_root, self.analyzer_options, self).optimize_ast()
-    spitfire.compiler.optimizer.FinalPassAnalyzer(
-      ast_root, self.analyzer_options, self).optimize_ast()
-    
-    code_generator = codegen.CodeGenerator(ast_root,
-                                           self.analyzer_options)
-    return code_generator.get_code()
 
+    # keep a copy of the tree for debugging purposes
+    self._optimized_tree = copy.deepcopy(self._analyzed_tree)
+    spitfire.compiler.optimizer.OptimizationAnalyzer(
+      self._optimized_tree, self.analyzer_options, self).optimize_ast()
+    spitfire.compiler.optimizer.FinalPassAnalyzer(
+      self._optimized_tree, self.analyzer_options, self).optimize_ast()
+    
+    self._source_code = codegen.CodeGenerator(
+      self._optimized_tree, self.analyzer_options).get_code()
+    return self._source_code
+
+  def _reset(self):
+    self._parse_tree = None
+    self._analyzed_tree = None
+    self._optimized_tree = None
+    self._source_code = None
+    
   def compile_template(self, src_text, classname):
-    return self.compile_ast(parse_template(src_text, xhtml=self.xhtml_mode),
-                            classname)
+    self._reset()
+    self._parse_tree = parse_template(src_text, xhtml=self.xhtml_mode)
+    return self._compile_ast(self._parse_tree, classname)
 
   def compile_file(self, filename):
     self.src_filename = filename
@@ -260,3 +275,52 @@ class Compiler(object):
   # macro by the template source. they are limited to literal values right now.
   def register_macro(self, name, function):
     self.macro_registry[name] = function
+
+
+def validate_path(option, opt_str, path, parser):
+  path = os.path.abspath(os.path.expanduser(path))
+  setattr(parser.values, option.dest, path)
+
+# standard options to any compiler front-end
+# @op option_parser, this object will be modified
+def add_common_options(op):
+  op.add_option('--preserve-optional-whitespace', action='store_false',
+                default=True, dest='ignore_optional_whitespace',
+                help='preserve leading whitespace before a directive')
+  op.add_option('--normalize-whitespace', action='store_true',
+                default=False,
+                help='normalize all runs of whitespace to one character')
+  op.add_option('-v', '--verbose', action='store_true', default=False)
+  op.add_option('-V', '--version', action='store_true', default=False)
+  op.add_option('-O', dest='optimizer_level', type='int', default=0)
+  op.add_option('-o', '--output-file',  dest='output_file', default=None)
+  op.add_option('--x-disable-psyco', dest='x_psyco', default=True,
+                action='store_false',
+                help='disable psyco')
+  op.add_option('--x-psyco-profile',
+                action='store_true',
+                help='enable psyco profiler logging')
+
+  op.add_option('--disable-filters', dest='enable_filters',
+                action='store_false', default=True)
+
+  op.add_option('--output-directory', default='',
+                action="callback", callback=validate_path,
+                type="str", nargs=1,
+                help='alternate directory to store compiled templates')
+
+  op.add_option('--base-extends-package', default=None)
+  op.add_option('--extract-message-catalogue', action='store_true',
+                default=False)
+  op.add_option('--message-catalogue-file', default=None,
+                action="callback", callback=validate_path,
+                type="str", nargs=1,
+                help='file to use as the message catalogue')
+  op.add_option('--locale', default='')
+  op.add_option('--function-registry-file', default=None,
+                action="callback", callback=validate_path,
+                type="str", nargs=1,
+                help='file to use as the function registry')
+  op.add_option('-X', dest='optimizer_flags', action='append', default=[],
+                help=analyzer.AnalyzerOptions.get_help())
+  
