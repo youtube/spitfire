@@ -197,6 +197,12 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     return
   
   def analyzeTemplateNode(self, template):
+    for n in template.from_nodes:
+      if n.alias:
+        template.global_identifiers.add(n.alias)
+      else:
+        template.global_identifiers.add(n.identifier)
+      
     self.visit_ast(template.main_function, template)
     for n in template.child_nodes:
       self.visit_ast(n, template)
@@ -265,6 +271,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       local_identifiers = self.get_local_identifiers(placeholder)
       #print "local_identifiers", local_identifiers
       if local_var in local_identifiers:
+        placeholder.parent.replace(placeholder, local_var)
+      elif local_var in self.ast_root.global_identifiers:
         placeholder.parent.replace(placeholder, local_var)
       elif cached_placeholder in local_identifiers:
         placeholder.parent.replace(placeholder, cached_placeholder)

@@ -353,9 +353,10 @@ class AbsoluteExtendsNode(ExtendsNode):
   pass
 
 class FromNode(ImportNode):
-  def __init__(self, module_name_list, identifier):
+  def __init__(self, module_name_list, identifier, alias=None):
     ImportNode.__init__(self, module_name_list)
     self.identifier = identifier
+    self.alias = alias
     
   def __eq__(self, node):
     return bool(type(self) == type(node) and
@@ -505,6 +506,7 @@ class TemplateNode(ASTNode):
     self.attr_nodes = NodeList()
     self.library = False
     self.implements = False
+    self.global_identifiers = set()
 
   
   def __str__(self):

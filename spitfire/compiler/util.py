@@ -12,6 +12,7 @@ import spitfire.compiler.optimizer
 import spitfire.compiler.xhtml2ast
 
 from spitfire.compiler import analyzer
+from spitfire.compiler import ast
 from spitfire.compiler import codegen
 
 valid_identfier = re.compile('[_a-z]\w*', re.IGNORECASE)
@@ -51,6 +52,24 @@ def read_template_file(filename):
     f.close()
 
 
+def read_function_registry(filename):
+  f = open(filename)
+  function_registry = {}
+  try:
+    for line in f:
+      line = line.strip()
+      if not line:
+        continue
+      if line.startswith('#'):
+        continue
+      
+      alias, fq_name = line.split('=')
+      function_registry[alias.strip()] = fq_name.strip()
+    return function_registry
+  finally:
+    f.close()
+    
+    
 # compile a text file into a template object
 # this won't recursively import templates, it's just a convenience in the case
 # where you need to create a fresh object directly from raw template file
@@ -100,15 +119,16 @@ class CompilerError(Exception):
 class Compiler(object):
   setting_names = [
     'base_extends_package',
+    'debug_flags',
     'enable_filters',
     'extract_message_catalogue',
+    'function_registry_file',
     'ignore_optional_whitespace',
     'locale',
     'message_catalogue_file',
     'normalize_whitespace',
     'optimizer_level',
     'optimizer_flags',
-    'debug_flags',
     'output_directory',
     ]
 
@@ -142,7 +162,10 @@ class Compiler(object):
     self.locale = None
 
     self.enable_filters = True
-
+    # the function registry is for optimized access to 'first-class' functions
+    # things that get accessed all the time that should be speedy
+    self.function_registry_file = None
+    self.function_name_registry = {}
     self.macro_registry = {}
 
     for key, value in kargs.iteritems():
@@ -165,7 +188,10 @@ class Compiler(object):
         setattr(self.analyzer_options, flag_name, flag_value)
       else:
         logging.warning('unknown optimizer flag: %s', flag_name)
-        
+
+    if self.function_registry_file:
+      self.function_name_registry = read_function_registry(
+        self.function_registry_file)
 
     # register macros before the first pass by any SemanticAnalyzer
     # this is just a default to give an example - it's not totally functional
@@ -180,6 +206,16 @@ class Compiler(object):
   def compile_ast(self, parse_root, classname):
     ast_root = analyzer.SemanticAnalyzer(
       classname, parse_root, self.analyzer_options, self).get_ast()
+
+    # at this point, if we have a function registry, add in the nodes before we
+    # begin optimizing
+    for alias, fq_name in self.function_name_registry.iteritems():
+      fq_name_parts = fq_name.split('.')
+      ast_root.from_nodes.append(ast.FromNode(
+        [ast.IdentifierNode(x) for x in fq_name_parts[:-1]],
+        ast.IdentifierNode(fq_name_parts[-1]),
+        ast.IdentifierNode(alias)))
+    
     spitfire.compiler.optimizer.OptimizationAnalyzer(
       ast_root, self.analyzer_options, self).optimize_ast()
     spitfire.compiler.optimizer.FinalPassAnalyzer(

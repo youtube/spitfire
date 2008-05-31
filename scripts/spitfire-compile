@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
 import logging
+import os
 import os.path
 import sys
 
+import spitfire
 from spitfire.compiler import analyzer
 from spitfire.compiler.util import Compiler
 
@@ -55,7 +57,7 @@ def init_psyco(options):
       import spitfire.compiler.ast
       psyco.bind(spitfire.compiler.ast.NodeList.__iter__)
   
-def validate_path(option, opt_str, value, parser):
+def validate_path(option, opt_str, path, parser):
   path = os.path.abspath(os.path.expanduser(path))
   setattr(parser.values, option.dest, path)
 
@@ -69,6 +71,7 @@ if __name__ == '__main__':
                 default=False,
                 help='normalize all runs of whitespace to one character')
   op.add_option('-v', '--verbose', action='store_true', default=False)
+  op.add_option('-V', '--version', action='store_true', default=False)
   op.add_option('-O', dest='optimizer_level', type='int', default=0)
   op.add_option('-o', '--output-file',  dest='output_file', default=None)
   op.add_option('--x-disable-psyco', dest='x_psyco', default=True,
@@ -94,11 +97,19 @@ if __name__ == '__main__':
                 type="str", nargs=1,
                 help='file to use as the message catalogue')
   op.add_option('--locale', default='')
+  op.add_option('--function-registry-file', default=None,
+                action="callback", callback=validate_path,
+                type="str", nargs=1,
+                help='file to use as the function registry')
   op.add_option('-X', dest='optimizer_flags', action='append', default=[],
                 help=analyzer.AnalyzerOptions.get_help())
 
   (options, args) = op.parse_args()
 
+  if options.version:
+    print >> sys.stderr, 'spitfire %s' % spitfire.__version__
+    sys.exit(0)
+  
   init_psyco(options)
 
   compiler_args = Compiler.args_from_optparse(options)
