@@ -200,7 +200,8 @@ class TreeVisitor(object):
   visitASTBinOpNode = visitASTBinOpExpressionNode
 
   visitASTAssignNode = visitASTBinOpNode
-
+  visitASTFilteredAssignNode = visitASTBinOpNode
+  
   def visitASTUnaryOpNode(self, node):
     v = self.visitDefault(node)[0]
     v.append(VisitNode(node.operator))
@@ -213,6 +214,16 @@ class TreeVisitor(object):
     if node.parameter_list:
       v.extend(self.build_text(node.parameter_list))
     #v.append(VisitNode(str(node.scope)))
+
+    for n in node.child_nodes:
+      v.extend(self.build_text(n))
+      
+    return [v]
+
+  def visitASTDefNode(self, node):
+    v = self.visitDefault(node)[0]
+    if node.parameter_list:
+      v.extend(self.build_text(node.parameter_list))
 
     for n in node.child_nodes:
       v.extend(self.build_text(n))
