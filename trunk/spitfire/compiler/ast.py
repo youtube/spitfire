@@ -58,7 +58,10 @@ class ASTNode(object):
       self.append(n)
 
   def insert_before(self, marker_node, insert_node):
-    idx = self.child_nodes.index(marker_node)
+    try:
+      idx = self.child_nodes.index(marker_node)
+    except ValueError:
+      raise ValueError("can't find child node %s in %s" % (marker_node, self))
     # print "insert_before", idx, id(self), self, id(marker_node), marker_node
     self.child_nodes.insert(idx, insert_node)
 
@@ -153,6 +156,7 @@ class AssignNode(BinOpNode):
 
 class BreakNode(ASTNode):
   pass
+  
 
 class CallFunctionNode(ASTNode):
   def __init__(self, expression=None, arg_list=None):
@@ -167,7 +171,7 @@ class CallFunctionNode(ASTNode):
     if self.expression is node:
       self.expression = replacement_node
     else:
-      raise Exception("expression doesn't mactch replacement")
+      raise Exception("expression doesn't match replacement")
 
   def __eq__(self, node):
     return bool(type(self) == type(node) and
@@ -183,6 +187,39 @@ class CallFunctionNode(ASTNode):
   def __str__(self):
     return '%s expr:%s arg_list:%s' % (
       self.__class__.__name__, self.expression, self.arg_list)
+
+# encapsulate the idea that you want to write this to an output stream
+# this is sort of an implicit function call, so the hierarchy makes some sense
+class BufferWrite(CallFunctionNode):
+  pass
+
+# encapsulate the idea that you want to run a filter over this expression
+# this is sort of an implicit function call, so the hierarchy makes some sense
+# again, in this case we want to preserve plenty of information and hierarchy
+# for ease of optimization later on in the process
+class FilterNode(ASTNode):
+  def __init__(self, expression=None, filter_function_node=None):
+    ASTNode.__init__(self)
+    self.expression = expression
+    self.filter_function_node = filter_function_node
+
+  def replace(self, node, replacement_node):
+    if self.expression is node:
+      self.expression = replacement_node
+    else:
+      raise Exception("expression doesn't match replacement")
+
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.expression == node.expression)
+
+  def __hash__(self):
+    return hash('%s%s' %
+                (type(self), hash(self.expression)))
+
+  def __str__(self):
+    return '%s expr:%s %s' % (
+      self.__class__.__name__, self.expression, hash(self))
 
 class CommentNode(ASTNode):
   pass
@@ -224,6 +261,7 @@ class ForNode(ASTNode):
     else:
       self.expression_list = ExpressionListNode()
     self.scope = Scope('ForNode')
+    self.loop_variant_set = None
     
   def __str__(self):
     return ('%s target_list:%s expr_list:%s' %
@@ -233,25 +271,11 @@ class ForNode(ASTNode):
 class FunctionNode(ASTNode):
   def __init__(self, *pargs, **kargs):
     ASTNode.__init__(self, *pargs, **kargs)
-    new_buffer = CallFunctionNode(
-          GetAttrNode(IdentifierNode('self'), 'new_buffer'))
 
-    self.child_nodes = NodeList([
-      AssignNode(
-        IdentifierNode('_buffer'),
-        new_buffer),
-      AssignNode(
-        IdentifierNode('_globals'),
-        CallFunctionNode(IdentifierNode('globals'))),
-      ReturnNode(
-        CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'getvalue'))),
-      ])
+    # PSEUDOCODE moved to codegen phase
     self.parameter_list = ParameterListNode()
     self.scope = Scope('Function')
     
-  def append(self, node):
-    self.child_nodes.insert(-1, node)
-
   def __str__(self):
     return '%s %s parameter_list:%r' % (
       self.__class__.__name__, self.name, self.parameter_list)
@@ -287,7 +311,7 @@ class GetAttrNode(ASTNode):
     if self.expression is node:
       self.expression = replacement_node
     else:
-      raise Exception("expression doesn't mactch replacement")
+      raise Exception("expression doesn't match replacement")
 
 class GetUDNNode(GetAttrNode):
   pass
@@ -324,6 +348,9 @@ class ElseNode(ASTNode):
     ASTNode.__init__(self)
     self.parent = parent
     self.scope = Scope('Else')
+
+  def __str__(self):
+    return '%s %s' % (self.__class__.__name__, hash(self))
 
 class ImplementsNode(ASTNode):
   pass
@@ -399,6 +426,16 @@ class ParameterNode(ASTNode):
 
   def __str__(self):
     return '%s %s' % (ASTNode.__str__(self), self.default)
+
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.name == node.name and
+                self.default == node.default)
+
+  def __hash__(self):
+    return hash('%s%s%s' %
+                (type(self), self.name,
+                 hash(self.default)))
 
 class AttributeNode(ParameterNode):
   pass
@@ -546,6 +583,7 @@ class Scope(object):
     self.local_identifiers = []
     self.aliased_expression_map = {}
     self.alias_name_set = set()
+    self.filtered_expression_map = {}
     self.hoisted_aliases = []
 
   def __str__(self):

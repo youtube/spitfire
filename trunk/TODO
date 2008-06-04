@@ -100,6 +100,10 @@ Varian 2.1: (UNTESTED)
    * Variant 2 is universally the slowest
 
 Cleanup:
+ * refactor 'visitor' into 'walker'
+ * re-enable cache_resolved_placeholders in -O3
+ * many chunks of the optimizer seem copy-pasted - they are slightly different
+   but would be best to factor that out
  * revisit all uses of default_analyze_node - usually this is where
    unimplemented functionality lurks
  * front-end mode is a bit annoying - need to better detect xhtml vs text mode
@@ -110,8 +114,6 @@ Cleanup:
    * how many times to I really have to make a copy of a node?
      * should I just modify inline after doing a tree-wise deep copy?
  * make the grammar file as simple as possible
- * crunner is a bit foul - might be better to have separate front end for tests
-   * borrow more code from spitfire-compile
  * EatPrevious node is a vile thing - make the DOM scanner look ahead 1 or 2
    nodes and determine what to do with optional whitespace nodes before
    processing them
@@ -120,7 +122,6 @@ Cleanup:
    * $varname should mean 'look this up in the search_list data'
    * parameter_list, macro_parameter_list and placeholder_parameter_list should
      be made into one or two variants
- * fix FunctionNode so that it uses Scope object
 
 Bugs:
  * py:conditional directives that are skipped still output a good amount of

@@ -1,5 +1,8 @@
 import cStringIO as StringIO
 
+# yes, i know this is evil
+from spitfire.compiler.ast import *
+
 class CodegenError(Exception):
   pass
 
@@ -305,9 +308,15 @@ class CodeGenerator(object):
 
     decorator_node = CodeNode('@template_method')
     code_node = CodeNode(ASTFunctionNode_tmpl[0] % vars())
+    
+    code_node.append(CodeNode('_buffer = self.new_buffer()'))
+    code_node.append(CodeNode('_buffer_write = _buffer.write'))
+    code_node.append(CodeNode('_globals = globals()'))
+    code_node.append(CodeNode('_self_filter_function = self.filter_function'))
     for n in node.child_nodes:
       code_child_nodes = self.build_code(n)
       code_node.extend(code_child_nodes)
+    code_node.append(CodeNode('return _buffer.getvalue()'))
     return [decorator_node, code_node]
   
   # fixme: don't know if i still need this - a 'template function'
@@ -315,6 +324,42 @@ class CodeGenerator(object):
   # to code that rather than adding a return node during the analyze
   #def codegenASTReturnNode(self, node):
   #  code_node = self.codegenDefault(node)
+
+  def codegenASTBufferWrite(self, node):
+    expression = self.generate_python(self.build_code(node.expression)[0])
+    code_node = CodeNode('_buffer_write(%(expression)s)' % vars())
+    return [code_node]
+
+  def codegenASTFilterNode(self, node):
+    expression = self.generate_python(self.build_code(node.expression)[0])
+    if node.filter_function_node:
+      filter_expression = self.generate_python(
+        self.build_code(node.filter_function_node)[0])
+    else:
+      filter_expression = '_self_filter_function'
+    if isinstance(node.expression, CallFunctionNode):
+      # need the placeholder function expression to make sure that we don't
+      # double escape the output of template functions
+      # fixme: this is suboptimal if this expression is expensive - should the
+      # optimizer fix this, or should we generate speedy code?
+      placeholder_function_expression = self.generate_python(
+        self.build_code(node.expression.expression)[0])
+      if node.filter_function_node:
+        code_node = CodeNode(
+          '%(filter_expression)s(self, %(expression)s, %(placeholder_function_expression)s)'
+          % vars())
+      else:
+        code_node = CodeNode(
+          '%(filter_expression)s(%(expression)s, %(placeholder_function_expression)s)'
+          % vars())
+    else:
+      if node.filter_function_node:
+        code_node = CodeNode('%(filter_expression)s(self, %(expression)s)' % vars())
+      else:
+        code_node = CodeNode('%(filter_expression)s(%(expression)s)' % vars())
+    return [code_node]
+
+    return []
 
   def codegenDefault(self, node):
     v = globals()
