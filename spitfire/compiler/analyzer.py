@@ -52,6 +52,9 @@ class AnalyzerOptions(object):
     self.hoist_conditional_aliases = False
     self.hoist_loop_invariant_aliases = False
 
+    # filtering is expensive, especially given the number of function calls
+    self.cache_filtered_placeholders = False
+
     self.enable_psyco = False
     self.__dict__.update(kargs)
 
@@ -78,6 +81,12 @@ o3_options = copy.copy(o2_options)
 o3_options.inline_hoist_loop_invariant_aliases = False
 o3_options.hoist_conditional_aliases = True
 o3_options.hoist_loop_invariant_aliases = True
+o3_options.cache_filtered_placeholders = True
+# FIXME: this covers up an interaction between FilterNode and PlaceholderNode
+# in many cases, this early optimization strategy generates bad code because
+# hoisting and caching are not doing enough variable depency mapping and
+# relying on conventions that are violated in this case. 
+o3_options.cache_resolved_placeholders = False
 
 o4_options = copy.copy(o3_options)
 o4_options.enable_psyco = True
@@ -275,12 +284,10 @@ class SemanticAnalyzer(object):
   def analyzeTextNode(self, pnode):
     if pnode.child_nodes:
       raise SemanticAnalyzerError("TextNode can't have children")
-    f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
     text = pnode.value
     if self.options.normalize_whitespace:
       text = normalize_whitespace(text)
-    f.arg_list.append(LiteralNode(text))
-    return [f]
+    return [BufferWrite(LiteralNode(text))]
 
   analyzeOptionalWhitespaceNode = analyzeTextNode
   analyzeWhitespaceNode = analyzeTextNode
@@ -367,58 +374,22 @@ class SemanticAnalyzer(object):
     arg_map = pnode.parameter_list.get_arg_map()
     format_string = arg_map.get('format_string', '%s')
     if self.compiler.enable_filters:
-      if type(ph_expression) == CallFunctionNode:
-        temp_placeholder_function = IdentifierNode('_phf')
-        call_function = ph_expression
-        function_expression = ph_expression.expression
-        assign_node = AssignNode(temp_placeholder_function,
-                                 function_expression)
-        call_function.expression = temp_placeholder_function
-        node_list.append(assign_node)
-      else:
-        temp_placeholder_function = None
-
-      temp_placeholder = IdentifierNode('_ph')
-      assign_node = AssignNode(temp_placeholder, ph_expression)
-      node_list.append(assign_node)
-      
       arg_node_map = pnode.parameter_list.get_arg_node_map()
       if 'raw' not in arg_map:
-        if 'filter' in arg_node_map:
-          filter_function = arg_node_map['filter']
-        else:
-          filter_function = GetAttrNode(IdentifierNode('self'),
-                                        'filter_function')
-        filter_call_node = CallFunctionNode(filter_function)
-        if 'filter' in arg_node_map:
-          filter_call_node.arg_list.append(IdentifierNode('self'))
-        filter_call_node.arg_list.append(temp_placeholder)
-        if temp_placeholder_function is not None:
-          filter_call_node.arg_list.append(temp_placeholder_function)
+        # if we need to filter, wrap up the node and wait for further analysis
+        # later on
+        ph_expression = FilterNode(ph_expression, arg_node_map.get('filter'))
 
-        filter_assign_node = AssignNode(
-          temp_placeholder, filter_call_node)
-        node_list.append(filter_assign_node)
-        
-      write_function = CallFunctionNode(
-        GetAttrNode(IdentifierNode('_buffer'), 'write'))
-
-      write_function.arg_list.append(
-        BinOpNode('%', LiteralNode(format_string), temp_placeholder))
-      node_list.append(write_function)
-    else:
-      f = CallFunctionNode(GetAttrNode(IdentifierNode('_buffer'), 'write'))
-      f.arg_list.append(BinOpNode('%', LiteralNode(format_string), ph_expression))
-      node_list.append(f)
-
-    analyzed_node_list = []
-    for n in node_list:
-      analyzed_node_list.extend(self.build_ast(n))
-    return analyzed_node_list
+    return self.build_ast(
+      BufferWrite(BinOpNode('%', LiteralNode(format_string),
+                            ph_expression)))
 
 
   def analyzePlaceholderNode(self, pnode):
     return [pnode]
+
+  analyzeBufferWrite = analyzePlaceholderNode
+  analyzeFilterNode = analyzePlaceholderNode
 
   def analyzeBinOpNode(self, pnode):
     n = pnode.copy()

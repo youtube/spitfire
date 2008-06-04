@@ -5,10 +5,16 @@ import os.path
 from spitfire.compiler.ast import *
 from spitfire.compiler.analyzer import *
 from spitfire.compiler.visitor import print_tree
+from spitfire.compiler.walker import flatten_tree
 
 import __builtin__
 builtin_names = vars(__builtin__)
 
+def unsigned_hash(x):
+  exp_hash = hash(x)
+  if exp_hash < 0:
+    exp_hash = -exp_hash | 0x80000000
+  return exp_hash
 
 class _BaseAnalyzer(object):
   def __init__(self, ast_root, options, compiler):
@@ -105,91 +111,98 @@ class _BaseAnalyzer(object):
 
 
   def reanalyzeConditionalNode(self, conditional_node):
-    if not self.options.hoist_conditional_aliases:
+    if (not self.options.hoist_conditional_aliases and
+        not self.options.cache_filtered_placeholders):
       return
 
+    parent_node = conditional_node
     parent_block, insertion_point = self.get_insert_block_and_point(conditional_node)
-    
-    # print "reanalyzeConditionalNode", conditional_node
-    # print "parent_block", parent_block
-    # print "parent_scope", parent_block.scope
-    for alias_node, alias in conditional_node.scope.aliased_expression_map.iteritems():
-      assign_alias = AssignNode(alias, alias_node)
-      if alias_node in parent_block.scope.aliased_expression_map:
-        # prune the implementation in the nested block
-        # print "prune", alias_node
-        # print "parent_block aliases", parent_block.scope.aliased_expression_map
-        conditional_node.child_nodes.remove(assign_alias)
-        # if we've already hoisted an assignment, don't do it again
-        if alias_node not in parent_block.scope.hoisted_aliases:
-          # prune the original implementation in the current block and
-          # reinsert the alias before it's first potential usage if it
-          # is needed earlier in the execution path.
-          # when a variable aliased in both the if and
-          # else blocks is promoted to the parent scope
-          # the implementation isn't actually hoisted (should it be?)
-          # inline with the IfNode optimization so we need to check if the
-          # node is already here
-          if assign_alias in parent_block.child_nodes:
-            current_pos = parent_block.child_nodes.index(assign_alias)
-            # an else node's parent is the IfNode, which is the relevant
-            # node when searching for the insertion point
-            needed_pos = parent_block.child_nodes.index(insertion_point)
-            if needed_pos < current_pos:
-              parent_block.child_nodes.remove(assign_alias)
-              parent_block.insert_before(conditional_node, assign_alias)
-              # print "insert_before", alias_node
-          else:
-            # still need to insert the alias
-            parent_block.insert_before(conditional_node, assign_alias)
-          parent_block.scope.hoisted_aliases.append(alias_node)
 
-  # FIXME: refactor out the common code from reanalyzeConditionalNode
+    if self.options.hoist_conditional_aliases:
+      # print "reanalyzeConditionalNode", conditional_node
+      # print "parent_block", parent_block
+      # print "parent_scope", parent_block.scope
+      for alias_node, alias in conditional_node.scope.aliased_expression_map.iteritems():
+        assign_alias_node = AssignNode(alias, alias_node)
+        if alias_node in parent_block.scope.aliased_expression_map:
+          self.hoist(
+            conditional_node, parent_block, insertion_point, alias_node, assign_alias_node)
+
+#     if self.options.cache_filtered_placeholders:
+#       for filter_node, (unused_original_filter_node, alias_node) in conditional_node.scope.filtered_expression_map.iteritems():
+#         print "filter_node", filter_node, alias_node
+#         print "parent filtered", parent_block.scope.filtered_expression_map
+#         if filter_node in parent_block.scope.filtered_expression_map:
+#           original_filter_node = parent_block.scope.filtered_expression_map[filter_node][0]
+#           print "hoist filter_node"
+#           print "parent_node", parent_node
+#           # ok, it looks like we use this filtered expressing in a few places
+#           # so let's hoist the filter, cache the expression and replace
+#           # the original expressions with a reference to the alias
+#           assign_alias_node = AssignNode(alias_node, filter_node)
+#           filter_node.parent.replace(filter_node, alias_node)
+#           # if we've already hoisted an assignment, don't do it again
+#           if alias_node not in parent_block.scope.hoisted_aliases:
+#             # prune the original implementation in the current block and
+#             # reinsert the alias before it's first potential usage if it
+#             # is needed earlier in the execution path.
+#             # when a variable aliased in both the if and
+#             # else blocks is promoted to the parent scope
+#             # the implementation isn't actually hoisted (should it be?)
+#             # inline with the IfNode optimization so we need to check if the
+#             # node is already here
+#             if assign_alias_node in parent_block.child_nodes:
+#               current_pos = parent_block.child_nodes.index(assign_alias_node)
+#               # an else node's parent is the IfNode, which is the relevant
+#               # node when searching for the insertion point
+#               needed_pos = parent_block.child_nodes.index(insertion_point)
+#               if needed_pos < current_pos:
+#                 parent_block.child_nodes.remove(assign_alias_node)
+#                 parent_block.insert_before(parent_node, assign_alias_node)
+#                 # print "insert_before", alias_node
+#             else:
+#               # still need to insert the alias
+#               parent_block.insert_before(parent_node, assign_alias_node)
+#             parent_block.scope.hoisted_aliases.append(alias_node)
+          
   def reanalyzeLoopNode(self, loop_node):
     if not self.options.hoist_loop_invariant_aliases:
       return
+
     parent_block, insertion_point = self.get_insert_block_and_point(loop_node)
     
     for alias_node, alias in loop_node.scope.aliased_expression_map.iteritems():
       assign_alias = AssignNode(alias, alias_node)
       if alias_node in parent_block.scope.aliased_expression_map:
-        # prune the implementation in the nested block
-        # print "prune", alias_node
-        # print "parent_block aliases", parent_block.scope.aliased_expression_map
-        loop_node.child_nodes.remove(assign_alias)
-        # if we've already hoisted an assignment, don't do it again
-        if alias_node not in parent_block.scope.hoisted_aliases:
-          # prune the original implementation in the current block and
-          # reinsert the alias before it's first potential usage if it
-          # is needed earlier in the execution path.
-          # when a variable aliased in both the if and
-          # else blocks is promoted to the parent scope
-          # the implementation isn't actually hoisted (should it be?)
-          # inline with the IfNode optimization so we need to check if the
-          # node is already here
-          if assign_alias in parent_block.child_nodes:
-            current_pos = parent_block.child_nodes.index(assign_alias)
-            # an else node's parent is the IfNode, which is the relevant
-            # node when searching for the insertion point
-            needed_pos = parent_block.child_nodes.index(insertion_point)
-            if needed_pos < current_pos:
-              parent_block.child_nodes.remove(assign_alias)
-              parent_block.insert_before(loop_node, assign_alias)
-              #print "insert_before", alias_node
-          else:
-            # still need to insert the alias
-            parent_block.insert_before(loop_node, assign_alias)
-          parent_block.scope.hoisted_aliases.append(alias_node)
+        self.hoist(loop_node, parent_block, insertion_point, alias_node, assign_alias)
       else:
         # if this alias is not already used in the parent scope, that's
         # ok, hoist it if it's loop invariant
-        # fixme: stronger check for invariance - right now it's not really
-        # possible to be look-variant - we treat loop variables as placeholders
-        # so we are calling resolve_udn, which doesn't get aliased
-        loop_node.child_nodes.remove(assign_alias)
-        parent_block.insert_before(loop_node, assign_alias)
-        parent_block.scope.hoisted_aliases.append(alias_node)
-        
+        if self.is_loop_invariant(alias_node, loop_node):
+          loop_node.child_nodes.remove(assign_alias)
+          parent_block.insert_before(loop_node, assign_alias)
+          parent_block.scope.hoisted_aliases.append(alias_node)
+
+  def is_loop_invariant(self, node, loop_node):
+    node_dependency_set = self.get_node_dependencies(node)
+    return not loop_node.loop_variant_set.intersection(node_dependency_set)
+
+  def get_node_dependencies(self, node):
+    node_dependency_set = set(flatten_tree(node))
+    parent_block = self.get_parent_block(node)
+
+    for n in list(node_dependency_set):
+      # when this is an identifier, you need to check all of the potential
+      # the dependencies for that symbol, which means doing some crawling
+      if isinstance(n, IdentifierNode):
+        identifier = n
+        for block_node in parent_block.child_nodes:
+          if isinstance(block_node, AssignNode):
+            if block_node.left == identifier:
+              node_dependency_set.update(
+                self.get_node_dependencies(block_node.right))
+    return node_dependency_set
+
 
 class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeParameterNode(self, parameter):
@@ -260,6 +273,39 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeCallFunctionNode(self, function_call):
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
+
+  def analyzeBufferWrite(self, buffer_write):
+    self.visit_ast(buffer_write.expression, buffer_write)
+
+  def analyzeFilterNode(self, filter_node):
+    self.visit_ast(filter_node.expression, filter_node)
+
+    if self.options.cache_filtered_placeholders:
+      # NOTE: you *must* analyze the node before putting it in a dict
+      # otherwise the definition of hash and equivalence will change and the
+      # node will not be found - very odd.
+      scope = self.get_parent_scope(filter_node)
+      alias = scope.aliased_expression_map.get(filter_node)
+
+      if not alias:
+        alias_name = '_fph%X' % unsigned_hash(filter_node.expression)
+        if alias_name in scope.alias_name_set:
+          print "duplicate alias_name", alias_name
+          print "scope", scope
+          print "scope.alias_name_set", scope.alias_name_set
+          print "scope.aliased_expression_map", scope.aliased_expression_map
+          return
+
+        alias = IdentifierNode(alias_name)
+        scope.alias_name_set.add(alias_name)
+        scope.aliased_expression_map[filter_node] = alias
+        assign_alias = AssignNode(alias, filter_node)
+
+        insert_block, insert_marker = self.get_insert_block_and_point(filter_node)
+        insert_block.insert_before(insert_marker, assign_alias)
+
+      filter_node.parent.replace(filter_node, alias)
+        
 
   def analyzePlaceholderNode(self, placeholder):
     if self.options.directly_access_defined_variables:
@@ -509,7 +555,34 @@ class FinalPassAnalyzer(_BaseAnalyzer):
     for n in if_node.else_.child_nodes:
       self.visit_ast(n, if_node.else_)
 
-
     self.reanalyzeConditionalNode(if_node)
     self.reanalyzeConditionalNode(if_node.else_)
 
+  def hoist(self, parent_node, parent_block, insertion_point, alias_node, assign_alias_node):
+    # prune the implementation in the nested block
+    # print "prune", alias_node
+    # print "parent_block aliases", parent_block.scope.aliased_expression_map
+    parent_node.child_nodes.remove(assign_alias_node)
+    # if we've already hoisted an assignment, don't do it again
+    if alias_node not in parent_block.scope.hoisted_aliases:
+      # prune the original implementation in the current block and
+      # reinsert the alias before it's first potential usage if it
+      # is needed earlier in the execution path.
+      # when a variable aliased in both the if and
+      # else blocks is promoted to the parent scope
+      # the implementation isn't actually hoisted (should it be?)
+      # inline with the IfNode optimization so we need to check if the
+      # node is already here
+      if assign_alias_node in parent_block.child_nodes:
+        current_pos = parent_block.child_nodes.index(assign_alias_node)
+        # an else node's parent is the IfNode, which is the relevant
+        # node when searching for the insertion point
+        needed_pos = parent_block.child_nodes.index(insertion_point)
+        if needed_pos < current_pos:
+          parent_block.child_nodes.remove(assign_alias_node)
+          parent_block.insert_before(parent_node, assign_alias_node)
+          # print "insert_before", alias_node
+      else:
+        # still need to insert the alias
+        parent_block.insert_before(insertion_point, assign_alias_node)
+      parent_block.scope.hoisted_aliases.append(alias_node)
