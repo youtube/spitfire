@@ -1,0 +1,6 @@
+-2 even
+-1 oddnegative one!not -2
+0 evennot xnot -2
+test andtest and1 oddnot -2
+test 22 evennot -2
+

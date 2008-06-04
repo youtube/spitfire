@@ -1,0 +1,3 @@
+#for $x in $test_object_list
+test line $x.id : $x.name
+#end for
