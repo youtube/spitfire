@@ -1,0 +1,7 @@
+existing variable: $get_var('test_x')
+missing variable with default: $get_var('crap', 'default text')
+missing variable with default array: $get_var('crap', [])
+## we don't support dictionary literals yet
+##missing variable with default dict: $get_var('crap', {})
+has missing variable? $has_var('crap')
+has existing variable? $has_var('test_x')

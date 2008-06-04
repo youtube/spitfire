@@ -1,0 +1,2 @@
+escape_html = cgi.escape
+#versioned_url = resource.loader.vurl

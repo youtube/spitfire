@@ -1,0 +1,7 @@
+#for $x in [0, 1, 2]
+  #if $x
+  if true $x
+  #else
+  else $x 
+  #end if
+#end for
