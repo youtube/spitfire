@@ -150,7 +150,8 @@ class TreeVisitor(object):
   def visitASTParameterListNode(self, node):
     v = self.visitDefault(node)[0]
     for n in node.child_nodes:
-      v.extend(self.build_text(n))
+      #print "visitASTParameterListNode:", n, text
+      v.append(VisitNode(str(n)))
     return [v]
 
   visitASTArgListNode = visitASTParameterListNode
@@ -168,10 +169,9 @@ class TreeVisitor(object):
     return [v]
 
   def visitASTParameterNode(self, node):
-    #v = self.visitDefault(node)[0]
     if node.default:
-      return [VisitNode('%s=%s' % (node.name, self.generate_text(
-        self.build_text(node.default)[0])))]
+      return [VisitNode('%s=%s' % (node.name, ' '.join([self.generate_text(x) for x in
+        self.build_text(node.default)])))]
     else:
       return [VisitNode('%s' % node.name)]
     
@@ -183,6 +183,12 @@ class TreeVisitor(object):
   visitASTGetAttrNode = visitASTGetUDNNode
   visitASTReturnNode = visitASTGetUDNNode
   visitASTPlaceholderSubstitutionNode = visitASTGetUDNNode
+  visitASTBufferWrite = visitASTGetUDNNode
+
+  def visitASTFilterNode(self, node):
+    v = VisitNode('%s %s %s' % (node.__class__.__name__, node.name, hash(node)))
+    v.extend(self.build_text(node.expression))
+    return [v]
   
   def visitASTSliceNode(self, node):
     v = self.visitDefault(node)[0]
@@ -200,7 +206,6 @@ class TreeVisitor(object):
   visitASTBinOpNode = visitASTBinOpExpressionNode
 
   visitASTAssignNode = visitASTBinOpNode
-  visitASTFilteredAssignNode = visitASTBinOpNode
   
   def visitASTUnaryOpNode(self, node):
     v = self.visitDefault(node)[0]
@@ -236,11 +241,13 @@ class TreeVisitor(object):
       v.extend(self.build_text(n))
       
     return [v]
+
   def visitASTLiteralNode(self, node):
     return [VisitNode("%s '%r'" % (node.__class__.__name__, node.value))]
   visitASTTextNode = visitASTLiteralNode  
   visitASTWhitespaceNode = visitASTLiteralNode  
   visitASTOptionalWhitespaceNode = visitASTLiteralNode  
+
   def visitDefault(self, node):
     return [VisitNode('%s %s' % (node.__class__.__name__, node.name))]
 

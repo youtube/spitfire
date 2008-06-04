@@ -22,29 +22,33 @@ test_function_registry: parser
 
 .PHONY : no_whitespace_tests
 no_whitespace_tests: clean_tests parser
-	$(COMPILER) tests/*txt tests/*tmpl
-	$(CRUNNER) --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
-	$(COMPILER) -O1 tests/*txt tests/*tmpl
-	$(CRUNNER) -O1 --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
-	$(COMPILER) -O2 tests/*txt tests/*tmpl
-	$(CRUNNER) -O2 --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
-	$(COMPILER) -O3 tests/*txt tests/*tmpl
-	$(CRUNNER) -O3 --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
-	$(COMPILER) -O4 tests/*txt tests/*tmpl
-	$(CRUNNER) -O4 --test-input tests/input/search_list_data.pye -qt tests/*txt tests/*tmpl
+	$(COMPILER) tests/*.txt tests/*.tmpl
+	$(CRUNNER) --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
+	$(COMPILER) -O1 tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O1 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
+	$(COMPILER) -O2 tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O2 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
+	$(COMPILER) -O3 tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O3 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
 
 .PHONY : whitespace_tests
 whitespace_tests: clean_tests parser
-	$(COMPILER) --preserve-optional-whitespace tests/*txt tests/*tmpl
-	$(CRUNNER) --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
-	$(COMPILER) -O1 --preserve-optional-whitespace tests/*txt tests/*tmpl
-	$(CRUNNER) -O1 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
-	$(COMPILER) -O2 --preserve-optional-whitespace tests/*txt tests/*tmpl
-	$(CRUNNER) -O2 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
-	$(COMPILER) -O3 --preserve-optional-whitespace tests/*txt tests/*tmpl
-	$(CRUNNER) -O3 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
-	$(COMPILER) -O4 --preserve-optional-whitespace tests/*txt tests/*tmpl
-	$(CRUNNER) -O4 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*txt tests/*tmpl
+	$(COMPILER) --preserve-optional-whitespace tests/*.txt tests/*.tmpl
+	$(CRUNNER) --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
+	$(COMPILER) -O1 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O1 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
+	$(COMPILER) -O2 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O2 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
+	$(COMPILER) -O3 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O3 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
+
+.PHONY : test_opt
+test_opt: clean_tests parser	
+	$(COMPILER) -O4 tests/*.txt tests/*.tmpl tests/*.o4txt
+	$(CRUNNER) -O4 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl tests/*.o4txt
+	$(COMPILER) -O4 --preserve-optional-whitespace tests/*.txt tests/*.tmpl tests/*.o4txt
+	$(CRUNNER) -O4 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl tests/*.o4txt
+
 
 .PHONY : xhtml_tests
 xhtml_tests: clean_tests parser
@@ -52,7 +56,7 @@ xhtml_tests: clean_tests parser
 	$(CRUNNER) --xhtml --test-input tests/input/search_list_data.pye --test-output output-xhtml -qt tests/*.xhtml
 
 .PHONY : tests
-tests: no_whitespace_tests whitespace_tests test_function_registry
+tests: no_whitespace_tests whitespace_tests test_function_registry test_opt
 
 
 .PHONY : clean
