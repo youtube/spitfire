@@ -388,6 +388,7 @@ class SemanticAnalyzer(object):
 
   analyzeBufferWrite = analyzePlaceholderNode
   analyzeFilterNode = analyzePlaceholderNode
+  analyzeEchoNode = analyzePlaceholderNode
 
   def analyzeBinOpNode(self, pnode):
     n = pnode.copy()
