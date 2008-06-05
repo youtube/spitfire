@@ -102,7 +102,12 @@ class CodeGenerator(object):
     module_code.append_line('from spitfire.runtime.udn import resolve_udn')
     module_code.append_line('from spitfire.runtime.template import template_method')
     module_code.append_line('')
-
+    if node.cached_identifiers:
+      module_code.append_line('# cached identifiers')
+      for cached_ph in node.cached_identifiers:
+        module_code.append_line('%s = None' % cached_ph.name)
+      module_code.append_line('')
+    
     class_code = CodeNode(
       'class %(classname)s(%(extends_clause)s):' % vars())
     module_code.append(class_code)
@@ -329,6 +334,14 @@ class CodeGenerator(object):
     expression = self.generate_python(self.build_code(node.expression)[0])
     code_node = CodeNode('_buffer_write(%(expression)s)' % vars())
     return [code_node]
+
+  def codegenASTCacheNode(self, node):
+    cached_name = node.name
+    expression = self.generate_python(self.build_code(node.expression)[0])
+    if_code = CodeNode('if %(cached_name)s is None:' % vars())
+    if_code.append(CodeNode('global %(cached_name)s' % vars()))
+    if_code.append(CodeNode('%(cached_name)s = %(expression)s' % vars()))
+    return [if_code]
 
   def codegenASTFilterNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])

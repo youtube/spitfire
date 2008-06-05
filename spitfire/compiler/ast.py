@@ -196,6 +196,11 @@ class CallFunctionNode(ASTNode):
 class BufferWrite(CallFunctionNode):
   pass
 
+class CacheNode(CallFunctionNode):
+  def __init__(self, expression=None):
+    ASTNode.__init__(self, '_cph%08X' % unsigned_hash(expression))
+    self.expression = expression
+
 # encapsulate the idea that you want to run a filter over this expression
 # this is sort of an implicit function call, so the hierarchy makes some sense
 # again, in this case we want to preserve plenty of information and hierarchy
@@ -214,15 +219,18 @@ class FilterNode(ASTNode):
 
   def __eq__(self, node):
     return bool(type(self) == type(node) and
-                self.expression == node.expression)
+                self.expression == node.expression and
+                self.filter_function_node == node.filter_function_node)
 
   def __hash__(self):
-    return hash('%s%s' %
-                (type(self), hash(self.expression)))
+    return hash('%s%s%s' %
+                (type(self), hash(self.expression),
+                 hash(self.filter_function_node)))
 
   def __str__(self):
     return '%s expr:%s %s' % (
       self.__class__.__name__, self.expression, hash(self))
+
 
 class CommentNode(ASTNode):
   pass
@@ -547,7 +555,7 @@ class TemplateNode(ASTNode):
     self.library = False
     self.implements = False
     self.global_identifiers = set()
-
+    self.cached_identifiers = []
   
   def __str__(self):
     return '%s\nimport:%s\nfrom:%s\nextends:%s\nmain:%s' % (
@@ -629,3 +637,9 @@ def make_optional(node_list):
         node_list[-1] = OptionalWhitespaceNode(node_list[-1].value)
   except IndexError:
     pass
+
+def unsigned_hash(x):
+  exp_hash = hash(x)
+  if exp_hash < 0:
+    exp_hash = -exp_hash | 0x80000000
+  return exp_hash
