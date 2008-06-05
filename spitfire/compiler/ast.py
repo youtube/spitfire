@@ -201,6 +201,14 @@ class CacheNode(CallFunctionNode):
     ASTNode.__init__(self, '_cph%08X' % unsigned_hash(expression))
     self.expression = expression
 
+class EchoNode(ASTNode):
+  def __init__(self, true_expression=None, test_expression=None,
+               false_expression=None):
+    ASTNode.__init__(self)
+    self.true_expression = true_expression
+    self.test_expression = test_expression
+    self.false_expression = false_expression
+  
 # encapsulate the idea that you want to run a filter over this expression
 # this is sort of an implicit function call, so the hierarchy makes some sense
 # again, in this case we want to preserve plenty of information and hierarchy

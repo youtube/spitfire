@@ -105,6 +105,14 @@ parser SpitfireParser:
         'set' SPACE placeholder {{ _lhs = IdentifierNode(placeholder.name) }}
         [ SPACE ] ASSIGN_OPERATOR [ SPACE ] expression {{ _rhs = expression }}
         CLOSE_DIRECTIVE {{ return AssignNode(_lhs, _rhs) }}
+        |
+        'echo' SPACE literal {{ _true_exp = literal }}
+         {{ _test_exp, _false_exp = None, None }}
+         [ SPACE 'if' SPACE expression {{ _test_exp = expression }}
+           [ SPACE 'else' SPACE literal {{ _false_exp = literal }}
+           ]
+         ]
+         CLOSE_DIRECTIVE {{ return EchoNode(_true_exp, _test_exp, _false_exp) }}
         
   rule modulename:
     identifier {{ _module_name_list = [identifier] }}
@@ -416,7 +424,8 @@ parser SpitfireParser:
           {{ _dict_literal.append((_key, expression)) }}
         ) *
       ]
-      CLOSE_BRACE {{ _primary = _dict_literal }}
+      # need PLACEHOLDERNODE to handle optional whitespace parsing
+      (CLOSE_BRACE | PLACEHOLDER_CLOSE_BRACE) {{ _primary = _dict_literal }}
     )
     (
       placeholder_suffix_expression<<_primary>>
@@ -443,7 +452,7 @@ parser SpitfireParser:
     ) *
     [
     ASSIGN_OPERATOR
-    {{ if not isinstance(_arg, IdentifierNode): raise SyntaxError(self._scanner.pos, "keyword arg can't be complex expression: %s" % _arg) }}
+    {{ if not isinstance(_arg, (IdentifierNode)): raise SyntaxError(self._scanner.pos, "keyword arg can't be complex expression: %s" % _arg) }}
     {{ _karg = ParameterNode(_arg.name) }}
     {{ _arg = None }}
     expression {{ _karg.default = expression }}

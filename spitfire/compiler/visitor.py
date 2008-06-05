@@ -146,6 +146,14 @@ class TreeVisitor(object):
     v = self.visitDefault(node)[0]
     v.extend(self.build_text(node.default))
     return [v]
+
+  def visitASTEchoNode(self, node):
+    v = self.visitDefault(node)[0]
+    for n in [node.test_expression, node.true_expression, node.false_expression]:
+      #print "visitASTParameterListNode:", n, text
+      v.append(VisitNode(str(n)))
+    return [v]
+
     
   def visitASTParameterListNode(self, node):
     v = self.visitDefault(node)[0]

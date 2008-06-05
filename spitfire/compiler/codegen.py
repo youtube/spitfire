@@ -335,6 +335,30 @@ class CodeGenerator(object):
     code_node = CodeNode('_buffer_write(%(expression)s)' % vars())
     return [code_node]
 
+  def codegenASTEchoNode(self, node):
+    node_list = []
+    
+    true_expression = self.generate_python(
+      self.build_code(node.true_expression)[0])
+    true_code = CodeNode('_buffer_write(%(true_expression)s)' % vars())
+    if node.test_expression:
+      test_expression = self.generate_python(
+        self.build_code(node.test_expression)[0])
+      if_code = CodeNode('if %(test_expression)s:' % vars())
+      if_code.append(true_code)
+      node_list.append(if_code)
+    else:
+      node_list.append(true_code)
+
+    if node.false_expression:
+      false_expression = self.generate_python(
+        self.build_code(node.false_expression)[0])
+      else_code = CodeNode('else:' % vars())
+      else_code.append(
+        CodeNode('_buffer_write(%(false_expression)s)' % vars()))
+      node_list.append(else_code)
+    return node_list
+
   def codegenASTCacheNode(self, node):
     cached_name = node.name
     expression = self.generate_python(self.build_code(node.expression)[0])
