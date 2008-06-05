@@ -15,6 +15,11 @@ factored out some of the optimization techniques - like hoisting. added some
 reasonable code to do dependency analysis for hoisted expressions which should
 prevent referencing undefined values.
 
+added caching of resolved and filtered placeholders.
+
+fixed scope search with ForNode when you are optimizing something in the
+expression list. 
+
 
 0.6.18 - 2008-05-29
 added a function registry - functions that should be available to all

@@ -65,6 +65,9 @@ class ASTNode(object):
     # print "insert_before", idx, id(self), self, id(marker_node), marker_node
     self.child_nodes.insert(idx, insert_node)
 
+  def remove(self, node):
+    self.replace(node, [])
+
   def replace(self, marker_node, insert_node_list):
     try:
       idx = self.child_nodes.index(marker_node)
@@ -581,13 +584,41 @@ class Scope(object):
     else:
       self.name = hex(id(self))
     self.local_identifiers = []
-    self.aliased_expression_map = {}
+    self.aliased_expression_map = OrderedDict()
     self.alias_name_set = set()
     self.filtered_expression_map = {}
     self.hoisted_aliases = []
 
   def __str__(self):
     return "<Scope %(name)s> %(alias_name_set)s" % vars(self)
+
+class OrderedDict(object):
+  def __init__(self):
+    self._dict = {}
+    self._order = []
+
+  def get(self, key, default=None):
+    return self._dict.get(key, default)
+
+  def __contains__(self, key):
+    return key in self._dict
+
+  def __getitem__(self, key):
+    return self._dict[key]
+
+  def __setitem__(self, key, value):
+    if key in self._dict:
+      raise ValueError('duplicate key: %s' % key)
+    self._order.append(key)
+    self._dict[key] = value
+
+  def iteritems(self):
+    for key in self._order:
+      yield key, self._dict[key]
+
+  def update(self, ordered_dict):
+    for key, value in ordered_dict.iteritems():
+      self[key] = value
 
 # this is sort of a hack to support optional white space nodes inside the
 # parse tree.  the reality is that this probably requires a more complex

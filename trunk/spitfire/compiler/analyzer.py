@@ -82,11 +82,6 @@ o3_options.inline_hoist_loop_invariant_aliases = False
 o3_options.hoist_conditional_aliases = True
 o3_options.hoist_loop_invariant_aliases = True
 o3_options.cache_filtered_placeholders = True
-# FIXME: this covers up an interaction between FilterNode and PlaceholderNode
-# in many cases, this early optimization strategy generates bad code because
-# hoisting and caching are not doing enough variable depency mapping and
-# relying on conventions that are violated in this case. 
-o3_options.cache_resolved_placeholders = False
 
 o4_options = copy.copy(o3_options)
 o4_options.enable_psyco = True
@@ -169,8 +164,6 @@ class SemanticAnalyzer(object):
       built_nodes = self.build_ast(pn)
       self.template.main_function.extend(built_nodes)
 
-    #self.template.main_function = self.build_ast(
-    #  self.template.main_function)[0]
     return [self.template]
 
   def analyzeForNode(self, pnode):

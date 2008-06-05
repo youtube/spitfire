@@ -101,7 +101,8 @@ Varian 2.1: (UNTESTED)
 
 Cleanup:
  * refactor 'visitor' into 'walker'
- * re-enable cache_resolved_placeholders in -O3
+ * OrderedDict keeps you from having to do proper dependency analysis for
+   hoisting aliases. this seems a little fragile, but it does seem to work.
  * many chunks of the optimizer seem copy-pasted - they are slightly different
    but would be best to factor that out
  * revisit all uses of default_analyze_node - usually this is where
