@@ -372,10 +372,15 @@ class SemanticAnalyzer(object):
         # if we need to filter, wrap up the node and wait for further analysis
         # later on
         ph_expression = FilterNode(ph_expression, arg_node_map.get('filter'))
-
-    return self.build_ast(
-      BufferWrite(BinOpNode('%', LiteralNode(format_string),
-                            ph_expression)))
+        if 'cache' in arg_map:
+          cache_expression = CacheNode(ph_expression)
+          self.template.cached_identifiers.append(cache_expression)
+          node_list.append(cache_expression)
+          ph_expression = IdentifierNode(cache_expression.name)
+          
+    node_list.append(BufferWrite(BinOpNode('%', LiteralNode(format_string),
+                                           ph_expression)))
+    return [self.build_ast(n) for n in node_list]
 
 
   def analyzePlaceholderNode(self, pnode):

@@ -20,6 +20,9 @@ added caching of resolved and filtered placeholders.
 fixed scope search with ForNode when you are optimizing something in the
 expression list. 
 
+added 'cache' argument to extended placholder syntax - this will cache the
+output of the expression indefinitely
+
 
 0.6.18 - 2008-05-29
 added a function registry - functions that should be available to all
