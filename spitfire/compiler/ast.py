@@ -607,10 +607,9 @@ class OrderedDict(object):
     return self._dict[key]
 
   def __setitem__(self, key, value):
-    if key in self._dict:
-      raise ValueError('duplicate key: %s' % key)
-    self._order.append(key)
-    self._dict[key] = value
+    if key not in self._dict:
+      self._order.append(key)
+      self._dict[key] = value
 
   def iteritems(self):
     for key in self._order:
