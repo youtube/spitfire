@@ -87,7 +87,8 @@ class _BaseAnalyzer(object):
       elif type(node) == ElseNode:
         return node.scope
       elif type(node) == ForNode:
-        return node.scope
+        if node_stack[-1] != node.expression_list:
+          return node.scope
       node_stack.append(node)
       node = node.parent
     raise SemanticAnalyzerError("expected a parent function")
@@ -128,42 +129,6 @@ class _BaseAnalyzer(object):
           self.hoist(
             conditional_node, parent_block, insertion_point, alias_node, assign_alias_node)
 
-#     if self.options.cache_filtered_placeholders:
-#       for filter_node, (unused_original_filter_node, alias_node) in conditional_node.scope.filtered_expression_map.iteritems():
-#         print "filter_node", filter_node, alias_node
-#         print "parent filtered", parent_block.scope.filtered_expression_map
-#         if filter_node in parent_block.scope.filtered_expression_map:
-#           original_filter_node = parent_block.scope.filtered_expression_map[filter_node][0]
-#           print "hoist filter_node"
-#           print "parent_node", parent_node
-#           # ok, it looks like we use this filtered expressing in a few places
-#           # so let's hoist the filter, cache the expression and replace
-#           # the original expressions with a reference to the alias
-#           assign_alias_node = AssignNode(alias_node, filter_node)
-#           filter_node.parent.replace(filter_node, alias_node)
-#           # if we've already hoisted an assignment, don't do it again
-#           if alias_node not in parent_block.scope.hoisted_aliases:
-#             # prune the original implementation in the current block and
-#             # reinsert the alias before it's first potential usage if it
-#             # is needed earlier in the execution path.
-#             # when a variable aliased in both the if and
-#             # else blocks is promoted to the parent scope
-#             # the implementation isn't actually hoisted (should it be?)
-#             # inline with the IfNode optimization so we need to check if the
-#             # node is already here
-#             if assign_alias_node in parent_block.child_nodes:
-#               current_pos = parent_block.child_nodes.index(assign_alias_node)
-#               # an else node's parent is the IfNode, which is the relevant
-#               # node when searching for the insertion point
-#               needed_pos = parent_block.child_nodes.index(insertion_point)
-#               if needed_pos < current_pos:
-#                 parent_block.child_nodes.remove(assign_alias_node)
-#                 parent_block.insert_before(parent_node, assign_alias_node)
-#                 # print "insert_before", alias_node
-#             else:
-#               # still need to insert the alias
-#               parent_block.insert_before(parent_node, assign_alias_node)
-#             parent_block.scope.hoisted_aliases.append(alias_node)
           
   def reanalyzeLoopNode(self, loop_node):
     if not self.options.hoist_loop_invariant_aliases:
@@ -179,7 +144,7 @@ class _BaseAnalyzer(object):
         # if this alias is not already used in the parent scope, that's
         # ok, hoist it if it's loop invariant
         if self.is_loop_invariant(alias_node, loop_node):
-          loop_node.child_nodes.remove(assign_alias)
+          loop_node.remove(assign_alias)
           parent_block.insert_before(loop_node, assign_alias)
           parent_block.scope.hoisted_aliases.append(alias_node)
 
@@ -326,6 +291,10 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         placeholder.parent.replace(placeholder,
                                    IdentifierNode(local_var.name))
       elif self.options.cache_resolved_placeholders:
+        scope = self.get_parent_scope(placeholder)
+        scope.alias_name_set.add(cached_placeholder.name)
+        scope.aliased_expression_map[placeholder] = cached_placeholder
+
         insert_block, insert_marker = self.get_insert_block_and_point(
           placeholder)
         # note: this is sketchy enough that it requires some explanation
@@ -342,7 +311,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
           insert_marker, assign_rph)
         self.visit_ast(assign_rph, insert_block)
         assign_rph.right = placeholder
-        placeholder.parent.replace(placeholder, cached_placeholder)    
+        placeholder.parent.replace(placeholder, cached_placeholder)
+
       
   def analyzePlaceholderSubstitutionNode(self, placeholder_substitution):
     self.visit_ast(placeholder_substitution.expression,
@@ -389,7 +359,6 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     alias = scope.aliased_expression_map.get(node)
 
     if not alias:
-      #print "analyzeGetAttrNode", scope, alias
       if node.expression.name[0] != '_':
         alias_format = '_%s_%s'
       else:
