@@ -236,6 +236,12 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeBufferWrite(self, buffer_write):
     self.visit_ast(buffer_write.expression, buffer_write)
 
+  def analyzeEchoNode(self, node):
+    for n in (node.test_expression, node.true_expression, node.false_expression):
+      if n:
+        self.visit_ast(n, node)
+
+
   def analyzeFilterNode(self, filter_node):
     self.visit_ast(filter_node.expression, filter_node)
 

@@ -23,6 +23,11 @@ expression list.
 added 'cache' argument to extended placholder syntax - this will cache the
 output of the expression indefinitely
 
+added #echo 'literal when true' if condition else 'literal when false'# - 
+bascially yet another conditional inline statement. it is contingent on doing
+output so it restricts it from being useful in places where it might be very
+hard to read.
+
 
 0.6.18 - 2008-05-29
 added a function registry - functions that should be available to all
