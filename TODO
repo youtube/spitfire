@@ -100,6 +100,7 @@ Varian 2.1: (UNTESTED)
    * Variant 2 is universally the slowest
 
 Cleanup:
+ * add a test case for caching - ${something_expensive($arg)|cache}
  * refactor 'visitor' into 'walker'
  * OrderedDict keeps you from having to do proper dependency analysis for
    hoisting aliases. this seems a little fragile, but it does seem to work.

@@ -10,12 +10,6 @@ from spitfire.compiler.walker import flatten_tree
 import __builtin__
 builtin_names = vars(__builtin__)
 
-def unsigned_hash(x):
-  exp_hash = hash(x)
-  if exp_hash < 0:
-    exp_hash = -exp_hash | 0x80000000
-  return exp_hash
-
 class _BaseAnalyzer(object):
   def __init__(self, ast_root, options, compiler):
     self.ast_root = ast_root
@@ -253,7 +247,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       alias = scope.aliased_expression_map.get(filter_node)
 
       if not alias:
-        alias_name = '_fph%X' % unsigned_hash(filter_node.expression)
+        alias_name = '_fph%08X' % unsigned_hash(filter_node.expression)
         if alias_name in scope.alias_name_set:
           print "duplicate alias_name", alias_name
           print "scope", scope
