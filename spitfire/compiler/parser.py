@@ -52,7 +52,7 @@ class SpitfireParserScanner(Scanner):
         ('SINGLE_LINE_COMMENT', re.compile('#.*?\n')),
         ('MULTI_LINE_COMMENT', re.compile('\\*[\\W\\w\\S\\s]+\\*#')),
         ('ASSIGN_OPERATOR', re.compile('=')),
-        ('COMP_OPERATOR', re.compile('[ \t]*(<=|>=|==|>|<|!=)[ \t]*')),
+        ('COMP_OPERATOR', re.compile('[ \t]*(<=|>=|==|>|<|!=|in)[ \t]*')),
         ('OPEN_PAREN', re.compile('[ \t]*\\([ \t]*')),
         ('CLOSE_PAREN', re.compile('[ \t]*\\)')),
         ('OPEN_BRACKET', re.compile('[ \t]*\\[[ \t]*')),
