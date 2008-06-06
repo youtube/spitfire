@@ -1,0 +1,18 @@
+#from spitfire.runtime.filters import escape_html
+#filter escape_html
+
+#def test_block
+<p>
+Demo block of internationalized text with ${test_unwebsafe}.
+
+Demo block of internationalized text with ${test_dict}.
+
+Demo block of internationalized text with ${test_str_function($test_dict)}.
+</p>
+#end def
+
+#def test_block_2
+$test_block()
+#end def
+
+$test_block_2()
