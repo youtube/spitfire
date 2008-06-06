@@ -9,6 +9,34 @@ There are a few notable places where things diverge and some of this is up for d
 
 = Notable Differences =
 
+=== Passing keyword arguments is different. ===
+
+We do not allow whitespace around the '=' and the keyword name itself is not a placeholder - so no '$' is allowed.
+
+You need to do:
+{{{
+$function(keyword='value')
+}}}
+
+Instead of:
+{{{
+$function($keyword = 'value')
+}}}
+
+You might see this error if you have extra whitespace:
+{{{
+Trying to find CLOSE_PAREN on line 15:
+>  $function(keyword = 'value')
+>                   ^
+}}}
+You might see this error if you have an extra dollar sign. Note that the error message is correct, but the error
+caret is slightly off.
+{{{
+keyword arg can't be complex expression: PlaceholderNode keyword on line 15:
+>  $function($keyword='value')
+>                     ^
+}}}
+
 === Spitfire does not do autocalling. ===
 
 If you want to call a function, you must explicitly do so. This is the opposite of Cheetah's default behavior.  The default filter in Spitfire will replace references to function objects with empty strings.
