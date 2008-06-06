@@ -1,6 +1,11 @@
 0.7.1 - 2008-06-04
 added 'in' operator which was forgotten somehow.
 
+fixed syntax to allow for trailing whitespace in directives.
+
+changed codegen for explicit caching to keep python from bitching about variable usage.
+
+
 0.7 - 2008-06-03
 this is a fairly significant refactoring from the 0.6.x branch. the motivation
 was encountering limits in the optimization strategies easily applied to

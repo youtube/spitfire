@@ -362,10 +362,10 @@ class CodeGenerator(object):
   def codegenASTCacheNode(self, node):
     cached_name = node.name
     expression = self.generate_python(self.build_code(node.expression)[0])
+    globalize_var = CodeNode('global %(cached_name)s' % vars())
     if_code = CodeNode('if %(cached_name)s is None:' % vars())
-    if_code.append(CodeNode('global %(cached_name)s' % vars()))
     if_code.append(CodeNode('%(cached_name)s = %(expression)s' % vars()))
-    return [if_code]
+    return [globalize_var, if_code]
 
   def codegenASTFilterNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
