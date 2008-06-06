@@ -164,8 +164,8 @@ def print_error(input, err, scanner):
     p = p - 7
 
   # Now print the string, along with an indicator
-  print '> ',text.encode(sys.getdefaultencoding())
-  print '> ',' '*p + '^'
+  print '> ', text.replace('\t', ' ').encode(sys.getdefaultencoding())
+  print '> ', ' '*p + '^'
   print 'List of nearby tokens:', scanner
 
 
