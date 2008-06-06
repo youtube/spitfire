@@ -16,7 +16,7 @@ parser SpitfireParser:
   token SINGLE_LINE_COMMENT: '#.*?\n'
   token MULTI_LINE_COMMENT: '\*[\W\w\S\s]+\*#'
   token ASSIGN_OPERATOR: '='
-  token COMP_OPERATOR: '[ \t]*(<=|>=|==|>|<|!=)[ \t]*'
+  token COMP_OPERATOR: '[ \t]*(<=|>=|==|>|<|!=|in)[ \t]*'
   token OPEN_PAREN: '[ \t]*\([ \t]*'
   #token CLOSE_PAREN: '[ \t]*\)[ \t]*'
   # changing this to not gobble trailing whitespace - important for placeholder
