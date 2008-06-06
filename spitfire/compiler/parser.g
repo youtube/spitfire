@@ -34,7 +34,7 @@ parser SpitfireParser:
   token COLON_DELIMITER: '[ \t]*:[ \t]*'
 
   token SPACE: '[ \t]+'
-  token CLOSE_DIRECTIVE: '[ \t]*[\n#]'
+  token CLOSE_DIRECTIVE_TOKEN: '[ \t]*[\n#]'
   token END_DIRECTIVE: '#end'
   token START_DIRECTIVE: '#'
   token START_PLACEHOLDER: '\$'
@@ -48,10 +48,16 @@ parser SpitfireParser:
   # i18n message body
   token I18N_BODY: '[^#]+'
 
+  # need to make close_directive a rule because sometimes optional trailing
+  # whitespace may get slurped up as SPACE depending on how far things got
+  # scanned ahead
+  rule CLOSE_DIRECTIVE:
+    [ SPACE ] CLOSE_DIRECTIVE_TOKEN {{ return CLOSE_DIRECTIVE_TOKEN }}
+
   rule goal:
     {{ template = TemplateNode() }}
     ( block<<start=True>> {{ template.append(block) }} ) *
-    END {{ return template }}
+    END {{ return template }}    
 
   rule fragment_goal:
     {{ fragment = FragmentNode() }}
