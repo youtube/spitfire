@@ -126,6 +126,7 @@ Cleanup:
      be made into one or two variants
 
 Bugs:
+ * multi-line comments can get confused sometimes - add test case
  * py:conditional directives that are skipped still output a good amount of
    extra whitespace. could this be tightened up?
    

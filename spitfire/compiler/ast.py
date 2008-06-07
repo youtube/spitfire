@@ -208,6 +208,16 @@ class EchoNode(ASTNode):
     self.true_expression = true_expression
     self.test_expression = test_expression
     self.false_expression = false_expression
+
+  def replace(self, node, replacement_node):
+    if self.true_expression is node:
+      self.true_expression = replacement_node
+    elif self.test_expression is node:
+      self.test_expression = replacement_node
+    elif self.false_expression is node:
+      self.false_expression = replacement_node
+    else:
+      raise Exception("expression does not match target")
   
 # encapsulate the idea that you want to run a filter over this expression
 # this is sort of an implicit function call, so the hierarchy makes some sense
