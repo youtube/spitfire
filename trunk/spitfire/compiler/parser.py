@@ -47,8 +47,8 @@ class SpitfireParserScanner(Scanner):
         ('DOT', re.compile('\\.')),
         ('NUM', re.compile('[0-9]+')),
         ('ID', re.compile('[A-Za-z_][0-9A-Za-z_]*')),
-        ('SINGLE_QUOTE_STR', re.compile("[^']*")),
-        ('DOUBLE_QUOTE_STR', re.compile('[^"]*')),
+        ('SINGLE_QUOTE_STR', re.compile("(?:[^'\\\\]|\\\\.)*")),
+        ('DOUBLE_QUOTE_STR', re.compile('(?:[^"\\\\]|\\\\.)*')),
         ('SINGLE_LINE_COMMENT', re.compile('#.*?\n')),
         ('MULTI_LINE_COMMENT', re.compile('\\*[\\W\\w\\S\\s]+\\*#')),
         ('ASSIGN_OPERATOR', re.compile('=')),
@@ -104,7 +104,7 @@ class SpitfireParser(Parser):
     def i18n_goal(self):
         fragment = FragmentNode()
         start_pos = 0
-        while self._peek('END', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') != 'END':
+        while self._peek('END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') != 'END':
             text_or_placeholders = self.text_or_placeholders(start=True)
             end_pos = self._scanner.tokens[self._pos-1][1]
             fragment.append(text_or_placeholders)
@@ -259,8 +259,13 @@ class SpitfireParser(Parser):
                 CLOSE_PAREN = self._scan('CLOSE_PAREN')
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
             start = CLOSE_DIRECTIVE.endswith('\n')
-            I18N_BODY = self._scan('I18N_BODY')
-            _macro.value = I18N_BODY
+            _macro.value = ''
+            while self._peek('I18N_BODY', 'END_DIRECTIVE') == 'I18N_BODY':
+                I18N_BODY = self._scan('I18N_BODY')
+                _macro.value += I18N_BODY
+                if self._peek('START_DIRECTIVE', 'I18N_BODY', 'END_DIRECTIVE') == 'START_DIRECTIVE':
+                    START_DIRECTIVE = self._scan('START_DIRECTIVE')
+                    _macro.value += START_DIRECTIVE
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'i18n'")
@@ -401,8 +406,11 @@ class SpitfireParser(Parser):
             return _primary
 
     def text_or_placeholders(self, start=False):
-        _token_ = self._peek('SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT')
-        if _token_ == 'TEXT':
+        _token_ = self._peek('START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT')
+        if _token_ == 'START_DIRECTIVE':
+            START_DIRECTIVE = self._scan('START_DIRECTIVE')
+            return TextNode(START_DIRECTIVE)
+        elif _token_ == 'TEXT':
             text = self.text()
             return text
         elif _token_ == 'SPACE':
@@ -414,7 +422,7 @@ class SpitfireParser(Parser):
             NEWLINE = self._scan('NEWLINE')
             _node_list = NodeList()
             _node_list.append(NewlineNode(NEWLINE))
-            if self._peek('SPACE', 'END', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') == 'SPACE':
+            if self._peek('SPACE', 'END', 'START_DIRECTIVE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') == 'SPACE':
                 SPACE = self._scan('SPACE')
                 _node_list.append(WhitespaceNode(SPACE))
             return _node_list
@@ -422,7 +430,7 @@ class SpitfireParser(Parser):
             _parameter_list = None
             START_PLACEHOLDER = self._scan('START_PLACEHOLDER')
             _primary = TextNode(START_PLACEHOLDER)
-            if self._peek('PLACEHOLDER_OPEN_BRACE', 'ID', 'END', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') in ['PLACEHOLDER_OPEN_BRACE', 'ID']:
+            if self._peek('PLACEHOLDER_OPEN_BRACE', 'ID', 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT') in ['PLACEHOLDER_OPEN_BRACE', 'ID']:
                 _token_ = self._peek('PLACEHOLDER_OPEN_BRACE', 'ID')
                 if _token_ == 'PLACEHOLDER_OPEN_BRACE':
                     PLACEHOLDER_OPEN_BRACE = self._scan('PLACEHOLDER_OPEN_BRACE')

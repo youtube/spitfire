@@ -10,8 +10,8 @@ parser SpitfireParser:
   token ID:    '[A-Za-z_][0-9A-Za-z_]*'
 
   #token STR:   r'"([^\\"]+|\\.)*"'
-  token SINGLE_QUOTE_STR: "[^']*"
-  token DOUBLE_QUOTE_STR: '[^"]*'
+  token SINGLE_QUOTE_STR: r"(?:[^'\\]|\\.)*"
+  token DOUBLE_QUOTE_STR: r'(?:[^"\\]|\\.)*'
 
   token SINGLE_LINE_COMMENT: '#.*?\n'
   token MULTI_LINE_COMMENT: '\*[\W\w\S\s]+\*#'
@@ -146,7 +146,12 @@ parser SpitfireParser:
         ]
         CLOSE_DIRECTIVE
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-        I18N_BODY {{ _macro.value = I18N_BODY }}
+        {{ _macro.value = '' }}
+        (
+          I18N_BODY {{ _macro.value += I18N_BODY }}
+          [ START_DIRECTIVE {{ _macro.value += START_DIRECTIVE }}
+          ]
+        )*
         END_DIRECTIVE SPACE 'i18n' CLOSE_DIRECTIVE {{ _node_list.append(_macro) }}
         |
         'def' SPACE ID {{ _def = DefNode(ID) }}
@@ -237,6 +242,9 @@ parser SpitfireParser:
     {{ return _primary }}
     
   rule text_or_placeholders<<start=False>>:
+    ## in this context, a # is just a #
+    START_DIRECTIVE {{ return TextNode(START_DIRECTIVE) }}
+    |
     text {{ return text }}
     |
     SPACE {{ _node_list = NodeList() }}

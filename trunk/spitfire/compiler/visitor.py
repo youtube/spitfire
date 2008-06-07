@@ -259,4 +259,5 @@ class TreeVisitor(object):
   def visitDefault(self, node):
     return [VisitNode('%s %s' % (node.__class__.__name__, node.name))]
 
-
+  def visitASTMacroNode(self, node):
+    return [VisitNode('%s %s' % (node.__class__.__name__, node.value))]
