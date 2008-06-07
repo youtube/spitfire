@@ -94,6 +94,9 @@ class TestRunner(object):
       if 'optimized_tree' in self.options.debug_flags:
         print "optimized_tree:"
         print_tree(self.compiler._optimized_tree)
+      if 'hoisted_tree' in self.options.debug_flags:
+        print "hoisted_tree:"
+        print_tree(self.compiler._hoisted_tree)
       if 'source_code' in self.options.debug_flags:
         print "source_code:"
         for i, line in enumerate(self.compiler._source_code.split('\n')):
@@ -178,8 +181,8 @@ if __name__ == '__main__':
           help='accept current code output as correct for future tests')
   op.add_option('-q', '--quiet', action='store_true', default=False)
   op.add_option('-D', dest='debug_flags', action='store',
-                default='optimized_tree,source_code',
-                help='parse_tree, analyzed_tree, optimized_tree, source_code'
+                default='hoisted_tree,source_code',
+                help='parse_tree, analyzed_tree, optimized_tree, hoisted_tree, source_code'
                 )
   (options, args) = op.parse_args()
   setattr(options, 'debug_flags', getattr(options, 'debug_flags').split(','))
