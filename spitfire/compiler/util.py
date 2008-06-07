@@ -172,6 +172,7 @@ class Compiler(object):
     self._parse_tree = None
     self._analyzed_tree = None
     self._optimized_tree = None
+    self._hoisted_tree = None
     self._source_code = None
 
     for key, value in kargs.iteritems():
@@ -226,17 +227,19 @@ class Compiler(object):
     self._optimized_tree = copy.deepcopy(self._analyzed_tree)
     spitfire.compiler.optimizer.OptimizationAnalyzer(
       self._optimized_tree, self.analyzer_options, self).optimize_ast()
+    self._hoisted_tree = copy.deepcopy(self._optimized_tree)
     spitfire.compiler.optimizer.FinalPassAnalyzer(
-      self._optimized_tree, self.analyzer_options, self).optimize_ast()
+      self._hoisted_tree, self.analyzer_options, self).optimize_ast()
     
     self._source_code = codegen.CodeGenerator(
-      self._optimized_tree, self.analyzer_options).get_code()
+      self._hoisted_tree, self.analyzer_options).get_code()
     return self._source_code
 
   def _reset(self):
     self._parse_tree = None
     self._analyzed_tree = None
     self._optimized_tree = None
+    self._hoisted_tree = None
     self._source_code = None
     
   def compile_template(self, src_text, classname):

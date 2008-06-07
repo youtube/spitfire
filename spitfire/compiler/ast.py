@@ -148,7 +148,8 @@ class BinOpNode(ASTNode):
 
   def __hash__(self):
     return hash('%s%s%s%s%s' %
-                (type(self), self.name, self.operator, hash(self.left), hash(self.right)))
+                (type(self), self.name, self.operator,
+                 hash(self.left), hash(self.right)))
 
 class BinOpExpressionNode(BinOpNode):
   pass

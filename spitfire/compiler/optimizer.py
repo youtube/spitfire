@@ -120,6 +120,7 @@ class _BaseAnalyzer(object):
       for alias_node, alias in conditional_node.scope.aliased_expression_map.iteritems():
         assign_alias_node = AssignNode(alias, alias_node)
         if alias_node in parent_block.scope.aliased_expression_map:
+          #if not self.get_node_dependencies(alias_node).intersection(parent_block.scope.local_identifiers):
           self.hoist(
             conditional_node, parent_block, insertion_point, alias_node, assign_alias_node)
 
@@ -439,15 +440,6 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       # self.
       pass
       
-#     else:
-#       common_local_identifiers = if_node.scope.local_identifiers
-#       common_alias_name_set = if_node.scope.alias_name_set
-#       common_aliased_expression_map = if_node.scope.aliased_expression_map
-      
-#     scope = self.get_parent_scope(if_node)
-#     scope.local_identifiers.extend(common_local_identifiers)
-#     scope.alias_name_set.update(common_alias_name_set)
-#     scope.aliased_expression_map.update(common_aliased_expression_map)
 
   def analyzeBinOpNode(self, n):
     self.visit_ast(n.left, n)
@@ -460,23 +452,22 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 
   def get_local_identifiers(self, node):
     local_identifiers = []
-#     # search over the previous siblings for this node
-#     # mostly to look for AssignNode
-#     if node.parent is not None:
-#       idx = node.parent.child_nodes.index(node)
-#       previous_siblings = node.parent.child_nodes[:idx]
-      
     
     # search the parent scopes
-    # fixme: looking likely that this should be recursive
+    # fixme: should this be recursive?
     node = node.parent
     while node is not None:
-      # fixme: there are many more sources of local_identifiers
-      # have to scan AssignNodes up to your current position
-      # also check the parameters of your function
       if isinstance(node, ForNode):
         local_identifiers.extend(node.loop_variant_set)
         local_identifiers.extend(node.scope.local_identifiers)
+      elif isinstance(node, IfNode):
+        local_identifiers.extend(node.scope.local_identifiers)
+      elif isinstance(node, ElseNode):
+        # in this case, we don't want to go to the parent node, which is the
+        # IfNode - we want to go to the parent 'scope'
+        local_identifiers.extend(node.scope.local_identifiers)
+        node = node.parent.parent
+        continue
       elif isinstance(node, FunctionNode):
         local_identifiers.extend(node.scope.local_identifiers)
         break
