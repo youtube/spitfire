@@ -5,7 +5,7 @@
 # name='my attribute' - it must be a legal python identifier
 
 import __builtin__
-
+import inspect
 
 # create a sentinel value for missing attributes
 class __MissingAttr(object):
@@ -40,6 +40,30 @@ class UndefinedPlaceholder(object):
 class __UnresolvedPlaceholder(object):
   pass
 UnresolvedPlaceholder = __UnresolvedPlaceholder()
+
+# Cheetah supports autocalling - Spitfire does not. this stand-in class will
+# raise an exception if you do something like compare a function object.
+class CallOnlyPlaceholder(object):
+  def __init__(self, name, function):
+    self.name = name
+    self.function = function
+    
+  def __call__(self, *pargs, **kargs):
+    return self.function(*pargs, **kargs)
+
+  @property
+  def template_method(self):
+    return getattr(self.function, 'template_method')
+
+  @property
+  def skip_filter(self):
+    return getattr(self.function, 'skip_filter')
+  
+  def __cmp__(self):
+    raise PlaceholderError(self.name, 'function placeholder was not called')
+
+  def __nonzero__(self):
+    raise PlaceholderError(self.name, 'function placeholder was not called')
 
 class PlaceholderError(KeyError):
   pass
@@ -93,7 +117,7 @@ def resolve_udn_prefer_attr3(_object, name):
 # FIXME: i'm sure this is a little pokey - might be able to speed this up
 # somehow. not sure if it's better to look before leaping or raise.
 # might also want to let users tune whether to prefer keys or attributes
-def resolve_placeholder(name, template=None, local_vars=None, global_vars=None,
+def _resolve_placeholder(name, template=None, local_vars=None, global_vars=None,
                         default=Unspecified):
   if local_vars is not None:
     try:
@@ -137,6 +161,23 @@ def resolve_placeholder(name, template=None, local_vars=None, global_vars=None,
 #     raise PlaceholderError(name,
 #                            [get_available_placeholders(scope)
 #                             for scope in template.search_list])
+
+
+def _debug_resolve_placeholder(name, *pargs, **kargs):
+  placeholder = _resolve_placeholder(name, *pargs, **kargs)
+  if inspect.isroutine(placeholder):
+    return CallOnlyPlaceholder(name, placeholder)
+  else:
+    return placeholder
+
+def _debug_resolve_udn(_object, name, *pargs, **kargs):
+  placeholder = resolve_udn_prefer_attr3(_object, name, *pargs, **kargs)
+  if inspect.isroutine(placeholder):
+    return CallOnlyPlaceholder(name, placeholder)
+  else:
+    return placeholder
+
+resolve_placeholder = _resolve_placeholder
 
 def get_var_from_search_list(name, search_list):
   for scope in search_list:
