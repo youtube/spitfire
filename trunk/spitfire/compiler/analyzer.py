@@ -13,6 +13,12 @@ def tree_walker(node):
 class SemanticAnalyzerError(Exception):
   pass
 
+class MacroError(SemanticAnalyzerError):
+  pass
+
+class MacroParseError(MacroError):
+  pass
+
 class AnalyzerOptions(object):
 
   def __init__(self, **kargs):
@@ -318,6 +324,30 @@ class SemanticAnalyzer(object):
     call_block = self.build_ast(p)
     return call_block
 
+  def handleMacro(self, pnode, macro_function):
+    if isinstance(pnode, MacroNode):
+      kargs_map = pnode.parameter_list.get_arg_map()
+    elif isinstance(pnode, CallFunctionNode):
+      kargs_map = pnode.arg_list.get_arg_map()
+    else:
+      raise SemanticAnalyzerError("unexpected node type '%s' for macro" %
+                                  type(pnode))
+    
+    macro_output = macro_function(pnode, kargs_map, self.compiler)
+    # fixme: bad place to import, difficult to put at the top due to
+    # cyclic dependency
+    import spitfire.compiler.util
+    try:
+      if isinstance(pnode, MacroNode):
+        fragment_ast = spitfire.compiler.util.parse(
+          macro_output, 'fragment_goal')
+      elif isinstance(pnode, CallFunctionNode):
+        fragment_ast = spitfire.compiler.util.parse(
+          macro_output, 'rhs_expression')
+    except Exception, e:
+      raise MacroParseError(e)
+    return self.build_ast(fragment_ast)
+
   def analyzeMacroNode(self, pnode):
     # fixme: better error handler
     macro_handler_name = 'macro_%s' % pnode.name
@@ -326,14 +356,7 @@ class SemanticAnalyzer(object):
     except KeyError:
       raise SemanticAnalyzerError("no handler registered for '%s'"
                                   % macro_handler_name)
-    arg_map = pnode.parameter_list.get_arg_map()
-    #print "analyzeMacroNode", arg_map
-    macro_output = macro_function(pnode, arg_map, self.compiler)
-    # fixme: bad place to import, difficult to put at the top due to
-    # cyclic dependency
-    import spitfire.compiler.util
-    fragment_ast = spitfire.compiler.util.parse(macro_output, 'fragment_goal')
-    return self.build_ast(fragment_ast)
+    return self.handleMacro(pnode, macro_function)
 
   def analyzeAttributeNode(self, pnode):
     self.template.attr_nodes.append(pnode.copy())
@@ -364,11 +387,12 @@ class SemanticAnalyzer(object):
   def analyzePlaceholderSubstitutionNode(self, pnode):
     #print "analyzePlaceholderSubstitutionNode", pnode, pnode.parameter_list.get_arg_map()
     node_list = []
-    ph_expression = pnode.expression
+    ph_expression = self.build_ast(pnode.expression)[0]
 
     arg_map = pnode.parameter_list.get_arg_map()
     format_string = arg_map.get('format_string', '%s')
-    if self.compiler.enable_filters:
+    if (self.compiler.enable_filters and
+        not isinstance(ph_expression, LiteralNode)):
       arg_node_map = pnode.parameter_list.get_arg_node_map()
       if 'raw' not in arg_map:
         # if we need to filter, wrap up the node and wait for further analysis
@@ -379,11 +403,13 @@ class SemanticAnalyzer(object):
           self.template.cached_identifiers.append(cache_expression)
           node_list.append(cache_expression)
           ph_expression = IdentifierNode(cache_expression.name)
-          
-    node_list.append(BufferWrite(BinOpNode('%', LiteralNode(format_string),
-                                           ph_expression)))
-    
-    return [self.build_ast(n) for n in node_list]
+
+    if isinstance(ph_expression, LiteralNode):
+      node_list.append(BufferWrite(ph_expression))
+    else:
+      node_list.append(BufferWrite(BinOpNode('%', LiteralNode(format_string),
+                                             ph_expression)))
+    return node_list
 
 
   def analyzePlaceholderNode(self, pnode):
@@ -411,18 +437,10 @@ class SemanticAnalyzer(object):
   def analyzeCallFunctionNode(self, pnode):
     fn = pnode.copy()
     if isinstance(fn.expression, PlaceholderNode):
-      if fn.expression.name == i18n_function_name:
-        macro_handler_name = 'function_%s' % fn.expression.name
-        try:
-          macro_function = self.compiler.macro_registry[macro_handler_name]
-        except KeyError:
-          raise SemanticAnalyzerError("no handler registered for '%s'"
-                                      % macro_handler_name)
-        pargs_list = pnode.arg_list.get_parg_list()
-        kargs_map = pnode.arg_list.get_arg_map()
-        #print 'i18n', pargs_list[0], kargs_map
-        i18n_msg = macro_function(pargs_list[0], kargs_map, self)
-        return [LiteralNode(i18n_msg)]
+      macro_handler_name = 'macro_function_%s' % fn.expression.name
+      macro_function = self.compiler.macro_registry.get(macro_handler_name)
+      if macro_function:
+        return self.handleMacro(fn, macro_function)
     fn.expression = self.build_ast(fn.expression)[0]
     fn.arg_list = self.build_ast(fn.arg_list)[0]
     return [fn]

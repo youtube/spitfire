@@ -8,8 +8,8 @@ variable usage.
 
 fixed string literal to allow escaping.  allow #i18n blocks to have bare '#' in
 the body of the macro. added 'i18n' macro function.  this works quite similarly
-the #i18n, but let's you do $i18n where appropriate.  it's a little kludgy -
-might be better to make the macro function evaluation more generic.
+the #i18n, but let's you do $i18n where appropriate.  this uses a generic macro
+function handler - so this might be useful in the future for more stuff.
 
 allow #echo to be properly optimized.
 
