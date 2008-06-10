@@ -17,6 +17,26 @@ class __Unspecified(object):
   pass
 Unspecified = __Unspecified()
 
+# the idea is to have something that is always like None, but explodes when
+# you try to use it as a string. this means that you can resolve placeholders
+# and evaluate them in complex conditional expressions, allowing them to be
+# hoisted, and still protect conditional access to the values
+# it could also be that you might try to call the result - in that case, blow
+# and exception as well.
+class UndefinedPlaceholder(object):
+  def __init__(self, name, available_placeholders):
+    self.name = name
+    self.available_placeholders = available_placeholders
+
+  def __nonzero__(self):
+    return False
+
+  def __str__(self):
+    raise PlaceholderError(self.name, self.available_placeholders)
+
+  def __call__(self, *pargs, **kargs):
+    raise PlaceholderError(self.name, self.available_placeholders)
+
 class __UnresolvedPlaceholder(object):
   pass
 UnresolvedPlaceholder = __UnresolvedPlaceholder()
@@ -111,9 +131,12 @@ def resolve_placeholder(name, template=None, local_vars=None, global_vars=None,
   if default is not Unspecified:
     return default
   else:
-    raise PlaceholderError(name,
-                           [get_available_placeholders(scope)
-                            for scope in template.search_list])
+    return UndefinedPlaceholder(name,
+                                [get_available_placeholders(scope)
+                                 for scope in template.search_list])
+#     raise PlaceholderError(name,
+#                            [get_available_placeholders(scope)
+#                             for scope in template.search_list])
 
 def get_var_from_search_list(name, search_list):
   for scope in search_list:

@@ -9,6 +9,13 @@ variable usage.
 fixed string literal to allow escaping.  allow #i18n blocks to have bare '#' in
 the body of the macro.
 
+allow #echo to be properly optimized.
+
+fixed long-standing bug in crawling AST for current local identifiers.
+
+remove double analysis on the main template message body. this was manifesting
+itself oddly as BlockNodes would get processed twice.
+
 
 0.7 - 2008-06-03
 this is a fairly significant refactoring from the 0.6.x branch. the motivation

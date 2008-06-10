@@ -255,7 +255,7 @@ class CodeGenerator(object):
     name = node.name
     if name in ('has_var', 'get_var'):
       return [CodeNode("self.%(name)s" % vars())]
-    elif self.options and self.options.directly_access_defined_variables:
+    elif self.options and self.options.omit_local_scope_search:
       return [CodeNode(
         "resolve_placeholder('%(name)s', template=self, global_vars=_globals)"
         % vars())]
@@ -312,9 +312,26 @@ class CodeGenerator(object):
       parameter_list = ''
 
     decorator_node = CodeNode('@template_method')
-    code_node = CodeNode(ASTFunctionNode_tmpl[0] % vars())
-    
-    code_node.append(CodeNode('_buffer = self.new_buffer()'))
+    # NOTE: for Cheetah compatibility, we have to handle the case where Cheetah
+    # tries to pass a 'transaction' object through. hopefully this doesn't have
+    # some other baggage coming with it.
+    if self.options.cheetah_compatibility:
+      if parameter_list:
+        code_node = CodeNode('def %(name)s(%(parameter_list)s, **kargs):' % vars())
+      else:
+        code_node = CodeNode('def %(name)s(**kargs):' % vars())
+    else:
+      code_node = CodeNode('def %(name)s(%(parameter_list)s):' % vars())
+
+    if self.options.cheetah_compatibility:
+      if_cheetah = CodeNode("if 'trans' in kargs:")
+      cheetah_code = [if_cheetah]
+      if_cheetah.append(CodeNode("_buffer = kargs['trans'].response()"))
+      else_spitfire = CodeNode('else:')
+      else_spitfire.append(CodeNode('_buffer = self.new_buffer()'))
+      cheetah_code.append(else_spitfire)
+    else:
+      code_node.append(CodeNode('_buffer = self.new_buffer()'))
     code_node.append(CodeNode('_buffer_write = _buffer.write'))
     code_node.append(CodeNode('_globals = globals()'))
     code_node.append(CodeNode('_self_filter_function = self.filter_function'))
