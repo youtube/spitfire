@@ -59,10 +59,14 @@ def macro_i18n(macro_node, arg_map, compiler):
   #print_tree(macro_content_ast)
   return i18n_msg
 
-def function_i18n(literal_node, arg_map, compiler):
+def macro_function_i18n(call_node, arg_map, compiler):
   # generate a fake translation for now to verify this is working
   # most apps will have to stub this part out somehow i think
-  i18n_msg = spitfire.util.i18n_mangled_message(literal_node.value)
+  # in the context of a function, the goal is to replace a function with a
+  # translated literal string. we have to do some shenanigans since Spitfire
+  # doesn't parse repr(unicode)
+  i18n_msg = spitfire.util.i18n_mangled_message(
+    call_node.arg_list.parg_list[0].value)
   i18n_msg_utf8 = i18n_msg.encode(sys.getdefaultencoding())
-  return i18n_msg
+  return u"'%s'" % i18n_msg.replace("'", "\\'")
   

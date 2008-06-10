@@ -205,7 +205,8 @@ class Compiler(object):
     # fixme: nasty time to import - but does break weird cycle
     import spitfire.compiler.macros.i18n
     self.register_macro('macro_i18n', spitfire.compiler.macros.i18n.macro_i18n)
-    self.register_macro('function_i18n', spitfire.compiler.macros.i18n.function_i18n)
+    self.register_macro('macro_function_i18n',
+                        spitfire.compiler.macros.i18n.macro_function_i18n)
 
   # take an AST and generate code from it - this will run the analysis phase
   # this doesn't have the same semantics as python's AST operations
