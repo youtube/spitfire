@@ -103,10 +103,17 @@ class NodeList(list):
 class _ListNode(ASTNode):
   def __init__(self, parg_list=None, karg_list=None):
     ASTNode.__init__(self)
+    self.parg_list = parg_list
+    self.karg_list = karg_list
     if parg_list:
       self.extend(parg_list)
+    else:
+      self.parg_list = []
+      
     if karg_list:
       self.extend(karg_list)
+    else:
+      self.karg_list = []
 
   def __len__(self):
     return len(self.child_nodes)
@@ -118,8 +125,35 @@ class _ListNode(ASTNode):
     return '%s %s' % (ASTNode.__str__(self),
                       ', '.join(str(n) for n in self.child_nodes))
 
+  def get_arg_map(self):
+    arg_map = {}
+    for parameter_node in self.child_nodes:
+      if not isinstance(parameter_node, ParameterNode):
+        continue
+      if parameter_node.default:
+        arg_map[parameter_node.name] = parameter_node.default.value
+      else:
+        arg_map[parameter_node.name] = NoParameter
+    return arg_map
+
+  def get_arg_node_map(self):
+    arg_map = {}
+    for parameter_node in self.child_nodes:
+      if not isinstance(parameter_node, ParameterNode):
+        continue
+      if parameter_node.default:
+        arg_map[parameter_node.name] = parameter_node.default
+      else:
+        arg_map[parameter_node.name] = NoParameter
+    return arg_map
+
+  def get_parg_list(self):
+    return self.parg_list
+    
+
 class ArgListNode(_ListNode):
   pass
+    
 
 class BinOpNode(ASTNode):
   def __init__(self, operator, left, right):
@@ -477,23 +511,7 @@ class __NoParameter(object):
 NoParameter = __NoParameter()
 
 class ParameterListNode(_ListNode):
-  def get_arg_map(self):
-    arg_map = {}
-    for parameter_node in self.child_nodes:
-      if parameter_node.default:
-        arg_map[parameter_node.name] = parameter_node.default.value
-      else:
-        arg_map[parameter_node.name] = NoParameter
-    return arg_map
-
-  def get_arg_node_map(self):
-    arg_map = {}
-    for parameter_node in self.child_nodes:
-      if parameter_node.default:
-        arg_map[parameter_node.name] = parameter_node.default
-      else:
-        arg_map[parameter_node.name] = NoParameter
-    return arg_map
+  pass
 
 class PlaceholderNode(ASTNode):
   pass

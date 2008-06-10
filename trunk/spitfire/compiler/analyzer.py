@@ -103,6 +103,8 @@ optimizer_map = {
   }
 
 
+i18n_function_name = 'i18n'
+
 # convert the parse tree into something a bit more 'fat' and useful
 # is this an AST? i'm not sure. it will be a tree of some sort
 # this should simplify the codegen stage into a naive traversal
@@ -141,7 +143,7 @@ class SemanticAnalyzer(object):
     except TypeError, e:
       raise SemanticAnalyzerError('method: %s, result: %s' % (
         method, ast_node_list))
-    ast_node = ast_node_list[0]
+
     return ast_node_list
 
   def default_analyze_node(self, pnode):
@@ -380,14 +382,13 @@ class SemanticAnalyzer(object):
           
     node_list.append(BufferWrite(BinOpNode('%', LiteralNode(format_string),
                                            ph_expression)))
+    
     return [self.build_ast(n) for n in node_list]
 
 
   def analyzePlaceholderNode(self, pnode):
     return [pnode]
 
-  analyzeBufferWrite = analyzePlaceholderNode
-  analyzeFilterNode = analyzePlaceholderNode
   analyzeEchoNode = analyzePlaceholderNode
 
   def analyzeBinOpNode(self, pnode):
@@ -408,10 +409,29 @@ class SemanticAnalyzer(object):
     return []
 
   def analyzeCallFunctionNode(self, pnode):
-    # print "analyzeCallFunctionNode", pnode.expression.name
     fn = pnode.copy()
+    if isinstance(fn.expression, PlaceholderNode):
+      if fn.expression.name == i18n_function_name:
+        macro_handler_name = 'function_%s' % fn.expression.name
+        try:
+          macro_function = self.compiler.macro_registry[macro_handler_name]
+        except KeyError:
+          raise SemanticAnalyzerError("no handler registered for '%s'"
+                                      % macro_handler_name)
+        pargs_list = pnode.arg_list.get_parg_list()
+        kargs_map = pnode.arg_list.get_arg_map()
+        #print 'i18n', pargs_list[0], kargs_map
+        i18n_msg = macro_function(pargs_list[0], kargs_map, self)
+        return [LiteralNode(i18n_msg)]
     fn.expression = self.build_ast(fn.expression)[0]
     fn.arg_list = self.build_ast(fn.arg_list)[0]
+    return [fn]
+
+  analyzeBufferWrite = analyzeCallFunctionNode
+
+  def analyzeFilterNode(self, pnode):
+    fn = pnode.copy()
+    fn.expression = self.build_ast(fn.expression)[0]
     return [fn]
 
   # go over the parsed nodes and weed out the parts we don't need
