@@ -325,11 +325,11 @@ class CodeGenerator(object):
 
     if self.options.cheetah_compatibility:
       if_cheetah = CodeNode("if 'trans' in kargs:")
-      cheetah_code = [if_cheetah]
+      code_node.append(if_cheetah)
       if_cheetah.append(CodeNode("_buffer = kargs['trans'].response()"))
       else_spitfire = CodeNode('else:')
       else_spitfire.append(CodeNode('_buffer = self.new_buffer()'))
-      cheetah_code.append(else_spitfire)
+      code_node.append(else_spitfire)
     else:
       code_node.append(CodeNode('_buffer = self.new_buffer()'))
     code_node.append(CodeNode('_buffer_write = _buffer.write'))
