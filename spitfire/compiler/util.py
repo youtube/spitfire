@@ -224,10 +224,19 @@ class Compiler(object):
         ast.IdentifierNode(alias)))
 
     # keep a copy of the tree for debugging purposes
-    self._optimized_tree = copy.deepcopy(self._analyzed_tree)
+    if self.debug_flags:
+      self._optimized_tree = copy.deepcopy(self._analyzed_tree)
+    else:
+      self._optimized_tree = self._analyzed_tree
+      
     spitfire.compiler.optimizer.OptimizationAnalyzer(
       self._optimized_tree, self.analyzer_options, self).optimize_ast()
-    self._hoisted_tree = copy.deepcopy(self._optimized_tree)
+
+    if self.debug_flags:
+      self._hoisted_tree = copy.deepcopy(self._optimized_tree)
+    else:
+      self._hoisted_tree = self._optimized_tree
+      
     spitfire.compiler.optimizer.FinalPassAnalyzer(
       self._hoisted_tree, self.analyzer_options, self).optimize_ast()
     

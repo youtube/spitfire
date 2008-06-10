@@ -146,8 +146,12 @@ if SpitfireTemplate:
     spitfire_tmpl_o3 = spitfire.compiler.util.load_template(
         spitfire_src, 'spitfire_tmpl_o3', spitfire.compiler.analyzer.o3_options,
         {'enable_filters':enable_filters})
+
+    spitfire_tmpl_o4 = spitfire.compiler.util.load_template(
+        spitfire_src, 'spitfire_tmpl_o4', spitfire.compiler.analyzer.o4_options,
+        {'enable_filters':enable_filters})
     # run once to get psyco warmed up
-    spitfire_tmpl_o3(search_list=[{'table':table}]).main()
+    spitfire_tmpl_o4(search_list=[{'table':table}]).main()
 
 
     def test_spitfire():
@@ -169,6 +173,11 @@ if SpitfireTemplate:
         """Spitfire template -O3"""
         data = spitfire_tmpl_o3(search_list=[{'table':table}]).main()
         #print "spitfire -O3", len(data)
+
+    def test_spitfire_o4():
+        """Spitfire template -O4"""
+        data = spitfire_tmpl_o4(search_list=[{'table':table}]).main()
+        #print "spitfire -O4", len(data)
 
 if CheetahTemplate:
     cheetah_src = """<table>
@@ -350,7 +359,7 @@ def run(which=None, number=10):
              'test_et', 'test_cet', 'test_clearsilver', 'test_django',
              'test_cheetah',
              'test_spitfire', 'test_spitfire_o1',
-             'test_spitfire_o2', 'test_spitfire_o3',
+             'test_spitfire_o2', 'test_spitfire_o3', 'test_spitfire_o4',
              'test_python_stringio', 'test_python_cstringio', 'test_python_array'
              ]
 
