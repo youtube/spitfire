@@ -100,7 +100,6 @@ Varian 2.1: (UNTESTED)
    * Variant 2 is universally the slowest
 
 Cleanup:
- * make 'macro_function' generic - not a special case for $i18n
  * atone for making hash value mutable?
  * add a test case for caching - ${something_expensive($arg)|cache}
  * refactor 'visitor' into 'walker'
