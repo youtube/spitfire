@@ -242,6 +242,7 @@ class TreeVisitor(object):
       v.extend(self.build_text(n))
       
     return [v]
+  visitASTBlockNode = visitASTDefNode
 
   def visitASTFragmentNode(self, node):
     v = self.visitDefault(node)[0]

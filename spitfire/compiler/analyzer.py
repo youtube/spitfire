@@ -35,6 +35,12 @@ class AnalyzerOptions(object):
     # know that this local variable will always resolve first
     self.directly_access_defined_variables = False
 
+    # if directly_access_defined_variables is working 100% correctly, you can
+    # compleletely ignore the local scope, as those placeholders will have been
+    # resolved at compile time. there are some complex cases where there are
+    # some problems, so it is disabled for now
+    self.omit_local_scope_search = False
+
     # once a placeholder is resolved in a given scope, cache it in a local
     # reference for faster subsequent retrieval
     self.cache_resolved_placeholders = False
@@ -54,6 +60,8 @@ class AnalyzerOptions(object):
 
     # filtering is expensive, especially given the number of function calls
     self.cache_filtered_placeholders = False
+
+    self.cheetah_compatibility = False
 
     self.enable_psyco = False
     self.__dict__.update(kargs)
@@ -150,19 +158,10 @@ class SemanticAnalyzer(object):
     self.template = pnode.copy(copy_children=False)
     self.template.classname = self.classname
 
-    main_function_nodes = []
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
-      # save a copy so this node doesn't get mangled by the analysis
-      # need this so you can reoptimize the final nodes needed for the implied
-      # main function
-      saved_pn = pn.copy()
       built_nodes = self.build_ast(pn)
       if built_nodes:
-        main_function_nodes.append(saved_pn)
-
-    for pn in self.optimize_parsed_nodes(main_function_nodes):
-      built_nodes = self.build_ast(pn)
-      self.template.main_function.extend(built_nodes)
+        self.template.main_function.extend(built_nodes)
 
     return [self.template]
 
@@ -307,6 +306,16 @@ class SemanticAnalyzer(object):
     self.template.append(function)
     return []
 
+  def analyzeBlockNode(self, pnode):
+    #if not pnode.child_nodes:
+    #  raise SemanticAnalyzerError("BlockNode must have children")
+    self.analyzeDefNode(pnode)
+    function_node = CallFunctionNode()
+    function_node.expression = self.build_ast(PlaceholderNode(pnode.name))[0]
+    p = PlaceholderSubstitutionNode(function_node)
+    call_block = self.build_ast(p)
+    return call_block
+
   def analyzeMacroNode(self, pnode):
     # fixme: better error handler
     macro_handler_name = 'macro_%s' % pnode.name
@@ -328,15 +337,6 @@ class SemanticAnalyzer(object):
     self.template.attr_nodes.append(pnode.copy())
     return []
 
-  def analyzeBlockNode(self, pnode):
-    #if not pnode.child_nodes:
-    #  raise SemanticAnalyzerError("BlockNode must have children")
-    self.analyzeDefNode(pnode)
-    function_node = CallFunctionNode()
-    function_node.expression = self.build_ast(PlaceholderNode(pnode.name))[0]
-    p = PlaceholderSubstitutionNode(function_node)
-    #print "analyzeBlockNode", id(p), p
-    return self.build_ast(p)
 
   # note: we do a copy-thru to force analysis of the child nodes
   # this function is drastically complicated by the logic for filtering

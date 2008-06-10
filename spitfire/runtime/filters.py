@@ -1,5 +1,7 @@
 # a few helpful filter functions
 
+from spitfire.runtime.udn import UndefinedPlaceholder
+
 def passthrough_filter(template_instance, value):
   return value
 
@@ -15,7 +17,7 @@ def escape_html(template_instance, value, quote=False):
   return value
 
 def safe_values(template_instance, value):
-  if isinstance(value, (str, unicode, int, long, float)):
+  if isinstance(value, (str, unicode, int, long, float, UndefinedPlaceholder)):
     return value
   else:
     return ''
