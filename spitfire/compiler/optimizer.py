@@ -477,12 +477,9 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeGetUDNNode(self, node):
     self.visit_ast(node.expression, node)
 
-
-#   def analyzeSliceNode(self, pnode):
-#     snode = pnode
-#     snode.expression = self.build_ast(pnode.expression)[0]
-#     snode.slice_expression = self.build_ast(pnode.slice_expression)[0]
-#     return [snode]
+  def analyzeSliceNode(self, pnode):
+    self.visit_ast(pnode.expression, pnode)
+    self.visit_ast(pnode.slice_expression, pnode)
 
 #   def analyzeAttributeNode(self, pnode):
 #     self.template.attr_nodes.append(pnode.copy())
@@ -522,7 +519,7 @@ class FinalPassAnalyzer(_BaseAnalyzer):
     # prune the implementation in the nested block
     # print "prune", alias_node
     # print "parent_block aliases", parent_block.scope.aliased_expression_map
-    parent_node.child_nodes.remove(assign_alias_node)
+    parent_node.remove(assign_alias_node)
     # if we've already hoisted an assignment, don't do it again
     if alias_node not in parent_block.scope.hoisted_aliases:
       # prune the original implementation in the current block and
