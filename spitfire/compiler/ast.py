@@ -229,7 +229,11 @@ class CallFunctionNode(ASTNode):
 # encapsulate the idea that you want to write this to an output stream
 # this is sort of an implicit function call, so the hierarchy makes some sense
 class BufferWrite(CallFunctionNode):
-  pass
+  def append_text_node(self, node):
+    if not (isinstance(node, BufferWrite) and
+            isinstance(node.expression, LiteralNode)):
+      raise Exception('node type mismatch')
+    self.expression.value += node.expression.value
 
 class CacheNode(CallFunctionNode):
   def __init__(self, expression=None):
@@ -546,6 +550,25 @@ class SliceNode(ASTNode):
   def __str__(self):
     return ('%s expr:%s [ %s ]' %
             (self.__class__.__name__, self.expression, self.slice_expression))
+
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.expression == node.expression and
+                self.slice_expression == node.slice_expression)
+
+  def __hash__(self):
+    return hash('%s%s%s' %
+                (type(self), hash(self.expression),
+                 hash(self.slice_expression)))
+
+
+  def replace(self, node, replacement_node):
+    if self.expression is node:
+      self.expression = replacement_node
+    elif self.slice_expression is node:
+      self.slice_expression = replacement_node
+    else:
+      raise Exception("neither expression matches target")
 
 class TargetNode(IdentifierNode):
   pass
