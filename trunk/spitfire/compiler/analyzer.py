@@ -171,6 +171,9 @@ class SemanticAnalyzer(object):
       if built_nodes:
         self.template.main_function.extend(built_nodes)
 
+    self.template.main_function.child_nodes = self.optimize_buffer_writes(
+      self.template.main_function.child_nodes)
+
     return [self.template]
 
   def analyzeForNode(self, pnode):
@@ -182,7 +185,9 @@ class SemanticAnalyzer(object):
       for_node.expression_list.extend(self.build_ast(pn))
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
       for_node.extend(self.build_ast(pn))
-      
+
+    for_node.child_nodes = self.optimize_buffer_writes(for_node.child_nodes)
+
     return [for_node]
 
   def analyzeGetUDNNode(self, pnode):
@@ -200,8 +205,11 @@ class SemanticAnalyzer(object):
     if_node.test_expression = self.build_ast(pnode.test_expression)[0]
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
       if_node.extend(self.build_ast(pn))
+      if_node.child_nodes = self.optimize_buffer_writes(if_node.child_nodes)
     for pn in self.optimize_parsed_nodes(pnode.else_.child_nodes):
       if_node.else_.extend(self.build_ast(pn))
+      if_node.else_.child_nodes = self.optimize_buffer_writes(
+        if_node.else_.child_nodes)
     return [if_node]
 
   def analyzeFragmentNode(self, node):
@@ -309,8 +317,8 @@ class SemanticAnalyzer(object):
     
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
       function.extend(self.build_ast(pn))
-
     function = self.build_ast(function)[0]
+    function.child_nodes = self.optimize_buffer_writes(function.child_nodes)
     self.template.append(function)
     return []
 
@@ -471,3 +479,22 @@ class SemanticAnalyzer(object):
         optimized_nodes.append(n)
     #print "optimized_nodes", node_list, optimized_nodes
     return optimized_nodes
+
+  # go over the parsed nodes and weed out the parts we don't need
+  # do this after analysis as well, in case a macro generates more BufferWrite
+  def optimize_buffer_writes(self, node_list):
+    optimized_nodes = NodeList()
+    for n in node_list:
+      if (self.options.collapse_adjacent_text and
+          is_text_write(n) and
+          len(optimized_nodes) and
+          is_text_write(optimized_nodes[-1])):
+        optimized_nodes[-1].append_text_node(n)
+      else:
+        optimized_nodes.append(n)
+    return optimized_nodes
+
+def is_text_write(node):
+  return (isinstance(node, BufferWrite) and
+          isinstance(node.expression, LiteralNode))
+  

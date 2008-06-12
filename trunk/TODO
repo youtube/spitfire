@@ -102,6 +102,7 @@ Varian 2.1: (UNTESTED)
 Cleanup:
  * atone for making hash value mutable?
  * add a test case for caching - ${something_expensive($arg)|cache}
+ * add a test case for slice optimization
  * refactor 'visitor' into 'walker'
  * OrderedDict keeps you from having to do proper dependency analysis for
    hoisting aliases. this seems a little fragile, but it does seem to work.
