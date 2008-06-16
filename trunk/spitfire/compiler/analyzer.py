@@ -67,7 +67,10 @@ class AnalyzerOptions(object):
     # filtering is expensive, especially given the number of function calls
     self.cache_filtered_placeholders = False
 
+    # generate functions compatible with Cheetah calling conventions
     self.cheetah_compatibility = False
+    # use Cheetah NameMapper to resolve placeholders and UDN
+    self.cheetah_cheats = False
 
     self.enable_psyco = False
     self.__dict__.update(kargs)
@@ -400,6 +403,7 @@ class SemanticAnalyzer(object):
     arg_map = pnode.parameter_list.get_arg_map()
     format_string = arg_map.get('format_string', '%s')
     if (self.compiler.enable_filters and
+        format_string == '%s' and
         not isinstance(ph_expression, LiteralNode)):
       arg_node_map = pnode.parameter_list.get_arg_node_map()
       if 'raw' not in arg_map:
@@ -414,6 +418,9 @@ class SemanticAnalyzer(object):
 
     if isinstance(ph_expression, LiteralNode):
       node_list.append(BufferWrite(ph_expression))
+    #elif self.compiler.enable_filters:
+    #  # we are already filtering, don't bother creating a new string
+    #  node_list.append(BufferWrite(ph_expression))
     else:
       node_list.append(BufferWrite(BinOpNode('%', LiteralNode(format_string),
                                              ph_expression)))
