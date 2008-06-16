@@ -98,8 +98,12 @@ class CodeGenerator(object):
     module_code.append_line('import spitfire.runtime')
     module_code.append_line('import spitfire.runtime.template')
 
-    module_code.append_line('from spitfire.runtime.udn import resolve_placeholder')
-    module_code.append_line('from spitfire.runtime.udn import resolve_udn')
+    if self.options and self.options.cheetah_cheats:
+      module_code.append_line('from Cheetah.NameMapper import valueFromSearchList as resolve_placeholder')
+      module_code.append_line('from Cheetah.NameMapper import valueForKey as resolve_udn')
+    else:
+      module_code.append_line('from spitfire.runtime.udn import resolve_placeholder')
+      module_code.append_line('from spitfire.runtime.udn import resolve_udn')
     module_code.append_line('from spitfire.runtime.template import template_method')
     module_code.append_line('')
     if node.cached_identifiers:
@@ -255,6 +259,10 @@ class CodeGenerator(object):
     name = node.name
     if name in ('has_var', 'get_var'):
       return [CodeNode("self.%(name)s" % vars())]
+    elif self.options and self.options.cheetah_cheats:
+      return [CodeNode(
+        "resolve_placeholder(_self_search_list, '%(name)s')"
+        % vars())]
     elif self.options and self.options.omit_local_scope_search:
       return [CodeNode(
         "resolve_placeholder('%(name)s', template=self, global_vars=_globals)"
@@ -315,7 +323,7 @@ class CodeGenerator(object):
     # NOTE: for Cheetah compatibility, we have to handle the case where Cheetah
     # tries to pass a 'transaction' object through. hopefully this doesn't have
     # some other baggage coming with it.
-    if self.options.cheetah_compatibility:
+    if self.options and self.options.cheetah_compatibility:
       if parameter_list:
         code_node = CodeNode('def %(name)s(%(parameter_list)s, **kargs):' % vars())
       else:
@@ -323,7 +331,7 @@ class CodeGenerator(object):
     else:
       code_node = CodeNode('def %(name)s(%(parameter_list)s):' % vars())
 
-    if self.options.cheetah_compatibility:
+    if self.options and self.options.cheetah_compatibility:
       if_cheetah = CodeNode("if 'trans' in kargs:")
       code_node.append(if_cheetah)
       if_cheetah.append(CodeNode("_buffer = kargs['trans'].response()"))
@@ -335,10 +343,19 @@ class CodeGenerator(object):
     code_node.append(CodeNode('_buffer_write = _buffer.write'))
     code_node.append(CodeNode('_globals = globals()'))
     code_node.append(CodeNode('_self_filter_function = self.filter_function'))
+    
+    if self.options and self.options.cheetah_cheats:
+      code_node.append(CodeNode('_self_search_list = self.search_list + [_globals]'))
+
     for n in node.child_nodes:
       code_child_nodes = self.build_code(n)
       code_node.extend(code_child_nodes)
-    code_node.append(CodeNode('return _buffer.getvalue()'))
+    if self.options.cheetah_compatibility:
+      if_cheetah = CodeNode("if 'trans' not in kargs:")
+      if_cheetah.append(CodeNode('return _buffer.getvalue()'))
+      code_node.append(if_cheetah)
+    else:
+      code_node.append(CodeNode('return _buffer.getvalue()'))
     return [decorator_node, code_node]
   
   # fixme: don't know if i still need this - a 'template function'
