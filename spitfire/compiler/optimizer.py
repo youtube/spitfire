@@ -475,7 +475,38 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     return frozenset(local_identifiers)
   
   def analyzeGetUDNNode(self, node):
-    self.visit_ast(node.expression, node)
+    if not self.options.prefer_whole_udn_expressions:
+      self.visit_ast(node.expression, node)
+    
+    if self.options.cache_resolved_udn_expressions:
+      cached_udn = IdentifierNode('_rudn_%s' % unsigned_hash(node))
+      local_identifiers = self.get_local_identifiers(node)
+      if cached_udn in local_identifiers:
+        node.parent.replace(node, cached_udn)
+      else:
+        scope = self.get_parent_scope(node)
+        scope.alias_name_set.add(cached_udn.name)
+        scope.aliased_expression_map[node] = cached_udn
+
+        insert_block, insert_marker = self.get_insert_block_and_point(
+          node)
+        # note: this is sketchy enough that it requires some explanation
+        # basically, you need to visit the node for the parent function to
+        # get the memo that this value is aliased. unfortunately, the naive
+        # case of just calling visit_ast blows up since it tries to double
+        # analyze a certain set of nodes. you only really need to analyze
+        # that the assignment took place, then you can safely alias the
+        # actual function call. definitely sketchy, but it does seem to work
+        assign_rph = AssignNode(cached_udn, None)
+        insert_block.insert_before(
+          insert_marker, assign_rph)
+        self.visit_ast(assign_rph, insert_block)
+        assign_rph.right = node
+        node.parent.replace(node, cached_udn)
+    elif self.options.prefer_whole_udn_expressions:
+      self.visit_ast(node.expression, node)
+      
+      
 
   def analyzeSliceNode(self, pnode):
     self.visit_ast(pnode.expression, pnode)

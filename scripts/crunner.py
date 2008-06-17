@@ -24,6 +24,13 @@ from spitfire.compiler.util import Compiler
 # this class let's me check if placeholder caching is working properly by
 # tracking the number of accesses for a single key
 class ResolveCounter(object):
+  @property
+  def resolve_x(self):
+    return self._get_item('resolve_x')
+  @property
+  def resolve_y(self):
+    return self._get_item('resolve_y')
+  
   def _get_item(self, key):
     if key in self.__dict__:
       self.__dict__[key] += 1
@@ -31,6 +38,9 @@ class ResolveCounter(object):
       self.__dict__[key] = 1
 
     return '%s%s' % (key, self.__dict__[key])
+
+  def __contains__(self, key):
+    return key.startswith('resolve')
   
   def __getitem__(self, key):
     if not key.startswith('resolve'):
@@ -55,8 +65,8 @@ class TestRunner(object):
     if options.test_input:
       self._search_list = [
         spitfire.runtime.runner.load_search_list(options.test_input),
+        {'tier1': {'tier2': ResolveCounter()}},
         ResolveCounter(),
-        {'nested_resolver': ResolveCounter()},
         ]
     else:
       self._search_list = []

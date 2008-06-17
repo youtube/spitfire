@@ -50,6 +50,10 @@ class AnalyzerOptions(object):
     # once a placeholder is resolved in a given scope, cache it in a local
     # reference for faster subsequent retrieval
     self.cache_resolved_placeholders = False
+    self.cache_resolved_udn_expressions = False
+    # when this is enabled, $a.b.c will cache only the result of the entire
+    # expression. otherwise, each subexpression will be cached separately
+    self.prefer_whole_udn_expressions = False
     
     # when adding an alias, detect if the alias is loop invariant and hoist
     # right there on the spot.  this has probably been superceded by
@@ -92,6 +96,7 @@ o2_options = copy.copy(o1_options)
 o2_options.alias_invariants = True
 o2_options.directly_access_defined_variables = True
 o2_options.cache_resolved_placeholders = True
+o2_options.cache_resolved_udn_expressions = True
 o2_options.inline_hoist_loop_invariant_aliases = True
 
 o3_options = copy.copy(o2_options)
