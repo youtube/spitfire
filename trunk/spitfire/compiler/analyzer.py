@@ -407,6 +407,14 @@ class SemanticAnalyzer(object):
 
     arg_map = pnode.parameter_list.get_arg_map()
     format_string = arg_map.get('format_string', '%s')
+
+    skip_filter = False
+    if isinstance(ph_expression, CallFunctionNode):
+      fname = ph_expression.expression.name
+      if fname in self.compiler.function_name_registry:
+        ph_function = self.compiler.function_name_registry[fname][-1]
+        skip_filter = getattr(ph_function, 'skip_filter', False)
+
     if (self.compiler.enable_filters and
         format_string == '%s' and
         not isinstance(ph_expression, LiteralNode)):
@@ -414,7 +422,13 @@ class SemanticAnalyzer(object):
       if 'raw' not in arg_map:
         # if we need to filter, wrap up the node and wait for further analysis
         # later on
-        ph_expression = FilterNode(ph_expression, arg_node_map.get('filter'))
+        if skip_filter:
+          # explicitly set the filter to none here - this means we will cache
+          # expensive pseudo-filtered nodes
+          ph_expression = FilterNode(ph_expression, None)
+        else:
+          ph_expression = FilterNode(
+            ph_expression, arg_node_map.get('filter', DefaultFilterFunction))
         if 'cache' in arg_map:
           cache_expression = CacheNode(ph_expression)
           self.template.cached_identifiers.append(cache_expression)

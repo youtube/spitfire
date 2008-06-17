@@ -170,6 +170,15 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     return
   
   def analyzeTemplateNode(self, template):
+    # at this point, if we have a function registry, add in the nodes before we
+    # begin optimizing
+    for alias, (fq_name, method) in self.compiler.function_name_registry.iteritems():
+      fq_name_parts = fq_name.split('.')
+      self.ast_root.from_nodes.append(FromNode(
+        [IdentifierNode(x) for x in fq_name_parts[:-1]],
+        IdentifierNode(fq_name_parts[-1]),
+        IdentifierNode(alias)))
+      
     for n in template.from_nodes:
       if n.alias:
         template.global_identifiers.add(n.alias)
@@ -249,7 +258,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     if self.options.cache_filtered_placeholders:
       # NOTE: you *must* analyze the node before putting it in a dict
       # otherwise the definition of hash and equivalence will change and the
-      # node will not be found - very odd.
+      # node will not be found due to the sketchy custom hash function
       scope = self.get_parent_scope(filter_node)
       alias = scope.aliased_expression_map.get(filter_node)
 
@@ -267,7 +276,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         scope.aliased_expression_map[filter_node] = alias
         assign_alias = AssignNode(alias, filter_node)
 
-        insert_block, insert_marker = self.get_insert_block_and_point(filter_node)
+        insert_block, insert_marker = self.get_insert_block_and_point(
+          filter_node)
         insert_block.insert_before(insert_marker, assign_alias)
 
       filter_node.parent.replace(filter_node, alias)

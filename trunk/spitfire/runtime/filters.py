@@ -2,9 +2,18 @@
 
 from spitfire.runtime.udn import UndefinedPlaceholder
 
+# decorate a function object so the default filter will not be applied to the
+# value of a placeholder. this is handy when building functions that will
+# create data that could be double-escaped and you don't wnat to constantly
+# inform spitfire to us raw mode.
+def skip_filter(function):
+  function.skip_filter = True
+  return function
+
 def passthrough_filter(template_instance, value):
   return value
 
+@skip_filter
 def escape_html(template_instance, value, quote=False):
   """Replace special characters '&', '<' and '>' by SGML entities."""
   value = safe_values(template_instance, value)
@@ -22,10 +31,7 @@ def safe_values(template_instance, value):
   else:
     return ''
 
-# decorate a function object so the default filter will not be applied to the
-# value of a placeholder. this is handy when building functions that will
-# create data that could be double-escaped and you don't wnat to constantly
-# inform spitfire to us raw mode.
-def skip_filter(function):
-  function.skip_filter = True
-  return function
+# test function for function registry - don't use
+@skip_filter
+def escape_html_function(value):
+  return escape_html(None, value)

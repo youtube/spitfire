@@ -403,11 +403,15 @@ class CodeGenerator(object):
 
   def codegenASTFilterNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
-    if node.filter_function_node:
+    
+    if node.filter_function_node == DefaultFilterFunction:
+      filter_expression = '_self_filter_function'
+    elif node.filter_function_node:
       filter_expression = self.generate_python(
         self.build_code(node.filter_function_node)[0])
     else:
-      filter_expression = '_self_filter_function'
+      filter_expression = None
+
     if isinstance(node.expression, CallFunctionNode):
       # need the placeholder function expression to make sure that we don't
       # double escape the output of template functions
@@ -415,22 +419,27 @@ class CodeGenerator(object):
       # optimizer fix this, or should we generate speedy code?
       placeholder_function_expression = self.generate_python(
         self.build_code(node.expression.expression)[0])
-      if node.filter_function_node:
+      if node.filter_function_node == DefaultFilterFunction:
+        code_node = CodeNode(
+          '%(filter_expression)s(%(expression)s, %(placeholder_function_expression)s)'
+          % vars())
+      elif node.filter_function_node:
         code_node = CodeNode(
           '%(filter_expression)s(self, %(expression)s, %(placeholder_function_expression)s)'
           % vars())
       else:
-        code_node = CodeNode(
-          '%(filter_expression)s(%(expression)s, %(placeholder_function_expression)s)'
-          % vars())
+        code_node = CodeNode('%(expression)s' % vars())
     else:
-      if node.filter_function_node:
-        code_node = CodeNode('%(filter_expression)s(self, %(expression)s)' % vars())
+      if node.filter_function_node == DefaultFilterFunction:
+        code_node = CodeNode(
+          '%(filter_expression)s(%(expression)s)' % vars())
+      elif node.filter_function_node:
+        code_node = CodeNode(
+          '%(filter_expression)s(self, %(expression)s)' % vars())
       else:
-        code_node = CodeNode('%(filter_expression)s(%(expression)s)' % vars())
+        code_node = CodeNode('%(expression)s' % vars())
     return [code_node]
 
-    return []
 
   def codegenDefault(self, node):
     v = globals()
