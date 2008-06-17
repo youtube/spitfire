@@ -6,7 +6,6 @@ def import_module_symbol(name):
   try:
     symbol = getattr(module, symbol_name)
   except AttributeError, e:
-    print "import_module_symbol", module
     raise ImportError("can't import %s" % name)
   return symbol
 
