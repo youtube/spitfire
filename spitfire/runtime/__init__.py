@@ -17,3 +17,8 @@ def register_functions(module, template_function_map):
     f_func = import_module_symbol(f_name)
     setattr(module, t_name, f_func)
     
+# decorate a function object so the value will be retrieved once and then
+# cached in the template forever.
+def cache_forever(function):
+  function.cache_forever = True
+  return function
