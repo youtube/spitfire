@@ -32,7 +32,8 @@ added caching for UDN expressions and fixed ResolveCounter test class.
 
 placeholders resolved from the function registry can now determine whether or
 not they need to be filtered at runtime, if the function can be imported at
-compile time.
+compile time. the can also indicate that they should be cached indefinitely
+at the module level.
 
 
 0.7 - 2008-06-03

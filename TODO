@@ -100,6 +100,7 @@ Varian 2.1: (UNTESTED)
    * Variant 2 is universally the slowest
 
 Cleanup:
+ * chech if ${placeholde|raw} values get cached properly
  * atone for making hash value mutable?
  * add a test case for caching - ${something_expensive($arg)|cache}
  * add a test case for slice optimization

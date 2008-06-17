@@ -239,6 +239,17 @@ class CacheNode(CallFunctionNode):
   def __init__(self, expression=None):
     ASTNode.__init__(self, '_cph%08X' % unsigned_hash(expression))
     self.expression = expression
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.expression == node.expression)
+
+  def __hash__(self):
+    return hash('%s%s' %
+                (type(self), hash(self.expression)))
+    
+  def __str__(self):
+    return '%s expr:%s' % (
+      self.__class__.__name__, self.expression)
 
 class EchoNode(ASTNode):
   def __init__(self, true_expression=None, test_expression=None,
@@ -622,7 +633,7 @@ class TemplateNode(ASTNode):
     self.library = False
     self.implements = False
     self.global_identifiers = set()
-    self.cached_identifiers = []
+    self.cached_identifiers = set()
   
   def __str__(self):
     return '%s\nimport:%s\nfrom:%s\nextends:%s\nmain:%s' % (
