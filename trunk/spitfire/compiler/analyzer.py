@@ -409,11 +409,13 @@ class SemanticAnalyzer(object):
     format_string = arg_map.get('format_string', '%s')
 
     skip_filter = False
+    cache_forever = False
     if isinstance(ph_expression, CallFunctionNode):
       fname = ph_expression.expression.name
       if fname in self.compiler.function_name_registry:
         ph_function = self.compiler.function_name_registry[fname][-1]
         skip_filter = getattr(ph_function, 'skip_filter', False)
+        cache_forever = getattr(ph_function, 'cache_forever', False)
 
     if (self.compiler.enable_filters and
         format_string == '%s' and
@@ -429,9 +431,9 @@ class SemanticAnalyzer(object):
         else:
           ph_expression = FilterNode(
             ph_expression, arg_node_map.get('filter', DefaultFilterFunction))
-        if 'cache' in arg_map:
+        if cache_forever or 'cache' in arg_map:
           cache_expression = CacheNode(ph_expression)
-          self.template.cached_identifiers.append(cache_expression)
+          self.template.cached_identifiers.add(cache_expression)
           node_list.append(cache_expression)
           ph_expression = IdentifierNode(cache_expression.name)
 
