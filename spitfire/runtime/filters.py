@@ -14,7 +14,7 @@ def passthrough_filter(template_instance, value):
   return value
 
 @skip_filter
-def escape_html(template_instance, value, quote=False):
+def escape_html(template_instance, value, quote=True):
   """Replace special characters '&', '<' and '>' by SGML entities."""
   value = safe_values(template_instance, value)
   if isinstance(value, basestring):
