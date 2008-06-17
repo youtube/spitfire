@@ -125,6 +125,9 @@ class _ListNode(ASTNode):
     return '%s %s' % (ASTNode.__str__(self),
                       ', '.join(str(n) for n in self.child_nodes))
 
+  def __getitem__(self, item):
+    return self.child_nodes[item]
+
   def get_arg_map(self):
     arg_map = {}
     for parameter_node in self.child_nodes:
