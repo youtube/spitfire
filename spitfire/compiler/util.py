@@ -5,13 +5,14 @@ import os.path
 import re
 import sys
 
+import spitfire.compiler.analyzer
 import spitfire.compiler.codegen
+import spitfire.compiler.optimizer
 import spitfire.compiler.parser
 import spitfire.compiler.scanner
-import spitfire.compiler.analyzer
-import spitfire.compiler.optimizer
 import spitfire.compiler.xhtml2ast
 
+from spitfire import runtime
 from spitfire.compiler import analyzer
 from spitfire.compiler import ast
 from spitfire.compiler import codegen
@@ -65,7 +66,14 @@ def read_function_registry(filename):
         continue
       
       alias, fq_name = line.split('=')
-      function_registry[alias.strip()] = fq_name.strip()
+      fq_name = fq_name.strip()
+      try:
+        method = runtime.import_module_symbol(fq_name)
+      except ImportError:
+        logging.warning('unable to import function registry symbol %s', fq_name)
+        method = None
+                        
+      function_registry[alias.strip()] = fq_name, method
     return function_registry
   finally:
     f.close()
@@ -216,14 +224,6 @@ class Compiler(object):
     self._analyzed_tree = analyzer.SemanticAnalyzer(
       classname, parse_root, self.analyzer_options, self).get_ast()
 
-    # at this point, if we have a function registry, add in the nodes before we
-    # begin optimizing
-    for alias, fq_name in self.function_name_registry.iteritems():
-      fq_name_parts = fq_name.split('.')
-      self._analyzed_tree.from_nodes.append(ast.FromNode(
-        [ast.IdentifierNode(x) for x in fq_name_parts[:-1]],
-        ast.IdentifierNode(fq_name_parts[-1]),
-        ast.IdentifierNode(alias)))
 
     # keep a copy of the tree for debugging purposes
     if self.debug_flags:

@@ -30,6 +30,10 @@ a lot of text generated via macro expansion.
 
 added caching for UDN expressions and fixed ResolveCounter test class.
 
+placeholders resolved from the function registry can now determine whether or
+not they need to be filtered at runtime, if the function can be imported at
+compile time.
+
 
 0.7 - 2008-06-03
 this is a fairly significant refactoring from the 0.6.x branch. the motivation

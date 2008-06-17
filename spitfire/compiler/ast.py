@@ -257,13 +257,20 @@ class EchoNode(ASTNode):
       self.false_expression = replacement_node
     else:
       raise Exception("expression does not match target")
-  
+
+# dopey semi singleton - the nodes get cloned via deepcopy, so just
+# make anything of this class identical
+class __DefaultFilterFunction(object):
+  def __eq__(self, o):
+    return isinstance(o, self.__class__)
+DefaultFilterFunction = __DefaultFilterFunction()
+
 # encapsulate the idea that you want to run a filter over this expression
 # this is sort of an implicit function call, so the hierarchy makes some sense
 # again, in this case we want to preserve plenty of information and hierarchy
 # for ease of optimization later on in the process
 class FilterNode(ASTNode):
-  def __init__(self, expression=None, filter_function_node=None):
+  def __init__(self, expression=None, filter_function_node=DefaultFilterFunction):
     ASTNode.__init__(self)
     self.expression = expression
     self.filter_function_node = filter_function_node
