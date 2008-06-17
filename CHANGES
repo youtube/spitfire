@@ -28,6 +28,8 @@ added optimization for SliceNode.
 added literal BufferWrite aggregation - this reduces writes when there are
 a lot of text generated via macro expansion.
 
+added caching for UDN expressions and fixed ResolveCounter test class.
+
 
 0.7 - 2008-06-03
 this is a fairly significant refactoring from the 0.6.x branch. the motivation

@@ -9,6 +9,7 @@
                          {'id': 3, 'name': 'o3'},
                          ],
     'test_dict': {'key1': 1},
+    'test_nested_dict': {'key1': 1, 'd2': {'key1': 1}},
     'test_whitespaced_dict': {'key 1': 1},
     'test_str_function': str,
     'test_range': range,
