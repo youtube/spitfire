@@ -257,6 +257,14 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 
   def analyzeBufferWrite(self, buffer_write):
     self.visit_ast(buffer_write.expression, buffer_write)
+    # template functions output text - don't format them as strings
+    if (isinstance(buffer_write.expression, BinOpNode) and
+        buffer_write.expression.operator == '%' and
+        isinstance(buffer_write.expression.right, CallFunctionNode) and
+        isinstance(buffer_write.expression.right.expression,
+                   TemplateMethodIdentifierNode)):
+      buffer_write.replace(
+        buffer_write.expression, buffer_write.expression.right)
 
   def analyzeEchoNode(self, node):
     for n in (node.test_expression, node.true_expression, node.false_expression):
