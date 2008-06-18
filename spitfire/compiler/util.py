@@ -291,6 +291,12 @@ class Compiler(object):
     self.macro_registry[name] = function
 
 
+
+# convert and extends path to a file path
+def extends2path(class_extend):
+  return class_extend.replace('.', '/') + ".spt"
+  
+
 def validate_path(option, opt_str, path, parser):
   path = os.path.abspath(os.path.expanduser(path))
   setattr(parser.values, option.dest, path)
