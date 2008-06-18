@@ -1,6 +1,7 @@
 import copy
 import logging
 import os.path
+import re
 
 from spitfire.compiler.ast import *
 from spitfire.compiler.analyzer import *
@@ -184,7 +185,18 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         template.global_identifiers.add(n.alias)
       else:
         template.global_identifiers.add(n.identifier)
-      
+
+    # scan extends for dependencies
+    # this allows faster calling of template functions - we could also
+    # tune BufferWrite calls for these nodes
+    if self.options.use_dependency_analysis:
+      for n in template.extends_nodes:
+        for ext in template_extensions:
+          path = os.path.join(
+            *[ident_node.name for ident_node in n.module_name_list[:-1]]) + ext
+          template_function_names = get_template_functions(path)
+          template.template_methods.update(template_function_names)
+    
     self.visit_ast(template.main_function, template)
     for n in template.child_nodes:
       self.visit_ast(n, template)
@@ -255,6 +267,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeFilterNode(self, filter_node):
     self.visit_ast(filter_node.expression, filter_node)
 
+    if (isinstance(filter_node.expression, CallFunctionNode) and
+        isinstance(filter_node.expression.expression, TemplateMethodIdentifierNode)):
+      filter_node.parent.replace(filter_node, filter_node.expression)
+      return
+
     if self.options.cache_filtered_placeholders:
       # NOTE: you *must* analyze the node before putting it in a dict
       # otherwise the definition of hash and equivalence will change and the
@@ -294,6 +311,10 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       #print "local_identifiers", local_identifiers
       if local_var in local_identifiers:
         placeholder.parent.replace(placeholder, local_var)
+      elif placeholder.name in self.ast_root.template_methods:
+        placeholder.parent.replace(
+          placeholder, TemplateMethodIdentifierNode(
+          placeholder.name))
       elif local_var in self.ast_root.global_identifiers:
         placeholder.parent.replace(placeholder, local_var)
       elif cached_placeholder in local_identifiers:
@@ -556,7 +577,8 @@ class FinalPassAnalyzer(_BaseAnalyzer):
     self.reanalyzeConditionalNode(if_node)
     self.reanalyzeConditionalNode(if_node.else_)
 
-  def hoist(self, parent_node, parent_block, insertion_point, alias_node, assign_alias_node):
+  def hoist(self, parent_node, parent_block, insertion_point, alias_node,
+            assign_alias_node):
     # prune the implementation in the nested block
     # print "prune", alias_node
     # print "parent_block aliases", parent_block.scope.aliased_expression_map
@@ -584,3 +606,31 @@ class FinalPassAnalyzer(_BaseAnalyzer):
         # still need to insert the alias
         parent_block.insert_before(insertion_point, assign_alias_node)
       parent_block.scope.hoisted_aliases.append(alias_node)
+
+
+template_function_re = re.compile('^[^#]*#(def|block)\s+(\w+)')
+extends_re = re.compile('^#extends\s+([\.\w]+)')
+template_extensions = ('.spt', '.tmpl')
+# scan an spt file for template functions it will output
+def get_template_functions(path):
+  template_function_names = set()
+  if not os.path.exists(path):
+    logging.debug('no such template for dependecy check: %s', path)
+  else:
+    f = open(path)
+    for line in f:
+      match = template_function_re.match(line)
+      if match:
+        template_function_names.add(match.group(2))
+        continue
+      match = extends_re.match(line)
+      if match:
+        extend_name = match.group(1)
+        extend_path = extend_name.replace('.', '/')
+        print 
+        for ext in template_extensions:
+          template_path = extend_path + ext
+          template_function_names.update(
+            get_template_functions(template_path))
+        
+  return template_function_names

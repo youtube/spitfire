@@ -29,6 +29,9 @@ class AnalyzerOptions(object):
     # adjacent text nodes become one single node
     self.collapse_adjacent_text = False
 
+    # generate templates with unicode() instead of str()
+    self.generate_unicode = True
+    
     # runs of whitespace characters are replace with one space
     self.normalize_whitespace = False
     
@@ -40,6 +43,11 @@ class AnalyzerOptions(object):
     # identifier, don't incure the cost of a resolve_placeholder call since you
     # know that this local variable will always resolve first
     self.directly_access_defined_variables = False
+
+    # examine the 'extends' directive to see what other methods will be
+    # defined on this template - that allows use to make fast calls to template
+    # methods outside of the immediate file.
+    self.use_dependency_analysis = False
 
     # if directly_access_defined_variables is working 100% correctly, you can
     # compleletely ignore the local scope, as those placeholders will have been
@@ -75,6 +83,7 @@ class AnalyzerOptions(object):
     self.cheetah_compatibility = False
     # use Cheetah NameMapper to resolve placeholders and UDN
     self.cheetah_cheats = False
+    
 
     self.enable_psyco = False
     self.__dict__.update(kargs)
@@ -98,6 +107,7 @@ o2_options.directly_access_defined_variables = True
 o2_options.cache_resolved_placeholders = True
 o2_options.cache_resolved_udn_expressions = True
 o2_options.inline_hoist_loop_invariant_aliases = True
+o2_options.use_dependency_analysis = True
 
 o3_options = copy.copy(o2_options)
 o3_options.inline_hoist_loop_invariant_aliases = False
@@ -316,6 +326,7 @@ class SemanticAnalyzer(object):
   def analyzeDefNode(self, pnode):
     #if not pnode.child_nodes:
     #  raise SemanticAnalyzerError("DefNode must have children")
+    self.template.template_methods.add(pnode.name)
     function = FunctionNode(pnode.name)
     if pnode.parameter_list:
       function.parameter_list = self.build_ast(pnode.parameter_list)[0]

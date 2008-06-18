@@ -414,6 +414,8 @@ class IdentifierNode(ASTNode):
   def __hash__(self):
     return hash(self.name)
 
+class TemplateMethodIdentifierNode(IdentifierNode):
+  pass
 
 class IfNode(ASTNode):
   def __init__(self, test_expression=None):
@@ -637,6 +639,7 @@ class TemplateNode(ASTNode):
     self.implements = False
     self.global_identifiers = set()
     self.cached_identifiers = set()
+    self.template_methods = set()
   
   def __str__(self):
     return '%s\nimport:%s\nfrom:%s\nextends:%s\nmain:%s' % (

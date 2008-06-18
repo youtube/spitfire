@@ -210,6 +210,14 @@ class CodeGenerator(object):
          for n in node.child_nodes]))]
   codegenASTExpressionListNode = codegenASTTargetListNode
 
+  def codegenASTLiteralNode(self, node):
+    if self.options and not self.options.generate_unicode:
+      return [CodeNode(repr(node.value.encode(self.ast_root.encoding)))]
+    else:
+      # generate unicode by default
+      return [CodeNode('%(value)r' % vars(node))]
+      
+
   def codegenASTListLiteralNode(self, node):
     return [CodeNode('[%s]' % ', '.join([
       self.generate_python(self.build_code(n)[0])
@@ -472,6 +480,7 @@ ASTForNode_tmpl = ['for %(target_list)s in %(expression_list)s:']
 ASTTargetNode_tmpl = ['%(name)s']
 
 ASTIdentifierNode_tmpl = ['%(name)s']
+ASTTemplateMethodIdentifierNode_tmpl = ['self.%(name)s']
 
 ASTLiteralNode_tmpl = ['%(value)r']
 

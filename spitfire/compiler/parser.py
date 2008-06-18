@@ -595,12 +595,12 @@ class SpitfireParser(Parser):
             self._scan('\'"\'')
             DOUBLE_QUOTE_STR = self._scan('DOUBLE_QUOTE_STR')
             self._scan('\'"\'')
-            return unicode(DOUBLE_QUOTE_STR)
+            return unicode(eval('"%s"' % DOUBLE_QUOTE_STR))
         else:# == '"\'"'
             self._scan('"\'"')
             SINGLE_QUOTE_STR = self._scan('SINGLE_QUOTE_STR')
             self._scan('"\'"')
-            return unicode(SINGLE_QUOTE_STR)
+            return unicode(eval("'%s'" % SINGLE_QUOTE_STR))
 
     def literal(self):
         _token_ = self._peek('"True"', '"False"', '\'"\'', '"\'"', 'NUM')

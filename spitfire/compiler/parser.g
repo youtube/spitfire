@@ -385,9 +385,11 @@ parser SpitfireParser:
      {{ return _parameter_list }}
 
   rule stringliteral:
-    '"' DOUBLE_QUOTE_STR '"' {{ return unicode(DOUBLE_QUOTE_STR) }}
+    '"' DOUBLE_QUOTE_STR '"'
+    {{ return unicode(eval('"%s"' % DOUBLE_QUOTE_STR)) }}
     |
-    "'" SINGLE_QUOTE_STR "'" {{ return unicode(SINGLE_QUOTE_STR) }}
+    "'" SINGLE_QUOTE_STR "'"
+    {{ return unicode(eval("'%s'" % SINGLE_QUOTE_STR)) }}
 
   # had to factor out the floats
   rule literal:
