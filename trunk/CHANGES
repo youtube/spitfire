@@ -1,4 +1,4 @@
-0.7.1 - 2008-06-04
+0.7.1 - 2008-06-18
 added 'in' operator which was forgotten somehow.
 
 fixed syntax to allow for trailing whitespace in directives.
@@ -14,6 +14,8 @@ function handler - so this might be useful in the future for more stuff.
 allow #echo to be properly optimized.
 
 fixed long-standing bug in crawling AST for current local identifiers.
+
+fixed long-standing bug in string parsing with C-escaped entities \', \".
 
 remove double analysis on the main template message body. this was manifesting
 itself oddly as BlockNodes would get processed twice.
@@ -36,6 +38,10 @@ compile time. the can also indicate that they should be cached indefinitely
 at the module level. additionally, if we can determine that a registered
 function takes only a single literal argument, we can cache it indefinitely
 since the result should be the same for every execution.
+
+added minimal recursive dependency analysis - this tries to figure out which
+placeholders are actually calls to template functions and uses that to optimize
+the resolution, calling and filtering.
 
 
 0.7 - 2008-06-03

@@ -59,12 +59,8 @@ Optimization:
    variables and references directly - especially items used in an #if and then
    referenced as a placeholder in the block immediately following
    * there are some subtleties here
- * no need to cache placeholders when they are already references to local
-   scope variables (see bigtable test)
- * when caching a resolved placeholder inside an if block, hoist it up to the
-   parent scope if is independent of the test expression
- * do a better job of hoisting loop-invariant code (see filter function
-   resolution in bigtable test)
+     * need to handle the case where someone does $get_var() - that doesn't
+       end up getting cached
  * caching directive that tells you to memoize a result based on a function
    annotation (this could be handy for non-template functions as well)
    * add syntax to allow you to 'bless' a cache region's variables - this means
@@ -74,11 +70,6 @@ Optimization:
    returns that constant string - no need for intermediate buffer
    * in some cases, might be able to skip the whole function call too - make
      the value an attribute? hard to do if this is used by a subclass
- * expose imports as globals vars that don't need to be resolved at runtime
- * allow a function registry of names that should be injected into the globals
-   for template modules. this would let common functions from python get fast
-   lookups without going through resolve_placeholder each time.
- * factor out common sub-expressions during resolve_udn
  * only store local variables called more than once?
 Variant 1:
         write(u"""<td>""") 
@@ -100,7 +91,7 @@ Varian 2.1: (UNTESTED)
    * Variant 2 is universally the slowest
 
 Cleanup:
- * chech if ${placeholde|raw} values get cached properly
+ * check if ${placeholde|raw} values get cached properly
  * atone for making hash value mutable?
  * add a test case for caching - ${something_expensive($arg)|cache}
  * add a test case for slice optimization
@@ -141,7 +132,3 @@ test line $x.id : $x.name
     #break
   #end if
 #end for
-
- * Can't have a literal '#' inside a macro block
- * tests don't seem to run under Python 2.5.x for some reason. looks like some
-   sort of issue with the import functionality.
