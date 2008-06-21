@@ -131,11 +131,16 @@ class _BaseAnalyzer(object):
       return
 
     parent_block, insertion_point = self.get_insert_block_and_point(loop_node)
-    
+      
     for alias_node, alias in loop_node.scope.aliased_expression_map.iteritems():
+#       print "reanalyzeLoopNode:"
+#       print "  alias:", alias
+#       print "  alias node:", alias_node
       assign_alias = AssignNode(alias, alias_node)
       if alias_node in parent_block.scope.aliased_expression_map:
-        self.hoist(loop_node, parent_block, insertion_point, alias_node, assign_alias)
+        if self.is_loop_invariant(alias_node, loop_node):
+          self.hoist(loop_node, parent_block, insertion_point, alias_node,
+                     assign_alias)
       else:
         # if this alias is not already used in the parent scope, that's
         # ok, hoist it if it's loop invariant
@@ -146,6 +151,9 @@ class _BaseAnalyzer(object):
 
   def is_loop_invariant(self, node, loop_node):
     node_dependency_set = self.get_node_dependencies(node)
+#     print "is loop invariant node:", node
+#     for x in node_dependency_set:
+#       print "  dep:", x
     return not loop_node.loop_variant_set.intersection(node_dependency_set)
 
   def get_node_dependencies(self, node):
@@ -157,11 +165,21 @@ class _BaseAnalyzer(object):
       # the dependencies for that symbol, which means doing some crawling
       if isinstance(n, IdentifierNode):
         identifier = n
-        for block_node in parent_block.child_nodes:
-          if isinstance(block_node, AssignNode):
-            if block_node.left == identifier:
-              node_dependency_set.update(
-                self.get_node_dependencies(block_node.right))
+        parent_block_to_check = parent_block
+        while parent_block_to_check:
+          for block_node in parent_block_to_check.child_nodes:
+            if isinstance(block_node, AssignNode):
+              if block_node.left == identifier:
+                node_dependency_set.update(
+                  self.get_node_dependencies(block_node.right))
+                parent_block_to_check = None
+                break
+          else:
+            parent_block_to_check = self.get_parent_block(
+              parent_block_to_check)
+      #elif isinstance(n, (GetUDNNode, FilterNode)):
+      #  node_dependency_set.update(
+      #    self.get_node_dependencies(node.expression))
     return node_dependency_set
 
 
@@ -345,6 +363,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         # that the assignment took place, then you can safely alias the
         # actual function call. definitely sketchy, but it does seem to work
         assign_rph = AssignNode(cached_placeholder, None)
+        cached_placeholder.parent = assign_rph
         #print "optimize scope:", insert_block
         #print "optimize marker:", insert_marker
         insert_block.insert_before(
@@ -537,6 +556,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         # that the assignment took place, then you can safely alias the
         # actual function call. definitely sketchy, but it does seem to work
         assign_rph = AssignNode(cached_udn, None)
+        cached_udn.parent = assign_rph
         insert_block.insert_before(
           insert_marker, assign_rph)
         self.visit_ast(assign_rph, insert_block)
