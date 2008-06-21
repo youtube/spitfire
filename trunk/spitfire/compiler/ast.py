@@ -43,6 +43,11 @@ class ASTNode(object):
       if type(node) is EatPrevious:
         del self.child_nodes[-1]
       else:
+        try:
+          node.parent = self
+        except AttributeError, e:
+          print e, node
+          raise
         self.child_nodes.append(node)
 
   def prepend(self, node):
@@ -63,6 +68,7 @@ class ASTNode(object):
     except ValueError:
       raise ValueError("can't find child node %s in %s" % (marker_node, self))
     # print "insert_before", idx, id(self), self, id(marker_node), marker_node
+    insert_node.parent = self
     self.child_nodes.insert(idx, insert_node)
 
   def remove(self, node):
@@ -75,8 +81,10 @@ class ASTNode(object):
       raise ValueError("can't find child node %s in %s" % (marker_node, self))
     try:
       for n in reversed(insert_node_list):
+        n.parent = self
         self.child_nodes.insert(idx, n)
     except TypeError:
+      insert_node_list.parent = self
       self.child_nodes.insert(idx, insert_node_list)
     self.child_nodes.remove(marker_node)
 
@@ -332,7 +340,8 @@ class MacroNode(DefNode):
   pass
 
 class DictLiteralNode(ASTNode):
-  pass
+  def append(self, node):
+    self.child_nodes.append(node)
 
 class ExpressionListNode(_ListNode):
   pass
