@@ -172,11 +172,11 @@ class SemanticAnalyzer(object):
 
   def default_analyze_node(self, pnode):
     # print "default_analyze_node", type(pnode)
-    return [pnode.copy()]
+    return [pnode]
 
   # some nodes just don't need analysis
   def skip_analyze_node(self, pnode):
-    return [pnode.copy()]
+    return [pnode]
   analyzeIdentifierNode = skip_analyze_node
   analyzeLiteralNode = skip_analyze_node
 
@@ -249,12 +249,12 @@ class SemanticAnalyzer(object):
     return [tuple_node]
 
   def analyzeParameterNode(self, pnode):
-    param = pnode.copy()
+    param = pnode
     param.default = self.build_ast(pnode.default)[0]
     return [param]
 
   def analyzeSliceNode(self, pnode):
-    snode = pnode.copy()
+    snode = pnode
     snode.expression = self.build_ast(pnode.expression)[0]
     snode.slice_expression = self.build_ast(pnode.slice_expression)[0]
     return [snode]
@@ -304,7 +304,7 @@ class SemanticAnalyzer(object):
 
   def analyzeFromNode(self, pnode):
     if pnode not in self.template.from_nodes:
-      self.template.from_nodes.append(pnode.copy())
+      self.template.from_nodes.append(pnode)
     return []
 
   def analyzeTextNode(self, pnode):
@@ -386,7 +386,7 @@ class SemanticAnalyzer(object):
     return self.handleMacro(pnode, macro_function)
 
   def analyzeAttributeNode(self, pnode):
-    self.template.attr_nodes.append(pnode.copy())
+    self.template.attr_nodes.append(pnode)
     return []
 
 
@@ -477,7 +477,7 @@ class SemanticAnalyzer(object):
   analyzeEchoNode = analyzePlaceholderNode
 
   def analyzeBinOpNode(self, pnode):
-    n = pnode.copy()
+    n = pnode
     n.left = self.build_ast(n.left)[0]
     n.right = self.build_ast(n.right)[0]
     return [n]
@@ -486,7 +486,7 @@ class SemanticAnalyzer(object):
   analyzeAssignNode = analyzeBinOpNode
   
   def analyzeUnaryOpNode(self, pnode):
-    n = pnode.copy()
+    n = pnode
     n.expression = self.build_ast(n.expression)[0]
     return [n]
 
@@ -494,7 +494,7 @@ class SemanticAnalyzer(object):
     return []
 
   def analyzeCallFunctionNode(self, pnode):
-    fn = pnode.copy()
+    fn = pnode
     if isinstance(fn.expression, PlaceholderNode):
       macro_handler_name = 'macro_function_%s' % fn.expression.name
       macro_function = self.compiler.macro_registry.get(macro_handler_name)
@@ -507,7 +507,7 @@ class SemanticAnalyzer(object):
   analyzeBufferWrite = analyzeCallFunctionNode
 
   def analyzeFilterNode(self, pnode):
-    fn = pnode.copy()
+    fn = pnode
     fn.expression = self.build_ast(fn.expression)[0]
     return [fn]
 

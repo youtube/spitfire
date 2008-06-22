@@ -89,9 +89,11 @@ class ASTNode(object):
     self.child_nodes.remove(marker_node)
 
   def copy(self, copy_children=True):
-    node = copy.deepcopy(self)
     if not copy_children:
+      node = copy.copy(self)
       node.child_nodes = NodeList()
+    else:
+      node = copy.deepcopy(self)
     return node
 
 
