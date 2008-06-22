@@ -571,9 +571,6 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     self.visit_ast(pnode.expression, pnode)
     self.visit_ast(pnode.slice_expression, pnode)
 
-#   def analyzeAttributeNode(self, pnode):
-#     self.template.attr_nodes.append(pnode.copy())
-#     return []
 
 
 # a second pass over the optimized tree to hoist invariant aliases to their
