@@ -178,7 +178,7 @@ parser SpitfireParser:
         {{ make_optional(_if_node.child_nodes) }}
         (
           '#elif' SPACE expression CLOSE_DIRECTIVE {{ _elif_node = IfNode(expression) }}
-          {{ _if_node.else_.append(_elif_node) }}
+          {{ _last_condition_node.else_.append(_elif_node) }}
           {{ _last_condition_node = _elif_node }}
           {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
           ( block<<start>> {{ _elif_node.append(block) }} ) *
