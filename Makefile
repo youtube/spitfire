@@ -18,7 +18,7 @@ all: parser
 
 .PHONY : test_function_registry
 test_function_registry: parser
-	$(CRUNNER) -O3 --compile --test-input tests/input/search_list_data.pye -qt tests/test-function-registry.txtx --function-registry-file tests/test-function-registry.cnf
+	$(CRUNNER) -O3 --compile --test-input tests/input/search_list_data.pye -qt tests/test-function-registry.txtx tests/i18n-7.txtx --function-registry-file tests/test-function-registry.cnf
 
 .PHONY : no_whitespace_tests
 no_whitespace_tests: clean_tests parser

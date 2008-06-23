@@ -1,0 +1,1 @@
+$escape_html_function($i18n('Demo #1 - block of <b>bold</b> "internationalized" text.'))
