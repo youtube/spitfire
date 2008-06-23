@@ -15,11 +15,16 @@ import spitfire.compiler.analyzer
 import spitfire.compiler.optimizer
 import spitfire.compiler.util
 import spitfire.runtime.runner
+import spitfire.runtime.udn
 
 from spitfire.compiler import analyzer
 from spitfire.compiler.visitor import print_tree
 from spitfire.compiler.util import Compiler
 
+
+# use this resolver so that we don't call resolve tester attributes twice
+# automatically
+spitfire.runtime.udn.resolve_udn = spitfire.runtime.udn.resolve_udn_prefer_attr
 
 # this class let's me check if placeholder caching is working properly by
 # tracking the number of accesses for a single key
@@ -27,6 +32,7 @@ class ResolveCounter(object):
   @property
   def resolve_x(self):
     return self._get_item('resolve_x')
+
   @property
   def resolve_y(self):
     return self._get_item('resolve_y')
@@ -36,7 +42,6 @@ class ResolveCounter(object):
       self.__dict__[key] += 1
     else:
       self.__dict__[key] = 1
-
     return '%s%s' % (key, self.__dict__[key])
 
   def __contains__(self, key):
@@ -199,7 +204,7 @@ if __name__ == '__main__':
 
   compiler_args = Compiler.args_from_optparse(options)
   compiler = Compiler(**compiler_args)
-  test_runner = TestRunner(compiler, options)
   
+  test_runner = TestRunner(compiler, options)
   for filename in args:
     test_runner.process_file(filename)
