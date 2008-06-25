@@ -542,12 +542,26 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       if cached_udn in local_identifiers:
         node.parent.replace(node, cached_udn)
       else:
+        insert_block, insert_marker = self.get_insert_block_and_point(
+          node)
+
+        # if there is a reassignment in the parent block, don't cache this
+        # incase it needs to be re-resolved.
+        # #set $text = $text.replace('\r\n', '\n')
+        # #set $text = $text.replace('\t', '  ')
+        # in this example, if you cache the udn expression text.replace,
+        # you have a problem - you won't ever use the new string create by
+        # the first call to replace
+        for child_node in insert_block.child_nodes:
+          if (isinstance(child_node, AssignNode) and
+              child_node.left == node.expression):
+            return
+
         scope = self.get_parent_scope(node)
         scope.alias_name_set.add(cached_udn.name)
         scope.aliased_expression_map[node] = cached_udn
 
-        insert_block, insert_marker = self.get_insert_block_and_point(
-          node)
+
         # note: this is sketchy enough that it requires some explanation
         # basically, you need to visit the node for the parent function to
         # get the memo that this value is aliased. unfortunately, the naive

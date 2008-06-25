@@ -326,6 +326,12 @@ class SemanticAnalyzer(object):
   def analyzeDefNode(self, pnode):
     #if not pnode.child_nodes:
     #  raise SemanticAnalyzerError("DefNode must have children")
+    #if not isinstance(pnode.parent, TemplateNode):
+    #  raise SemanticAnalyzerError("Nested #def or #block directives are not allowed")
+
+    if pnode.name in self.template.template_methods:
+      raise SemanticAnalyzerError('Redefining #def/#block %s' % pnode.name)
+    
     self.template.template_methods.add(pnode.name)
     function = FunctionNode(pnode.name)
     if pnode.parameter_list:
