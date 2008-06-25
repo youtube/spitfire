@@ -1,0 +1,15 @@
+#if True
+  #set $text = '&lt;b&gt;test&lt;/b&gt;'
+  #set $text = $text.replace('&lt;b&gt;','<b>')
+  #set $text = $text.replace('&lt;/b&gt;','</b>')
+#else
+  #set $text = 'test'
+  #set $text = $text.replace('&lt;b&gt;','<b>')
+  #set $text = $text.replace('&lt;/b&gt;','</b>')
+#end if
+
+#if $text == '<b>test</b>'
+Success: $text
+#else
+Failed: $text
+#end if
