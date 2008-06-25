@@ -1,0 +1,2 @@
+$test_object_list[1].id
+$test_object_list[1].name

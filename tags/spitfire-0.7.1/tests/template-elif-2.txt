@@ -1,0 +1,11 @@
+#for $x,$y,$z in [(1,0,0), (0,1,0), (0,0,1), (0,0,0)]
+  #if $x
+  test if $x
+  #elif $y
+  test elif 1 $y
+  #elif $z
+  test elif 2 $z
+  #else
+  else nothing $x $y
+  #end if
+#end for
