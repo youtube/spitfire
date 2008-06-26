@@ -1,4 +1,5 @@
 import copy
+import traceback
 
 # this is a horrible hack to let the tree modify itself during conversion
 class EatPrevious(object):
@@ -688,13 +689,18 @@ class Scope(object):
       self.name = hex(id(self))
     self.local_identifiers = []
     self.aliased_expression_map = OrderedDict()
-    self.alias_name_set = set()
+    self.alias_name_set = ScopeSet()
     self.filtered_expression_map = {}
     self.hoisted_aliases = []
 
   def __str__(self):
     return "<Scope %(name)s> %(alias_name_set)s" % vars(self)
 
+class ScopeSet(set):
+  pass
+  #def add(self, o):
+  #  set.add(self, o)
+    
 class OrderedDict(object):
   def __init__(self):
     self._dict = {}
@@ -714,6 +720,19 @@ class OrderedDict(object):
       self._order.append(key)
       self._dict[key] = value
 
+  def __delitem__(self, key):
+    self._order.remove(key)
+    del self._dict[key]
+
+  def keys(self):
+    return list(self.iterkeys())
+
+  def items(self):
+    return list(self.iteritems())
+
+  def iterkeys(self):
+    return iter(self._order)
+
   def iteritems(self):
     for key in self._order:
       yield key, self._dict[key]
@@ -721,6 +740,9 @@ class OrderedDict(object):
   def update(self, ordered_dict):
     for key, value in ordered_dict.iteritems():
       self[key] = value
+
+  def __str__(self):
+    return str([(x, self._dict[x]) for x in self._order])
 
 # this is sort of a hack to support optional white space nodes inside the
 # parse tree.  the reality is that this probably requires a more complex

@@ -112,18 +112,24 @@ class _BaseAnalyzer(object):
       return
 
     parent_node = conditional_node
-    parent_block, insertion_point = self.get_insert_block_and_point(conditional_node)
+    parent_block, insertion_point = self.get_insert_block_and_point(
+      conditional_node)
 
     if self.options.hoist_conditional_aliases:
-      # print "reanalyzeConditionalNode", conditional_node
-      # print "parent_block", parent_block
-      # print "parent_scope", parent_block.scope
-      for alias_node, alias in conditional_node.scope.aliased_expression_map.iteritems():
+      #print "reanalyzeConditionalNode", conditional_node
+      #print "  parent_block", parent_block
+      #print "  parent_scope", parent_block.scope
+      # NOTE: need to iterate over items, in case we modify something
+      for alias_node, alias in conditional_node.scope.aliased_expression_map.items():
+        #print "  check alias:", alias
+        #print "    alias_node:", alias_node
         assign_alias_node = AssignNode(alias, alias_node)
         if alias_node in parent_block.scope.aliased_expression_map:
-          #if not self.get_node_dependencies(alias_node).intersection(parent_block.scope.local_identifiers):
-          self.hoist(
-            conditional_node, parent_block, insertion_point, alias_node, assign_alias_node)
+          if self.is_condition_invariant(alias_node, conditional_node):
+            #print "  hoist:", assign_alias_node
+            self.hoist(
+              conditional_node, parent_block, insertion_point, alias_node,
+              assign_alias_node)
 
           
   def reanalyzeLoopNode(self, loop_node):
@@ -131,11 +137,8 @@ class _BaseAnalyzer(object):
       return
 
     parent_block, insertion_point = self.get_insert_block_and_point(loop_node)
-      
-    for alias_node, alias in loop_node.scope.aliased_expression_map.iteritems():
-#       print "reanalyzeLoopNode:"
-#       print "  alias:", alias
-#       print "  alias node:", alias_node
+    # NOTE: need to iterate over items, in case we modify something
+    for alias_node, alias in loop_node.scope.aliased_expression_map.items():
       assign_alias = AssignNode(alias, alias_node)
       if alias_node in parent_block.scope.aliased_expression_map:
         if self.is_loop_invariant(alias_node, loop_node):
@@ -148,6 +151,15 @@ class _BaseAnalyzer(object):
           loop_node.remove(assign_alias)
           parent_block.insert_before(loop_node, assign_alias)
           parent_block.scope.hoisted_aliases.append(alias_node)
+
+  def is_condition_invariant(self, node, conditional_node):
+    node_dependency_set = self.get_node_dependencies(node)
+    condition_invariant = not node_dependency_set.intersection(
+      conditional_node.scope.local_identifiers)
+    #print "is_condition_invariant:", condition_invariant
+    #print "  locals:", conditional_node.scope.local_identifiers
+    #print "  deps:", node_dependency_set
+    return condition_invariant
 
   def is_loop_invariant(self, node, loop_node):
     node_dependency_set = self.get_node_dependencies(node)
@@ -180,6 +192,8 @@ class _BaseAnalyzer(object):
       #elif isinstance(n, (GetUDNNode, FilterNode)):
       #  node_dependency_set.update(
       #    self.get_node_dependencies(node.expression))
+    #print "get_node_dependencies", node
+    #print "  deps:", node_dependency_set
     return node_dependency_set
 
 
@@ -480,12 +494,14 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       if_scope_vars = set(if_node.scope.local_identifiers)
       common_local_identifiers = list(if_scope_vars.intersection(
         if_node.else_.scope.local_identifiers))
-      common_alias_name_set = if_node.scope.alias_name_set.union(
+      common_alias_name_set = if_node.scope.alias_name_set.intersection(
         if_node.else_.scope.alias_name_set)
+      common_keys = (
+        set(if_node.scope.aliased_expression_map.iterkeys()) &
+        set(if_node.else_.scope.aliased_expression_map.iterkeys()))
       common_aliased_expression_map = {}
-      for key, val in if_node.scope.aliased_expression_map.iteritems():
-        if key in if_node.else_.scope.aliased_expression_map:
-          common_aliased_expression_map[key] = val
+      for key in common_keys:
+        common_aliased_expression_map[key] = if_node.scope.aliased_expression_map[key]
 
       parent_scope.local_identifiers.extend(common_local_identifiers)
       parent_scope.alias_name_set.update(common_alias_name_set)
@@ -618,6 +634,7 @@ class FinalPassAnalyzer(_BaseAnalyzer):
 
   def hoist(self, parent_node, parent_block, insertion_point, alias_node,
             assign_alias_node):
+
     # prune the implementation in the nested block
     # print "prune", alias_node
     # print "parent_block aliases", parent_block.scope.aliased_expression_map
@@ -639,12 +656,24 @@ class FinalPassAnalyzer(_BaseAnalyzer):
         needed_pos = parent_block.child_nodes.index(insertion_point)
         if needed_pos < current_pos:
           parent_block.child_nodes.remove(assign_alias_node)
-          parent_block.insert_before(parent_node, assign_alias_node)
+          if isinstance(parent_node, ElseNode):
+            parent_block.insert_before(parent_node.parent, assign_alias_node)
+          else:
+            parent_block.insert_before(parent_node, assign_alias_node)
           # print "insert_before", alias_node
       else:
         # still need to insert the alias
         parent_block.insert_before(insertion_point, assign_alias_node)
       parent_block.scope.hoisted_aliases.append(alias_node)
+
+      # NOTE: once we hoist an expression, we need to make sure that we no
+      # longer use this for dependencies in the current scope
+      del parent_node.scope.aliased_expression_map[alias_node]
+      parent_node.scope.alias_name_set.remove(assign_alias_node.left.name)
+      # FIXME: this is probably an indication of a bug or unnecessary
+      # difference between the caching of placeholders and filter expressions
+      if not isinstance(alias_node, FilterNode):
+        parent_node.scope.local_identifiers.remove(assign_alias_node.left)
 
 
 template_function_re = re.compile('^[^#]*#(def|block)\s+(\w+)')

@@ -1,3 +1,7 @@
+0.7.2 - 2008-06-25
+fixed dependency analysis for local scope when hoisting invariants.
+
+
 0.7.1 - 2008-06-18
 added 'in' operator which was forgotten somehow.
 

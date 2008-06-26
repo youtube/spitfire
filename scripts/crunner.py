@@ -29,6 +29,9 @@ spitfire.runtime.udn.resolve_udn = spitfire.runtime.udn.resolve_udn_prefer_attr
 # this class let's me check if placeholder caching is working properly by
 # tracking the number of accesses for a single key
 class ResolveCounter(object):
+  def __init__(self):
+    self._dict = {}
+
   @property
   def resolve_x(self):
     return self._get_item('resolve_x')
@@ -38,11 +41,11 @@ class ResolveCounter(object):
     return self._get_item('resolve_y')
   
   def _get_item(self, key):
-    if key in self.__dict__:
-      self.__dict__[key] += 1
+    if key in self._dict:
+      self._dict[key] += 1
     else:
-      self.__dict__[key] = 1
-    return '%s%s' % (key, self.__dict__[key])
+      self._dict[key] = 1
+    return '%s%s' % (key, self._dict[key])
 
   def __contains__(self, key):
     return key.startswith('resolve')
@@ -56,6 +59,7 @@ class ResolveCounter(object):
     if not key.startswith('resolve'):
       raise AttributeError(key)
     return self._get_item(key)
+
 
 sys_modules = sys.modules.keys()
 def reset_sys_modules():
@@ -71,6 +75,7 @@ class TestRunner(object):
       self._search_list = [
         spitfire.runtime.runner.load_search_list(options.test_input),
         {'tier1': {'tier2': ResolveCounter()}},
+        {'nest': ResolveCounter()},
         ResolveCounter(),
         ]
     else:

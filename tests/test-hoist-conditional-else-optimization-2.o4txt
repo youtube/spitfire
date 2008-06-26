@@ -1,0 +1,10 @@
+#set $data = 'test'
+#if False
+crap
+#else
+#set $data = 'test else'
+never hit: $data
+#end if
+
+Success if '$data' == 'test else'
+
