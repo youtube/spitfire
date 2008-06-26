@@ -1,0 +1,4 @@
+never hit: test else
+
+Success if 'test else' == 'test else'
+
