@@ -211,7 +211,8 @@ class CodeGenerator(object):
   codegenASTExpressionListNode = codegenASTTargetListNode
 
   def codegenASTLiteralNode(self, node):
-    if self.options and not self.options.generate_unicode:
+    if (self.options and not self.options.generate_unicode and
+        isinstance(node.value, basestring)):
       return [CodeNode(repr(node.value.encode(self.ast_root.encoding)))]
     else:
       # generate unicode by default
