@@ -32,7 +32,7 @@ Trying to find CLOSE_PAREN on line 15:
 You might see this error if you have an extra dollar sign. Note that the error message is correct, but the error
 caret is slightly off.
 {{{
-keyword arg can't be complex expression: PlaceholderNode keyword on line 15:
+keyword arg can\'t be complex expression: PlaceholderNode keyword on line 15:
 >  $function($keyword='value')
 >                     ^
 }}}
@@ -49,7 +49,7 @@ If you want to call a function, you must explicitly do so. This is the opposite 
 #end for
 }}}
 
-This is legal in Cheetah, but not Spitfire. The rational is that the servlet or controller code should be doing this. Since the template and servlet are disjoint, slicing in the template is a good way of ensuring that eventually your backend is doing more work than it needs to. Over-fetching data burns resources and should be discouraged.
+This is legal in Cheetah, but not Spitfire. The rationale is that the servlet or controller code should be doing this. Since the template and servlet are disjoint, slicing in the template is a good way of ensuring that eventually your backend is doing more work than it needs to. Over-fetching data burns resources and should be discouraged.
 
 === Multiple #extends directives are fine. ===
 
