@@ -32,7 +32,7 @@ Trying to find CLOSE_PAREN on line 15:
 You might see this error if you have an extra dollar sign. Note that the error message is correct, but the error
 caret is slightly off.
 {{{
-keyword arg can\'t be complex expression: PlaceholderNode keyword on line 15:
+keyword arg cant be complex expression: PlaceholderNode keyword on line 15:
 >  $function($keyword='value')
 >                     ^
 }}}
