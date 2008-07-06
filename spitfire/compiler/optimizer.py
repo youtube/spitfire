@@ -225,7 +225,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       for n in template.extends_nodes:
         for ext in template_extensions:
           path = os.path.join(
-            *[ident_node.name for ident_node in n.module_name_list[:-1]]) + ext
+            *[ident_node.name
+              for ident_node in n.source_module_name_list]) + ext
           template_function_names = get_template_functions(path)
           template.template_methods.update(template_function_names)
     

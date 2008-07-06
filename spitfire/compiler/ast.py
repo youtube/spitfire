@@ -462,6 +462,9 @@ class ImportNode(ASTNode):
   def __init__(self, module_name_list):
     ASTNode.__init__(self)
     self.module_name_list = module_name_list
+    # in case you have a different target, save a copy of the
+    # orginal name to use for dependency analysis
+    self.source_module_name_list = module_name_list[:]
 
   def __eq__(self, node):
     return bool(type(self) == type(node) and
