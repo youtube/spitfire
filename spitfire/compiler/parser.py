@@ -350,6 +350,7 @@ class SpitfireParser(Parser):
             _node_list.append(_if_node)
         elif _token_ not in ['END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'"]:
             statement = self.statement()
+            statement.statement = True
             _node_list.append(statement)
         else:
             _node_list.append(TextNode(START_DIRECTIVE))
