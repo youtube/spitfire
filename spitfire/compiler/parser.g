@@ -191,7 +191,8 @@ parser SpitfireParser:
         ]
         END_DIRECTIVE SPACE 'if' CLOSE_DIRECTIVE {{ _node_list.append(_if_node) }}
         |
-        statement {{ _node_list.append(statement) }}
+        statement {{ statement.statement = True }}
+        {{ _node_list.append(statement) }}
         |
         {{ _node_list.append(TextNode(START_DIRECTIVE)) }}
       )

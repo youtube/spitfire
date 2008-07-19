@@ -14,6 +14,9 @@ class ASTNode(object):
     # optimization annotations
     self.hint_map = {}
     self.start = self.end = None
+    # tag items generated from a sigle line statment
+    # this makes it easier to invent new ways to mangle optional whitespace
+    self.statement = False
 
   def __str__(self):
     if self.value:
@@ -753,7 +756,9 @@ class OrderedDict(object):
 def make_optional(node_list):
   try:
     if type(node_list[-1]) == WhitespaceNode:
-      if len(node_list) == 1 or type(node_list[-2]) == NewlineNode:
+      if (len(node_list) == 1 or
+          type(node_list[-2]) == NewlineNode or
+          node_list[-2].statement):
         node_list[-1] = OptionalWhitespaceNode(node_list[-1].value)
   except IndexError:
     pass
