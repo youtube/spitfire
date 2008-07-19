@@ -531,7 +531,11 @@ class SemanticAnalyzer(object):
             isinstance(n, TextNode) and
             len(optimized_nodes) and
             isinstance(optimized_nodes[-1], TextNode)):
-        optimized_nodes[-1].append_text_node(n)
+        # recreate this object so it doesn't show up as whitespace
+        temp_text = TextNode(optimized_nodes[-1].value)
+        temp_text.parent = optimized_nodes[-1].parent
+        temp_text.append_text_node(n)
+        optimized_nodes[-1] = temp_text
       else:
         optimized_nodes.append(n)
     #print "optimized_nodes", node_list, optimized_nodes
