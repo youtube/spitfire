@@ -758,7 +758,8 @@ def make_optional(node_list):
     if type(node_list[-1]) == WhitespaceNode:
       if (len(node_list) == 1 or
           type(node_list[-2]) == NewlineNode or
-          node_list[-2].statement):
+          node_list[-2].statement or
+          not isinstance(node_list[-2], (TextNode, PlaceholderSubstitutionNode))):
         node_list[-1] = OptionalWhitespaceNode(node_list[-1].value)
   except IndexError:
     pass
