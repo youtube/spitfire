@@ -35,11 +35,11 @@ def parse(src_text, rule='goal'):
     spitfire.compiler.scanner.SpitfireScanner(src_text))
   return spitfire.compiler.parser.wrap_error_reporter(parser, rule)
 
-def parse_file(filename, xhtml=False):
-  return parse_template(read_template_file(filename), xhtml=xhtml)
+def parse_file(filename, xspt_mode=False):
+  return parse_template(read_template_file(filename), xspt_mode)
 
-def parse_template(src_text, xhtml=False):
-  if xhtml:
+def parse_template(src_text, xspt_mode=False):
+  if xspt_mode:
     parser = spitfire.compiler.xhtml2ast.XHTML2AST()
     return parser.parse(src_text)
   else:
@@ -84,9 +84,9 @@ def read_function_registry(filename):
 # where you need to create a fresh object directly from raw template file
 def load_template_file(filename, module_name=None,
                        options=spitfire.compiler.analyzer.default_options,
-                       xhtml=False,
+                       xspt_mode=False,
                        compiler_options=None):
-  c = Compiler(analyzer_options=options, xhtml_mode=xhtml)
+  c = Compiler(analyzer_options=options, xspt_mode=xspt_mode)
   if compiler_options:
     for k, v in compiler_options.iteritems():
       setattr(c, k, v)
@@ -139,6 +139,7 @@ class Compiler(object):
     'optimizer_level',
     'optimizer_flags',
     'output_directory',
+    'xspt_mode',
     ]
 
   @classmethod
@@ -154,7 +155,7 @@ class Compiler(object):
     # record transient state of the compiler
     self.src_filename = None
     self.output_directory = ''
-    self.xhtml_mode = False
+    self.xspt_mode = False
     self.write_file = False
     self.analyzer_options = None
 
@@ -221,6 +222,10 @@ class Compiler(object):
   # it would be good to have a reason for the inconsistency other than
   # laziness or stupidity
   def _compile_ast(self, parse_root, classname):
+    # copy if we are debugging
+    if self.debug_flags:
+      parse_root = copy.deepcopy(parse_root)
+
     self._analyzed_tree = analyzer.SemanticAnalyzer(
       classname, parse_root, self.analyzer_options, self).get_ast()
 
@@ -255,7 +260,7 @@ class Compiler(object):
     
   def compile_template(self, src_text, classname):
     self._reset()
-    self._parse_tree = parse_template(src_text, xhtml=self.xhtml_mode)
+    self._parse_tree = parse_template(src_text, self.xspt_mode)
     return self._compile_ast(self._parse_tree, classname)
 
   def compile_file(self, filename):
@@ -314,6 +319,8 @@ def add_common_options(op):
   op.add_option('-V', '--version', action='store_true', default=False)
   op.add_option('-O', dest='optimizer_level', type='int', default=0)
   op.add_option('-o', '--output-file',  dest='output_file', default=None)
+  op.add_option('--xspt-mode', action='store_true', default=False,
+                help='enable attribute language syntax')
   op.add_option('--x-disable-psyco', dest='x_psyco', default=True,
                 action='store_false',
                 help='disable psyco')
