@@ -43,7 +43,7 @@ whitespace_tests: clean_tests parser
 	$(CRUNNER) -O3 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
 
 .PHONY : test_opt
-test_opt: clean_tests parser	
+test_opt: clean_tests parser
 	$(COMPILER) -O4 tests/*.txt tests/*.tmpl tests/*.o4txt
 	$(CRUNNER) -O4 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl tests/*.o4txt
 	$(COMPILER) -O4 --preserve-optional-whitespace tests/*.txt tests/*.tmpl tests/*.o4txt
@@ -52,8 +52,8 @@ test_opt: clean_tests parser
 
 .PHONY : xhtml_tests
 xhtml_tests: clean_tests parser
-# $(COMPILER) --xhtml tests/*xhtml
-	$(CRUNNER) --xhtml --test-input tests/input/search_list_data.pye --test-output output-xhtml -qt tests/*.xhtml
+	$(COMPILER) --xspt-mode tests/*.xhtml
+	$(CRUNNER) --xspt-mode --test-input tests/input/search_list_data.pye --test-output output-xhtml -qt tests/*.xhtml
 
 .PHONY : tests
 tests: no_whitespace_tests whitespace_tests test_function_registry test_opt
