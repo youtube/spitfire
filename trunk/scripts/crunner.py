@@ -194,7 +194,6 @@ if __name__ == '__main__':
   op.add_option('-c', '--compile', action='store_true', default=False)
   op.add_option('-t', '--test', action='store_true', default=False)
   op.add_option('--test-input')
-  op.add_option('--xhtml', action='store_true')
   op.add_option('--test-output', default='output',
           help="directory for output")
   op.add_option('--accept-test-result', action='store_true', default=False,
