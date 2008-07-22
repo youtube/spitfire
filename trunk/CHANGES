@@ -1,12 +1,14 @@
-0.7.2 - 2008-06-25
-fixed dependency analysis for local scope when hoisting invariants.
-
+0.7.3 - 2008-07-21
 fixed collapsed adjacent TextNodes such that they are in face a new object,
 instead of modifying the object in place. this was leading to some wacky debug
 output - not really any material bug.
 
 changed (fixed?) optional whitespace handling for statements so that leading
 whitespace on the following line is appropriately tagged.
+
+
+0.7.2 - 2008-06-25
+fixed dependency analysis for local scope when hoisting invariants.
 
 
 0.7.1 - 2008-06-18
