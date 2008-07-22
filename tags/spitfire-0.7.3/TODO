@@ -1,0 +1,134 @@
+Functionality:
+ * macro syntax and substitution system
+   * want to save an intermediate representation to make it fast to do many
+     versions of a single language
+     * this may be pretty hard - next-best bet is to generate the parse tree
+       and reanalyze it once per language
+   * do you want to allow arbitrary nesting and tagging?
+   * should you have a different (shorthand?) syntax for args?
+     * could borrow the _() function from gettext
+   * allow #ifdef for compile time
+ * how do we do template import?
+   * it's really going to be multiple inheritance, but can i make it less
+     shady from a designer standpoint? maybe that's how i implement the 
+     #include directive - but check at runtime that it's a library?
+     * does that check buy you anything?
+   * could do '#reference template' - basically an alias for '#extend template'
+ * make #library directive to disambiguate template includes
+   * right now, '#implements library' is the syntax, but there is not
+     enforcement - it just doesn't generate a main method.
+ * import raw file include?
+ * implement array slicing?
+   * probably not - this is something that usually indicates wasted work on
+     the backend, so maybe it's best not to encourage that
+ * add native support for 'elif' clause
+   * is this a codegen or parsing problem?
+ * while loop (repeat?) what is the difference?
+   * add repeat syntax and do the clever repeat object from TAL
+ * test keyword args to functions with literals and complex placeholders
+   * keyword syntax is ambiguous between definition and calling - using $
+     should be more consistent. right now you must have it in the def, but you
+     can't have it when you do the calling.
+ * add #encoding directive
+ * add a build time/version/runtime_version attribute?
+ * xhtml-oriented front end
+   * emulate virtual odd/even var in loops (partially implemented Repeater)
+ * Attribute Language - (like TAL and Kid)
+   * guarantee well-formed
+   * test attribute operator precedence
+   * figure out nice way of inheritance
+     * most TAL templates only use 1 level of inheritance
+       * need to remember that most "subtemplates" are really complete,
+         well formed xhtml documents, so it's hard to define function fragments
+     * use processing instructions to create inheritance?
+     * use py:def nodes to create "functions"?
+   * add py:define
+     * use pythonesque syntax
+     * syntax: py:define="x=$placeholder[0], y=$placeholder[1].my_attribute" 
+   * add py:attributes
+     * use exactly the same syntax as define?
+     * syntax: py:attributes="x=$placeholder[0], y=$placeholder[1].my_attribute" 
+     * use py-attr:<name>="expression" ?
+       * creates yet another namespace - but might be the most logical
+
+Optimization:
+ * use ${var|html_escape,javascript_escape} alternate syntax
+   * compile down the filters into a sequence of optimized transformations
+     that take into account safe ordering of potentially conflicting options
+ * functions/placeholders that are used repeatedly should be cached as local
+   variables and references directly - especially items used in an #if and then
+   referenced as a placeholder in the block immediately following
+   * there are some subtleties here
+     * need to handle the case where someone does $get_var() - that doesn't
+       end up getting cached
+ * caching directive that tells you to memoize a result based on a function
+   annotation (this could be handy for non-template functions as well)
+   * add syntax to allow you to 'bless' a cache region's variables - this means
+     you could nix the cache if you found new, rogue values. the motivation
+     here is to prevent caching user data accidentally.
+ * replace functions that only write a string constant with one that just
+   returns that constant string - no need for intermediate buffer
+   * in some cases, might be able to skip the whole function call too - make
+     the value an attribute? hard to do if this is used by a subclass
+ * only store local variables called more than once?
+Variant 1:
+        write(u"""<td>""") 
+        write("%s" % column)
+        write(u"""</td>\n""")
+
+Variant 1.1:
+        write(u"""<td>""") 
+        write(str(column))
+        write(u"""</td>\n""")
+
+Variant 2:
+        write(u"""<td>%s</td>\n""" % column)
+
+Varian 2.1: (UNTESTED)
+        write(u"""<td>""" + "%s" % column + u"""</td>\n""")
+
+   * optimization of this loop is dependent on the python version (2.4 vs 2.5)
+   * Variant 2 is universally the slowest
+
+Cleanup:
+ * check if ${placeholde|raw} values get cached properly
+ * atone for making hash value mutable?
+ * add a test case for caching - ${something_expensive($arg)|cache}
+ * add a test case for slice optimization
+ * refactor 'visitor' into 'walker'
+ * OrderedDict keeps you from having to do proper dependency analysis for
+   hoisting aliases. this seems a little fragile, but it does seem to work.
+ * many chunks of the optimizer seem copy-pasted - they are slightly different
+   but would be best to factor that out
+ * revisit all uses of default_analyze_node - usually this is where
+   unimplemented functionality lurks
+ * front-end mode is a bit annoying - need to better detect xhtml vs text mode
+   instead of passing around
+ * analyzer is still a bit foul
+   * want to make it possible to arbitrarily modify the tree without a copy
+   * generic child_nodes array is probably no longer useful
+   * how many times to I really have to make a copy of a node?
+     * should I just modify inline after doing a tree-wise deep copy?
+ * make the grammar file as simple as possible
+ * EatPrevious node is a vile thing - make the DOM scanner look ahead 1 or 2
+   nodes and determine what to do with optional whitespace nodes before
+   processing them
+ * make the syntax consistent for argument passing inside a template
+   * right now, $varname is required in placeholders, macros and definitions
+   * $varname should mean 'look this up in the search_list data'
+   * parameter_list, macro_parameter_list and placeholder_parameter_list should
+     be made into one or two variants
+
+Bugs:
+ * multi-line comments can get confused sometimes - add test case
+ * py:conditional directives that are skipped still output a good amount of
+   extra whitespace. could this be tightened up?
+   
+ * optional whitespace is not getting located correctly - the break statement
+   seems to be confusing the parser
+#for $x in $test_object_list
+test line $x.id : $x.name
+  #if $x.id > 1
+    #break
+  #end if
+#end for

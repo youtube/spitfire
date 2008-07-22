@@ -1,0 +1,7 @@
+#def crap($value=None)
+crap: $value
+#end def
+
+#set $test_value = 'local value'
+
+$crap(value=$test_value)

@@ -1,0 +1,6 @@
+    -2 even   
+    -1 odd negative one!  not -2
+    0 even  not x not -2
+  test and test and 1 odd   not -2
+ test 2   2 even   not -2
+
