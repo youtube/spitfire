@@ -82,7 +82,7 @@ if MarkupTemplate:
     genshi_text_tmpl = NewTextTemplate("""
 <table>
 {% for row in table %}<tr>
-{% for c in row.values() %}<td>$c</td>{% end %}
+{% for c in row.values() %}<td>{c}</td>{% end %}
 </tr>{% end %}
 </table>
 """)
@@ -211,7 +211,7 @@ if genshi:
         data = stream.render('html', strip_whitespace=False)
         #print "genshi", len(data)
 
-    def test_genshi_text():
+    def disabled_test_genshi_text():
         """Genshi text template"""
         stream = genshi_text_tmpl.generate(table=table)
         print "test_genshi_text", stream
