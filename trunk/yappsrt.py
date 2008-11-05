@@ -3,7 +3,9 @@
 # This module is needed to run generated parsers.
 
 from string import join, count, find, rfind
+import logging
 import re
+import StringIO
 import sys
 
 class SyntaxError(Exception):
@@ -23,6 +25,8 @@ class NoMoreTokens(Exception):
   """Another exception object, for when we run out of tokens"""
   pass
 
+class FatalParseError(Exception):
+  """We have to fail-stop for one reason or another."""
 
 class Scanner(object):
   def __init__(self, patterns, ignore, input):
@@ -130,13 +134,14 @@ class Parser(object):
   
 
 
-def print_error(input, err, scanner):
+def format_error(input, err, scanner):
   """This is a really dumb long function to print error messages nicely."""
+  error_message = StringIO.StringIO()
   p = err.pos
-  print "error position", p
+  print >> error_message, "error position", p
   # Figure out the line number
   line = count(input[:p], '\n')
-  print err.msg, "on line", repr(line+1) + ":"
+  print >> error_message, err.msg, "on line", repr(line+1) + ":"
   # Now try printing part of the line
   text = input[max(p-80, 0):p+80]
   p = p - max(p-80, 0)
@@ -164,21 +169,21 @@ def print_error(input, err, scanner):
     p = p - 7
 
   # Now print the string, along with an indicator
-  print '> ', text.replace('\t', ' ').encode(sys.getdefaultencoding())
-  print '> ', ' '*p + '^'
-  print 'List of nearby tokens:', scanner
+  print >> error_message, '> ', text.replace('\t', ' ').encode(sys.getdefaultencoding())
+  print >> error_message, '> ', ' '*p + '^'
+  print >> error_message, 'List of nearby tokens:', scanner
+  return error_message.getvalue()
 
 
 def wrap_error_reporter(parser, rule):
   try:
-    return_value = getattr(parser, rule)()
-  except SyntaxError, s:
+    return getattr(parser, rule)()
+  except SyntaxError, e:
     input = parser._scanner.input
     try:
-      print_error(input, s, parser._scanner)
+      error_msg = format_error(input, e, parser._scanner)
     except ImportError:
-      print 'Syntax Error', s.msg, 'on line', 1 + count(input[:s.pos], '\n')
-  except NoMoreTokens:
-    print 'Could not complete parsing; stopped around here:'
-    print parser._scanner
-  return return_value
+      error_msg = 'Syntax Error %s on line\n' % (e.msg, 1 + count(input[:e.pos]))
+  except NoMoreTokens, e:
+    error_msg = 'Could not complete parsing; stopped around here:\n%s' % parser._scanner
+  raise FatalParseError(error_msg)
