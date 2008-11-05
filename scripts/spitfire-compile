@@ -31,8 +31,13 @@ def process_file(compiler, filename, options):
       f.write(src_code)
       f.close()
   except Exception, e:
-    print >> sys.stderr, 'FAILED:', filename, e
-    raise
+    error_msg = 'Failed processing file: %s' % filename
+    if options.verbose:
+      logging.exception(error_msg)
+    else:
+      print >> sys.stderr, error_msg
+      print >> sys.stderr, e
+    sys.exit(1)
 
 # selectively enable psyco on import methods
 def init_psyco(options):
