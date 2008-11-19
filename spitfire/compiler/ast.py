@@ -349,6 +349,25 @@ class DictLiteralNode(ASTNode):
   def append(self, node):
     self.child_nodes.append(node)
 
+  def insert_before(self, marker_node, insert_node):
+    raise ValueError('unsupported insert_before')
+
+  def replace(self, marker_node, insert_node_list):
+    insert_node = insert_node_list
+    try:
+      insert_node.parent = self
+    except AttributeError:
+      raise AttributeError('no parent attribute on %s' % insert_node)
+    for idx, (key_node, value_node) in enumerate(self.child_nodes):
+      if marker_node == key_node:
+        self.child_nodes[idx] = (insert_node, value_node)
+        break
+      elif marker_node == value_node:
+        self.child_nodes[idx] = (key_node, insert_node)
+        break
+    else:
+      raise ValueError("can't find child node %s in %s" % (marker_node, self))
+
 class ExpressionListNode(_ListNode):
   pass
 

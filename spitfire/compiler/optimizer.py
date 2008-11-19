@@ -284,6 +284,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     for n in tuple_literal_node.child_nodes:
       self.visit_ast(n, tuple_literal_node)
 
+  def analyzeDictLiteralNode(self, dict_literal_node):
+    for key_node, value_node in dict_literal_node.child_nodes:
+      self.visit_ast(key_node, dict_literal_node)
+      self.visit_ast(value_node, dict_literal_node)
+
   def analyzeCallFunctionNode(self, function_call):
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
