@@ -1,0 +1,6 @@
+#def test_def
+test line 1
+
+test line 2
+#end def
+$test_def()

@@ -1,0 +1,17 @@
+
+
+
+test no arg
+
+
+test 1
+
+test 1.0
+
+test test double quote arg
+
+test test single quote arg
+
+
+test arg1 1, arg2 2
+

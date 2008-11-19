@@ -1,0 +1,11 @@
+#for $i,$x in enumerate([1,2,3])
+$i test line $x
+#end for
+
+#for ($i,$x) in enumerate([1,2,3])
+$i test line $x
+#end for
+
+#for ($i, ($x, $y)) in enumerate([('a',1),('b',2),('c',3)])
+$i test line $x $y
+#end for

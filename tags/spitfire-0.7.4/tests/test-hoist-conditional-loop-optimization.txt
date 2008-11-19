@@ -1,0 +1,11 @@
+#def test()
+  #for $index, $test_object in $enumerate($test_object_list)
+    #if $test_nested_dict.d2.key1 == 1
+    part $test_object.name
+    #else
+    parcel $test_object.name
+    #end if
+  #end for
+#end def
+
+$test()

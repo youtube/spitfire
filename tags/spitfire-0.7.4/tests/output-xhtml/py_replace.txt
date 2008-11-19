@@ -1,0 +1,6 @@
+<html xmlns:py="http://code.google.com/p/msolo/wiki/spitfire">
+  <head>
+    1
+  </head>
+  <body />
+</html>

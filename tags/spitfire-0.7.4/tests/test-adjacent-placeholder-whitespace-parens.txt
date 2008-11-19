@@ -1,0 +1,5 @@
+#set $format_number = str
+#set $total = 27
+
+## make sure there is a space between the count and "base"
+all your $format_number($total) base are belong to us
