@@ -202,6 +202,7 @@ class BinOpNode(ASTNode):
                 (type(self), self.name, self.operator,
                  hash(self.left), hash(self.right)))
 
+# fixme: are both BinOpNode and BinOpExpressionNode needed?
 class BinOpExpressionNode(BinOpNode):
   pass
 
