@@ -1,5 +1,0 @@
-
-          part o1
-              part o2
-              part o3
-      

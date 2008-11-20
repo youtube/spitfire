@@ -1,3 +1,0 @@
-#set $variable='crap'
-#set $variable1 ='crap'
-#set $variable2 = 'crap'

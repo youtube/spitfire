@@ -1,9 +1,0 @@
-## trivial line
-#block test_block # ## dopey comment
-  crap
-#end block
-#*
-test line 2
- ## extra dopey comment
- * comment
-*#
