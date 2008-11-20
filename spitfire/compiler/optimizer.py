@@ -522,8 +522,21 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       
 
   def analyzeBinOpNode(self, n):
+    # if you are trying to use short-circuit behavior, these two optimizations
+    # can sabotage correct execution since the rhs may be hoisted above the
+    # IfNode and cause it to get executed prior to passing the lhs check.
+    if n.operator == 'and':
+      cache_placeholders = self.options.cache_resolved_placeholders
+      cache_udn_expressions = self.options.cache_resolved_udn_expressions
+      self.options.cache_resolved_placeholders = False
+      self.options.cache_resolved_udn_expressions = False
+      
     self.visit_ast(n.left, n)
     self.visit_ast(n.right, n)
+
+    if n.operator == 'and':
+      self.options.cache_resolved_placeholders = cache_placeholders
+      self.options.cache_resolved_udn_expressions = cache_udn_expressions
 
   analyzeBinOpExpressionNode = analyzeBinOpNode
 
