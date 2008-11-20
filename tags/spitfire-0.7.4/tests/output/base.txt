@@ -1,0 +1,7 @@
+<html>
+  <head>
+   <title>default title</title>
+  </head>
+  <body>
+  </body>
+</html>

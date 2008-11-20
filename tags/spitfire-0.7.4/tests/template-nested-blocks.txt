@@ -1,0 +1,14 @@
+#block html_block
+<html>
+  #block head_block
+  <head/>
+  #end block
+  #block body_block
+  <body>
+    #block masthead_block
+    masthead
+    #end block
+  </body>
+  #end block
+</html>
+#end block

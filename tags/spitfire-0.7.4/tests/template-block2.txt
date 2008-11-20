@@ -1,0 +1,6 @@
+#block test_block
+test line 1
+#end block
+#block test_block2
+test line 2
+#end block
