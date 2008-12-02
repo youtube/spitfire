@@ -52,8 +52,9 @@ class SpitfireParserScanner(Scanner):
         ('SINGLE_LINE_COMMENT', re.compile('#.*?\n')),
         ('MULTI_LINE_COMMENT', re.compile('\\*[\\W\\w\\S\\s]+\\*#')),
         ('ASSIGN_OPERATOR', re.compile('=')),
-        ('COMP_OPERATOR', re.compile('[ \t]*(<=|>=|==|>|<|!=|in)[ \t]*')),
+        ('COMP_OPERATOR', re.compile('[ \t]*(<=|>=|==|>|<|!=|[ \t]+in[ \t]+)[ \t]*')),
         ('OPEN_PAREN', re.compile('[ \t]*\\([ \t]*')),
+        ('PLACEHOLDER_OPEN_PAREN', re.compile('\\([ \t]*')),
         ('CLOSE_PAREN', re.compile('[ \t]*\\)')),
         ('OPEN_BRACKET', re.compile('[ \t]*\\[[ \t]*')),
         ('CLOSE_BRACKET', re.compile('[ \t]*\\][ \t]*')),
@@ -456,19 +457,19 @@ class SpitfireParser(Parser):
     def placeholder_in_text(self):
         ID = self._scan('ID')
         _primary = PlaceholderNode(ID)
-        while self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET', 'PIPE', 'PLACEHOLDER_CLOSE_BRACE', 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'") in ['DOT', 'OPEN_PAREN', 'OPEN_BRACKET']:
+        while self._peek('DOT', 'PLACEHOLDER_OPEN_PAREN', 'OPEN_BRACKET', 'PIPE', 'PLACEHOLDER_CLOSE_BRACE', 'END', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'") in ['DOT', 'PLACEHOLDER_OPEN_PAREN', 'OPEN_BRACKET']:
             placeholder_suffix_expression = self.placeholder_suffix_expression(_primary)
             _primary = placeholder_suffix_expression
         return _primary
 
     def placeholder_suffix_expression(self, _previous_primary):
-        _token_ = self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET')
+        _token_ = self._peek('DOT', 'PLACEHOLDER_OPEN_PAREN', 'OPEN_BRACKET')
         if _token_ == 'DOT':
             DOT = self._scan('DOT')
             ID = self._scan('ID')
             _primary = GetUDNNode(_previous_primary, ID)
-        elif _token_ == 'OPEN_PAREN':
-            OPEN_PAREN = self._scan('OPEN_PAREN')
+        elif _token_ == 'PLACEHOLDER_OPEN_PAREN':
+            PLACEHOLDER_OPEN_PAREN = self._scan('PLACEHOLDER_OPEN_PAREN')
             _arg_list = None
             if self._peek('CLOSE_PAREN', '"[ \\t]*not[ \\t]*"', 'START_PLACEHOLDER', 'ID', '"True"', '"False"', '\'"\'', '"\'"', 'NUM', 'OPEN_BRACKET', 'OPEN_PAREN', 'OPEN_BRACE', "'[ \\t]*\\-[ \\t]*'") != 'CLOSE_PAREN':
                 argument_list = self.argument_list()
@@ -617,7 +618,7 @@ class SpitfireParser(Parser):
         else:# == 'NUM'
             NUM = self._scan('NUM')
             int_part = NUM
-            if self._peek('"\\."', 'SPACE', 'CLOSE_DIRECTIVE_TOKEN', 'DOT', 'OPEN_PAREN', 'OPEN_BRACKET', 'COMMA_DELIMITER', "'[ \\t]*\\*[ \\t]*'", 'CLOSE_PAREN', "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", 'PLACEHOLDER_CLOSE_BRACE', "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'END', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_BRACE') == '"\\."':
+            if self._peek('"\\."', 'SPACE', 'CLOSE_DIRECTIVE_TOKEN', 'DOT', 'PLACEHOLDER_OPEN_PAREN', 'OPEN_BRACKET', 'COMMA_DELIMITER', "'[ \\t]*\\*[ \\t]*'", 'CLOSE_PAREN', "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", 'PLACEHOLDER_CLOSE_BRACE', "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'END', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_BRACE') == '"\\."':
                 self._scan('"\\."')
                 NUM = self._scan('NUM')
                 return LiteralNode(float('%s.%s' % (int_part, NUM)))
@@ -685,7 +686,7 @@ class SpitfireParser(Parser):
             else:# == 'PLACEHOLDER_CLOSE_BRACE'
                 PLACEHOLDER_CLOSE_BRACE = self._scan('PLACEHOLDER_CLOSE_BRACE')
             _primary = _dict_literal
-        while self._peek('DOT', 'OPEN_PAREN', 'OPEN_BRACKET', "'[ \\t]*\\*[ \\t]*'", "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'SPACE', 'CLOSE_DIRECTIVE_TOKEN', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE', 'PLACEHOLDER_CLOSE_BRACE') in ['DOT', 'OPEN_PAREN', 'OPEN_BRACKET']:
+        while self._peek('DOT', 'PLACEHOLDER_OPEN_PAREN', 'OPEN_BRACKET', "'[ \\t]*\\*[ \\t]*'", "'[ \\t]*\\/[ \\t]*'", "'[ \\t]*\\%[ \\t]*'", "'[ \\t]*\\+[ \\t]*'", "'[ \\t]*\\-[ \\t]*'", 'COMP_OPERATOR', "'[ \\t]*and[ \\t]*'", "'[ \\t]*or[ \\t]*'", 'SPACE', 'CLOSE_DIRECTIVE_TOKEN', 'END', 'COMMA_DELIMITER', 'COLON_DELIMITER', 'CLOSE_BRACKET', 'ASSIGN_OPERATOR', 'CLOSE_PAREN', 'CLOSE_BRACE', 'PLACEHOLDER_CLOSE_BRACE') in ['DOT', 'PLACEHOLDER_OPEN_PAREN', 'OPEN_BRACKET']:
             placeholder_suffix_expression = self.placeholder_suffix_expression(_primary)
             _primary = placeholder_suffix_expression
         return _primary
