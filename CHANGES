@@ -1,9 +1,18 @@
-0.7.4 - 2008-11-20
+0.7.4 - 2008-12-01
+fixed a parsing ambiguity with text placeholders followed by white space
+and parens such as this:
+
+$value (some more text)
+
+this was getting misparsed as a function call.
+
+fixed a parse error treating 'in' as an operator.
 fixed the error messaging when a parse error occurs.
 fixed optimization of dict literals.
 disabled two optimizations when dealing with a binary 'and' operator.
 this should solve an issue where short-circuit behavior was not being
 preserved.
+
 
 0.7.3 - 2008-07-21
 fixed collapsed adjacent TextNodes such that they are in face a new object,
