@@ -16,8 +16,15 @@ parser SpitfireParser:
   token SINGLE_LINE_COMMENT: '#.*?\n'
   token MULTI_LINE_COMMENT: '\*[\W\w\S\s]+\*#'
   token ASSIGN_OPERATOR: '='
-  token COMP_OPERATOR: '[ \t]*(<=|>=|==|>|<|!=|in)[ \t]*'
+  # 'in' requires whitespace around it, but that is the only
+  # such operator
+  token COMP_OPERATOR: '[ \t]*(<=|>=|==|>|<|!=|[ \t]+in[ \t]+)[ \t]*'
   token OPEN_PAREN: '[ \t]*\([ \t]*'
+  # don't gobble whitespace in the placeholder context
+  # this leads to some strange behavior and mis-parsing of lines like this:
+  # $value (something to echo)
+  # the only dynamic value there is $value
+  token PLACEHOLDER_OPEN_PAREN: '\([ \t]*'
   #token CLOSE_PAREN: '[ \t]*\)[ \t]*'
   # changing this to not gobble trailing whitespace - important for placeholder
   # functions in text
@@ -293,7 +300,7 @@ parser SpitfireParser:
     (
       DOT ID {{ _primary = GetUDNNode(_previous_primary, ID) }}
       |
-      OPEN_PAREN {{ _arg_list = None }}
+      PLACEHOLDER_OPEN_PAREN {{ _arg_list = None }}
       [ argument_list {{ _arg_list = argument_list }} ]
       # need this expression here to make a bare placeholder in text not
       # gobble trailing white space
