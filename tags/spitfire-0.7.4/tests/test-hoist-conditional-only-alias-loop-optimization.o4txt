@@ -1,0 +1,15 @@
+## fixme: this test doesn't help much unless you inspect the generated code
+## you shouldn't see multiple aliases for _buffer_write or _filter_function
+## and you should only resolve $test_x once, preferably before the loop
+## broken: unify hoisting of alias and resolved placeholders
+#for $x in [1, 2]
+  #if $x == 2
+    #if $resolve_test_x == 'resolve_test_x1'
+      Success
+    #else
+      Expected error
+    #end if
+  #else
+    $resolve_test_x
+  #end if
+#end for

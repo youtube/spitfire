@@ -1,0 +1,2 @@
+escape_html = cgi.escape
+escape_html_function = spitfire.runtime.filters.escape_html_function
