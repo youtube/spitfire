@@ -1,5 +1,0 @@
-#if False
-  $test_x
-#end if
-
-$test_x

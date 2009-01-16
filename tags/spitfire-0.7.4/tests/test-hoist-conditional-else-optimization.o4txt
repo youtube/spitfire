@@ -1,8 +1,0 @@
-#if False
-crap
-#else
-never hit: $nest.resolve_x
-#end if
-
-Should be '$nest.resolve_x' == 'resolve_x1'
-

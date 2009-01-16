@@ -1,4 +1,0 @@
-## trailing whitespace is significant
-#for $x in [0, 1, 2]
-  my #if $x# test $x #end if#
-#end for

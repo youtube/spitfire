@@ -1,4 +1,0 @@
-resolve_x resolve_x1
-
-Success
-

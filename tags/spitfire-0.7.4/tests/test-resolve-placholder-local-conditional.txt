@@ -1,7 +1,0 @@
-#if False
-  #set $icon = '/favicon.ico'
-#else
-  #set $icon = '/favicon-better.ico'
-#end if
-
-<img src="$icon" />

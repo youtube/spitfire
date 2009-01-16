@@ -1,3 +1,0 @@
-#attr $test_attr = 'test attr string'
-
-$test_attr

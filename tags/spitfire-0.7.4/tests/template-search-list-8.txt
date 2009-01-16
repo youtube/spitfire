@@ -1,2 +1,0 @@
-## test optional brace syntax
-${test_dict.key1}thingy

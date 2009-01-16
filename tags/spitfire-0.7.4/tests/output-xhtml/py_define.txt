@@ -1,3 +1,0 @@
-<html xmlns:py="http://spitfire/">
-        <title>o1</title>
-</html>

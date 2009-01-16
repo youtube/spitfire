@@ -1,3 +1,0 @@
-#block test_block
-test line 2 with an octothorp # 
-#end block
