@@ -365,7 +365,7 @@ class SemanticAnalyzer(object):
     else:
       raise SemanticAnalyzerError("unexpected node type '%s' for macro" %
                                   type(pnode))
-    
+
     macro_output = macro_function(pnode, kargs_map, self.compiler)
     # fixme: bad place to import, difficult to put at the top due to
     # cyclic dependency
