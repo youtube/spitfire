@@ -2,10 +2,10 @@ import sys
 
 import cStringIO as StringIO
 
+from spitfire.compiler import analyzer
 from spitfire.compiler.ast import *
 from spitfire.compiler.visitor import print_tree
 
-import spitfire.compiler.analyzer
 import spitfire.util
 
 
@@ -65,8 +65,11 @@ def macro_function_i18n(call_node, arg_map, compiler):
   # in the context of a function, the goal is to replace a function with a
   # translated literal string. we have to do some shenanigans since Spitfire
   # doesn't parse repr(unicode)
-  i18n_msg = spitfire.util.i18n_mangled_message(
-    call_node.arg_list.parg_list[0].value)
+  msg_arg_node = call_node.arg_list.parg_list[0]
+  if not isinstance(msg_arg_node, LiteralNode):
+    raise analyzer.SemanticAnalyzerError(
+      '$i18n argument "%s" must be a string literal' % msg_arg_node)
+  i18n_msg = spitfire.util.i18n_mangled_message(msg_arg_node.value)
   i18n_msg_utf8 = i18n_msg.encode(sys.getdefaultencoding())
   return u"'%s'" % i18n_msg.replace("'", "\\'")
   
