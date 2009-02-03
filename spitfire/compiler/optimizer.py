@@ -714,7 +714,6 @@ def get_template_functions(path):
       if match:
         extend_name = match.group(1)
         extend_path = extend_name.replace('.', '/')
-        print 
         for ext in template_extensions:
           template_path = extend_path + ext
           template_function_names.update(
