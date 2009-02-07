@@ -1,6 +1,8 @@
 0.7.5 - 2009-02-03
 fix spurious print
 raise an exception when $i18n macros do not have string args
+fix dependency analysis - loop-variant identifiers were not correctly
+resolved leading to bad code generation.
 
 0.7.4 - 2008-12-01
 fixed a parsing ambiguity with text placeholders followed by white space
