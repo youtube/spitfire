@@ -186,6 +186,14 @@ class _BaseAnalyzer(object):
                   self.get_node_dependencies(block_node.right))
                 parent_block_to_check = None
                 break
+            elif isinstance(block_node, IfNode):
+              # if you encounter a conditional in your chain, you depend on any
+              # dependencies of the condition itself
+              # FIXME: calling get_node_dependencies(block_node.test_expression)
+              # causes an infinite loop, but that is probably the correct way
+              # forward to address the dependency chain
+              node_dependency_set.update(
+                flatten_tree(block_node.test_expression))
           else:
             parent_block_to_check = self.get_parent_block(
               parent_block_to_check)
