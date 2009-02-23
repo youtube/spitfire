@@ -1,3 +1,7 @@
+0.7.6 - 2009-02-22
+added _udn module to accelerate resolving functions
+restructure a number of calls to facilitate testing and acceleration
+
 0.7.5 - 2009-02-03
 fix spurious print
 raise an exception when $i18n macros do not have string args

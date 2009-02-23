@@ -1,3 +1,18 @@
+class __UnresolvedPlaceholder(object):
+  pass
+UnresolvedPlaceholder = __UnresolvedPlaceholder()
+
+class __UnresolvedEntity(object):
+  pass
+UnresolvedEntity = __UnresolvedEntity()
+
+class PlaceholderError(KeyError):
+  pass
+
+class UDNResolveError(Exception):
+  pass
+
+
 def import_module_symbol(name):
   name_parts = name.split('.')
   module_name = '.'.join(name_parts[:-1])
