@@ -1,4 +1,5 @@
-from distutils.core import setup
+from distutils.core import setup, Extension
+import os.path
 
 import spitfire
 
@@ -28,4 +29,7 @@ setup(
     scripts=["scripts/crunner.py",
              "scripts/spitfire-compile",
              ],
+    ext_modules=[Extension("spitfire.runtime._udn",
+                           [os.path.join("spitfire", "runtime", "_udn.c")])
+                 ],
      ) 

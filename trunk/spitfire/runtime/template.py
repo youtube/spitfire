@@ -6,7 +6,7 @@ import spitfire.runtime.filters
 import spitfire.runtime.repeater
 
 from spitfire.runtime.udn import (
-  get_var_from_search_list, resolve_placeholder, UnresolvedPlaceholder)
+  _resolve_from_search_list, UnresolvedPlaceholder)
 
 
 # NOTE: in some instances, this is faster than using cStringIO
@@ -36,20 +36,13 @@ class SpitfireTemplate(object):
     if default_filter is not None:
       self._filter_function = default_filter
     
-
   def get_var(self, name, default=None):
-    if self.search_list is not None:
-      ph = get_var_from_search_list(name, self.search_list)
-      if ph is not UnresolvedPlaceholder:
-        return ph
-    return default
-
+    return _resolve_from_search_list(self.search_list, name, default)
 
   def has_var(self, name):
     var = self.get_var(name, default=UnresolvedPlaceholder) 
     return var is not UnresolvedPlaceholder
 
-  
   # wrap the underlying filter call so that items don't get filtered multiple
   # times (avoids double escaping)
   # fixme: this could be a hotspot, having to call getattr all the time seems
@@ -77,4 +70,3 @@ def template_method(function):
   function.template_method = True
   function.skip_filter = True
   return function
-
