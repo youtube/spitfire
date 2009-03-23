@@ -395,6 +395,7 @@ class SemanticAnalyzer(object):
     self.template.attr_nodes.append(pnode)
     return []
 
+  analyzeFilterAttributeNode = analyzeAttributeNode
 
   # note: we do a copy-thru to force analysis of the child nodes
   # this function is drastically complicated by the logic for filtering
