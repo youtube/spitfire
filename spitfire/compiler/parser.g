@@ -45,9 +45,11 @@ parser SpitfireParser:
   token END_DIRECTIVE: '#end'
   token START_DIRECTIVE: '#'
   token START_PLACEHOLDER: '\$'
+  token LITERAL_DOLLAR_SIGN: '\\\\\$'
   token NEWLINE: '\n'
   token PYTHON_LINE: '.+'
   token TEXT: '[^#\$\n]+'
+  #token TEXT: '[^\\\\#\$\n]+'
   token END:   '$'
 
   # don't allow directive inside i18n
@@ -210,6 +212,8 @@ parser SpitfireParser:
   # optional. this is sort of a hack - but i can't quite figure out the right
   # way to describe this syntax
   rule block<<start=False>>:
+    LITERAL_DOLLAR_SIGN {{ return TextNode(LITERAL_DOLLAR_SIGN) }}
+    |
     directive {{ return directive }}
     |
     text {{ return text }}
@@ -250,6 +254,8 @@ parser SpitfireParser:
     {{ return _primary }}
     
   rule text_or_placeholders<<start=False>>:
+    LITERAL_DOLLAR_SIGN {{ return TextNode(LITERAL_DOLLAR_SIGN) }}
+    |
     ## in this context, a # is just a #
     START_DIRECTIVE {{ return TextNode(START_DIRECTIVE) }}
     |
