@@ -28,13 +28,13 @@ class SpitfireTemplate(object):
   # when this is assigned to a template instance, accessing this name binds the
   # function to the current instance. using the name 'template_instance' to
   # indicate that these functions aren't really related to the template.
-  _filter_function = spitfire.runtime.filters.safe_values
+  _filter_function = staticmethod(spitfire.runtime.filters.safe_values)
   
   def __init__(self, search_list=None, default_filter=None):
     self.search_list = search_list
     self.repeat = spitfire.runtime.repeater.RepeatTracker()
     if default_filter is not None:
-      self._filter_function = default_filter
+      self._filter_function = staticmethod(default_filter)
     
   def get_var(self, name, default=None):
     return _resolve_from_search_list(self.search_list, name, default)

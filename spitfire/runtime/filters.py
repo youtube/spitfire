@@ -10,13 +10,13 @@ def skip_filter(function):
   function.skip_filter = True
   return function
 
-def passthrough_filter(template_instance, value):
+def passthrough_filter(value):
   return value
 
 @skip_filter
-def escape_html(template_instance, value, quote=True):
+def escape_html(value, quote=True):
   """Replace special characters '&', '<' and '>' by SGML entities."""
-  value = safe_values(template_instance, value)
+  value = safe_values(value)
   if isinstance(value, basestring):
     value = value.replace("&", "&amp;") # Must be done first!
     value = value.replace("<", "&lt;")
@@ -25,7 +25,7 @@ def escape_html(template_instance, value, quote=True):
       value = value.replace('"', "&quot;")
   return value
 
-def safe_values(template_instance, value):
+def safe_values(value):
   if isinstance(value, (str, unicode, int, long, float, UndefinedPlaceholder)):
     return value
   else:
@@ -34,4 +34,4 @@ def safe_values(template_instance, value):
 # test function for function registry - don't use
 @skip_filter
 def escape_html_function(value):
-  return escape_html(None, value)
+  return escape_html(value)

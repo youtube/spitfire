@@ -569,6 +569,9 @@ class ParameterNode(ASTNode):
 class AttributeNode(ParameterNode):
   pass
 
+class FilterAttributeNode(AttributeNode):
+  pass
+
 
 class __NoParameter(object):
   def __repr__(self):

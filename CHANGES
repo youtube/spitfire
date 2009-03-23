@@ -2,6 +2,8 @@
 added _udn module to accelerate resolving functions
 restructure a number of calls to facilitate testing and acceleration
 added escaping for literal $.
+remove dopey argument structure for custom filters, this makes it much
+easier to reuse a text formatting function as a filter.
 
 
 0.7.5 - 2009-02-03
