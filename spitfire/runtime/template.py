@@ -29,12 +29,16 @@ class SpitfireTemplate(object):
   # function to the current instance. using the name 'template_instance' to
   # indicate that these functions aren't really related to the template.
   _filter_function = staticmethod(spitfire.runtime.filters.safe_values)
+  repeat = None
   
   def __init__(self, search_list=None, default_filter=None):
     self.search_list = search_list
-    self.repeat = spitfire.runtime.repeater.RepeatTracker()
     if default_filter is not None:
       self._filter_function = staticmethod(default_filter)
+
+    # FIXME: repeater support is not needed most of the time, just
+    # disable it for the time being
+    # self.repeat = spitfire.runtime.repeater.RepeatTracker()
     
   def get_var(self, name, default=None):
     return _resolve_from_search_list(self.search_list, name, default)
