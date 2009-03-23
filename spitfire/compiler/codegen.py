@@ -247,6 +247,10 @@ class CodeGenerator(object):
   def codegenASTAttributeNode(self, node):
     return [CodeNode('%s = %s' % (node.name, self.generate_python(
       self.build_code(node.default)[0])))]
+
+  def codegenASTFilterAttributeNode(self, node):
+    return [CodeNode('%s = staticmethod(%s)' % (node.name, self.generate_python(
+      self.build_code(node.default)[0])))]
     
   def codegenASTParameterListNode(self, node):
     if len(node.child_nodes) == 1:
@@ -445,7 +449,7 @@ class CodeGenerator(object):
           '%(filter_expression)s(%(expression)s)' % vars())
       elif node.filter_function_node:
         code_node = CodeNode(
-          '%(filter_expression)s(self, %(expression)s)' % vars())
+          '%(filter_expression)s(%(expression)s)' % vars())
       else:
         code_node = CodeNode('%(expression)s' % vars())
     return [code_node]

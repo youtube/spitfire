@@ -280,7 +280,7 @@ def set_accelerator(enabled=True, enable_test_mode=False):
 
   resolve_udn = _resolve_udn
 
-  if _udn is None:
+  if enabled and _udn is None:
     logging.warning('unable to enable acceleration, _udn module not loaded')
 
 

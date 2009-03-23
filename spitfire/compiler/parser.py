@@ -179,7 +179,7 @@ class SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             identifier = self.identifier()
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
-            return AttributeNode('_filter_function', identifier)
+            return FilterAttributeNode('_filter_function', identifier)
         elif _token_ == "'set'":
             self._scan("'set'")
             SPACE = self._scan('SPACE')

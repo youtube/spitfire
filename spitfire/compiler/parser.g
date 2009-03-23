@@ -115,7 +115,7 @@ parser SpitfireParser:
         {{ return AttributeNode(placeholder.name, literal) }}
         |
         'filter' SPACE identifier CLOSE_DIRECTIVE
-        {{ return AttributeNode('_filter_function', identifier) }}
+        {{ return FilterAttributeNode('_filter_function', identifier) }}
         |
         'set' SPACE placeholder {{ _lhs = IdentifierNode(placeholder.name) }}
         [ SPACE ] ASSIGN_OPERATOR [ SPACE ] expression {{ _rhs = expression }}
