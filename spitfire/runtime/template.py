@@ -34,7 +34,7 @@ class SpitfireTemplate(object):
   def __init__(self, search_list=None, default_filter=None):
     self.search_list = search_list
     if default_filter is not None:
-      self._filter_function = staticmethod(default_filter)
+      self._filter_function = default_filter
 
     # FIXME: repeater support is not needed most of the time, just
     # disable it for the time being
