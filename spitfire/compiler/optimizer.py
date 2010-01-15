@@ -533,7 +533,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     # if you are trying to use short-circuit behavior, these two optimizations
     # can sabotage correct execution since the rhs may be hoisted above the
     # IfNode and cause it to get executed prior to passing the lhs check.
-    if n.operator == 'and':
+    if n.operator == 'and' or n.operator == 'or':
       cache_placeholders = self.options.cache_resolved_placeholders
       cache_udn_expressions = self.options.cache_resolved_udn_expressions
       self.options.cache_resolved_placeholders = False
@@ -542,7 +542,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     self.visit_ast(n.left, n)
     self.visit_ast(n.right, n)
 
-    if n.operator == 'and':
+    if n.operator == 'and' or n.operator == 'or':
       self.options.cache_resolved_placeholders = cache_placeholders
       self.options.cache_resolved_udn_expressions = cache_udn_expressions
 
