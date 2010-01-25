@@ -301,6 +301,9 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
 
+  def analyzeCacheNode(self, cache_node):
+    self.visit_ast(cache_node.expression, cache_node)
+
   def analyzeBufferWrite(self, buffer_write):
     self.visit_ast(buffer_write.expression, buffer_write)
     # template functions output text - don't format them as strings
