@@ -116,6 +116,11 @@ class TreeVisitor(object):
       v.extend(self.build_text(node.arg_list))
     return [v]
 
+  def visitASTCacheNode(self, node):
+    v = self.visitDefault(node)[0]
+    v.append(VisitNode('expression', self.build_text(node.expression)))
+    return [v]
+
   def visitASTForNode(self, node):
     visit_node = self.visitDefault(node)[0]
     target_list = self.build_text(node.target_list)
