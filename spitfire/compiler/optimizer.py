@@ -172,14 +172,19 @@ class _BaseAnalyzer(object):
       node_dependency_set_except_node_tree)
     depends_on_loop_variants = bool(loop_node.loop_variant_set.intersection(
       node_dependency_set))
-    if not depends_on_loop_variants and dependencies_within_loop:
-      # we can't assume this is invariant because it depends on other
-      # nodes inside the loop. eventually we should hoist out both the
-      # node and its dependencies.
-      dependency_nodes = '\n'.join('  %s' % node.parent for node in dependencies_within_loop)
-      logging.warning("Cannot hoist possible loop invariant: %s.", node)
-      logging.warning("Please move following dependencies out of the loop:\n%s",
-        dependency_nodes)
+
+	# TODO: Disabling warnings for now. They are useless witout
+	# filenames. Also need to make sure all these cases are valid.
+
+#     if not depends_on_loop_variants and dependencies_within_loop:
+#       # we can't assume this is invariant because it depends on other
+#       # nodes inside the loop. eventually we should hoist out both the
+#       # node and its dependencies.
+#       dependency_nodes = '\n'.join('  %s' % node.parent for node in dependencies_within_loop)
+#       logging.warning("Cannot hoist possible loop invariant: %s.", node)
+#       logging.warning("Please move following dependencies out of the loop:\n%s",
+#         dependency_nodes)
+
     return not depends_on_loop_variants and not dependencies_within_loop
 
   def get_node_dependencies(self, node):
