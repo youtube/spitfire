@@ -36,7 +36,9 @@ def parse(src_text, rule='goal'):
   return spitfire.compiler.parser.wrap_error_reporter(parser, rule)
 
 def parse_file(filename, xspt_mode=False):
-  return parse_template(read_template_file(filename), xspt_mode)
+  template_node = parse_template(read_template_file(filename), xspt_mode)
+  template_node.source_path = filename
+  return template_node
 
 def parse_template(src_text, xspt_mode=False):
   if xspt_mode:

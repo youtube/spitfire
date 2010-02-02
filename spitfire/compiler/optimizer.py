@@ -320,8 +320,21 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
 
+  # NOTE: these optimizations are disabled because the optimizer has a tendency
+  # to "over-hoist" code inside a CacheNode and you end up doing *more* work
   def analyzeCacheNode(self, cache_node):
+    cache_placeholders = self.options.cache_resolved_placeholders
+    cache_udn_expressions = self.options.cache_resolved_udn_expressions
+    cache_filtered_placeholders = self.options.cache_filtered_placeholders
+    self.options.cache_resolved_placeholders = False
+    self.options.cache_resolved_udn_expressions = False
+    self.options.cache_filtered_placeholders = False
+
     self.visit_ast(cache_node.expression, cache_node)
+
+    self.options.cache_resolved_placeholders = cache_placeholders
+    self.options.cache_resolved_udn_expressions = cache_udn_expressions
+    self.options.cache_filtered_placeholders = cache_filtered_placeholders
 
   def analyzeBufferWrite(self, buffer_write):
     self.visit_ast(buffer_write.expression, buffer_write)

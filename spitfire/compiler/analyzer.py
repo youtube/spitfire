@@ -424,7 +424,8 @@ class SemanticAnalyzer(object):
     ph_expression = self.build_ast(pnode.expression)[0]
 
     arg_map = pnode.parameter_list.get_arg_map()
-    format_string = arg_map.get('format_string', '%s')
+    default_format_string = '%s'
+    format_string = arg_map.get('format_string', default_format_string)
 
     skip_filter = False
     cache_forever = False
@@ -438,12 +439,13 @@ class SemanticAnalyzer(object):
         skip_filter = getattr(ph_function, 'skip_filter', False)
         cache_forever = getattr(ph_function, 'cache_forever', False)
         function_has_only_literal_args = (
-          ph_expression.arg_list and len(ph_expression.arg_list) and
-          isinstance(ph_expression.arg_list[0], LiteralNode))
+          ph_expression.arg_list and
+          not [_arg for _arg in ph_expression.arg_list
+               if not isinstance(_arg, LiteralNode)])
           
 
     if (self.compiler.enable_filters and
-        format_string == '%s' and
+        format_string == default_format_string and
         not isinstance(ph_expression, LiteralNode)):
       arg_node_map = pnode.parameter_list.get_arg_node_map()
       if 'raw' not in arg_map:
@@ -469,9 +471,9 @@ class SemanticAnalyzer(object):
 
     if isinstance(ph_expression, LiteralNode):
       node_list.append(BufferWrite(ph_expression))
-    #elif self.compiler.enable_filters:
-    #  # we are already filtering, don't bother creating a new string
-    #  node_list.append(BufferWrite(ph_expression))
+    elif self.compiler.enable_filters and format_string == default_format_string:
+      # we are already filtering, don't bother creating a new string
+      node_list.append(BufferWrite(ph_expression))
     else:
       node_list.append(BufferWrite(BinOpNode('%', LiteralNode(format_string),
                                              ph_expression)))
