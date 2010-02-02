@@ -1,5 +1,4 @@
 #from spitfire.runtime.filters import escape_html
-#from spitfire.runtime.filters import passthrough_filter
 #filter escape_html
 
 #def test_block
@@ -8,7 +7,7 @@ Demo web safe text: ${test_unwebsafe}.
 
 Demo web un-safe text: ${test_unwebsafe|raw}.
 
-Demo explicit filter: ${test_dict|filter=passthrough_filter}.
+Demo explicit filter: ${test_dict|filter=str}.
 </p>
 #end def
 

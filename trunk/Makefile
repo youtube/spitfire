@@ -6,8 +6,12 @@ ifndef YAPPS
 	export YAPPS = ../yapps2/yapps2.py
 endif
 
-CRUNNER = python2.4 scripts/crunner.py
-COMPILER = python2.4 scripts/spitfire-compile
+ifndef PYTHON
+	PYTHON = $(which python)
+endif
+
+CRUNNER = $(PYTHON) scripts/crunner.py
+COMPILER = $(PYTHON) scripts/spitfire-compile
 
 spitfire/compiler/parser.py: spitfire/compiler/parser.g
 	$(YAPPS) spitfire/compiler/parser.g

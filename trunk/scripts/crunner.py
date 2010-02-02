@@ -184,6 +184,9 @@ class TestRunner(object):
 
 
 if __name__ == '__main__':
+  reload(sys)
+  sys.setdefaultencoding('utf8')
+  
   from optparse import OptionParser
   op = OptionParser()
   spitfire.compiler.util.add_common_options(op)

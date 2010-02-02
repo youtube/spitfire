@@ -666,6 +666,7 @@ class FragmentNode(ASTNode):
 class TemplateNode(ASTNode):
   def __init__(self, classname=None, **kargs):
     ASTNode.__init__(self, **kargs)
+    self.source_path = None
     # fixme: need to get the classname from somewhere else
     self.classname = classname
     self.main_function = FunctionNode(name='main')
