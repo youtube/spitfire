@@ -28,7 +28,7 @@ class SpitfireTemplate(object):
   # when this is assigned to a template instance, accessing this name binds the
   # function to the current instance. using the name 'template_instance' to
   # indicate that these functions aren't really related to the template.
-  _filter_function = staticmethod(spitfire.runtime.filters.safe_values)
+  _filter_function = staticmethod(spitfire.runtime.filters.simple_str_filter)
   repeat = None
   
   def __init__(self, search_list=None, default_filter=None):

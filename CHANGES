@@ -1,3 +1,8 @@
+0.7.7 - 2009-04-23
+fixed a bug in checking when function has literal-only arguments
+changed filter handling to generate better code, since the majority case
+involves having a filter more often than not.
+
 0.7.6 - 2009-02-22
 added _udn module to accelerate resolving functions
 restructure a number of calls to facilitate testing and acceleration

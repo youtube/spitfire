@@ -1,4 +1,6 @@
 import cStringIO as StringIO
+import logging
+
 
 # yes, i know this is evil
 from spitfire.compiler.ast import *
@@ -127,6 +129,13 @@ class CodeGenerator(object):
     if (not node.extends_nodes and not node.library) or node.implements:
       class_code.extend(self.build_code(node.main_function))
 
+    # NOTE(msolo): originally, i thought this would be helpful in case a bit of
+    # human error - however, a more robust check is necessary here to make the
+    # warning less spurious
+    # else:
+    #   from spitfire.compiler.visitor import flatten_tree
+    #   logging.warning("throwing away defined main function because it is not a base class %s %s", self.ast_root.source_path)
+    #   logging.warning("%s", flatten_tree(node.main_function))
 
     if self.options and self.options.enable_psyco:
       module_code.append_line('spitfire.runtime.template.enable_psyco(%(classname)s)' % vars())
