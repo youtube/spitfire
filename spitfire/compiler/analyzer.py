@@ -431,6 +431,7 @@ class SemanticAnalyzer(object):
     cache_forever = False
     registered_function = False
     function_has_only_literal_args = False
+    never_cache = False
     if isinstance(ph_expression, CallFunctionNode):
       fname = ph_expression.expression.name
       registered_function = (fname in self.compiler.function_name_registry)
@@ -442,6 +443,7 @@ class SemanticAnalyzer(object):
           ph_expression.arg_list and
           not [_arg for _arg in ph_expression.arg_list
                if not isinstance(_arg, LiteralNode)])
+        never_cache = getattr(ph_function, 'never_cache', False)
           
 
     if (self.compiler.enable_filters and
@@ -462,7 +464,8 @@ class SemanticAnalyzer(object):
         # if this is a literal node, we still might want to filter it
         # but the output should always be the same - so do it once and cache
         # FIXME: could fold this and apply the function at compile-time
-        if ((registered_function and function_has_only_literal_args) or
+        if (not never_cache and
+            (registered_function and function_has_only_literal_args) or
             cache_forever or 'cache' in arg_map):
           cache_expression = CacheNode(ph_expression)
           self.template.cached_identifiers.add(cache_expression)
