@@ -37,3 +37,9 @@ def register_functions(module, template_function_map):
 def cache_forever(function):
   function.cache_forever = True
   return function
+
+# decorate a function object so its result is not cached in module globals
+def never_cache(function):
+	function.never_cache = True
+	return function
+
