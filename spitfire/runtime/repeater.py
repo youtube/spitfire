@@ -12,8 +12,9 @@ class RepeatTracker(object):
     return self.repeater_map[key]
 
 class Repeater(object):
-  def __init__(self, index=0, length=None):
+  def __init__(self, index=0, item=None, length=None):
     self.index = index
+    self.item = item
     self.length = length
 
   @property
@@ -36,14 +37,22 @@ class Repeater(object):
   def last(self):
     return (self.index == (self.length - 1))
 
-def reiterate(iterable):
-  try:
-    length = len(iterable)
-  except TypeError:
-    # if the iterable is a generator, then we have no length
-    length = None
-  for index, item in enumerate(iterable):
-    yield (Repeater(index, length), item)
+class RepeatIterator(object):
+  def __init__(self, iterable):
+    self.src_iterable = iterable
+    self.src_iterator = enumerate(iterable)
+    try:
+      self.length = len(iterable)
+    except TypeError:
+      # if the iterable is a generator, then we have no length
+      self.length = None
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+    index, item = self.src_iterator.next()
+    return Repeater(index, item, self.length)
     
     
     
