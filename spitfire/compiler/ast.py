@@ -706,6 +706,14 @@ class UnaryOpNode(ASTNode):
     else:
       raise Exception("expression does not match target")
 
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.name == node.name and
+                self.expression == node.expression)
+
+  def __hash__(self):
+    return hash('%s%s%s' %
+                (type(self), self.name, self.expression))
 
 # save state related to scoping rules for code blocks
 # this is kind of a hack. i am semi-emulating python scoping rules, which are
