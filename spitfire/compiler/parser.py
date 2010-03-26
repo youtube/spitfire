@@ -50,7 +50,7 @@ class SpitfireParserScanner(Scanner):
         ('SINGLE_QUOTE_STR', re.compile("(?:[^'\\\\]|\\\\.)*")),
         ('DOUBLE_QUOTE_STR', re.compile('(?:[^"\\\\]|\\\\.)*')),
         ('SINGLE_LINE_COMMENT', re.compile('#.*?\n')),
-        ('MULTI_LINE_COMMENT', re.compile('\\*[\\W\\w\\S\\s]+\\*#')),
+        ('MULTI_LINE_COMMENT', re.compile('\\*[\\W\\w\\S\\s]+?\\*#')),
         ('ASSIGN_OPERATOR', re.compile('=')),
         ('COMP_OPERATOR', re.compile('[ \t]*(<=|>=|==|>|<|!=|[ \t]+in[ \t]+)[ \t]*')),
         ('OPEN_PAREN', re.compile('[ \t]*\\([ \t]*')),
