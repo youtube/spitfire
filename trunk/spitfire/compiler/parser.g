@@ -14,7 +14,7 @@ parser SpitfireParser:
   token DOUBLE_QUOTE_STR: r'(?:[^"\\]|\\.)*'
 
   token SINGLE_LINE_COMMENT: '#.*?\n'
-  token MULTI_LINE_COMMENT: '\*[\W\w\S\s]+\*#'
+  token MULTI_LINE_COMMENT: '\*[\W\w\S\s]+?\*#'
   token ASSIGN_OPERATOR: '='
   # 'in' requires whitespace around it, but that is the only
   # such operator
