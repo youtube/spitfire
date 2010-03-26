@@ -1,0 +1,15 @@
+#* first multiline comment 
+ *#
+
+some text
+
+#* second multiline comment *#
+
+more text
+
+#* last multiline comment
+*  ...
+*  ...
+*#
+
+no more comments
