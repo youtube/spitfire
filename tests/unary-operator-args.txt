@@ -1,0 +1,3 @@
+
+$bool(not 1) should be False
+$bool(not 0) should be True
