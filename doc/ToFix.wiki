@@ -1,0 +1,18 @@
+#summary Known issues that need to be fixed.
+
+= Usability =
+
+ * Support line continuations - all function arguments shouldn't need to be on the same line.
+
+ * Reassigning a name with `#set` should raise a compiler error if it will get ignored anyway.
+
+ * Support `not in`.
+
+
+= Internationalization =
+
+ * Check in memtable (previously called xle).
+
+ * Build two implementations of the i18n macros. One using memtable and one using gettext. 
+
+ 
