@@ -55,18 +55,24 @@ def read_template_file(filename):
   finally:
     f.close()
 
-
 def read_function_registry(filename):
   f = open(filename)
+  lines = f.readlines()
+  f.close()
+  new_format = [ l for l in lines if not l.startswith('#') and l.find(',') > -1]
   function_registry = {}
-  try:
-    for line in f:
-      line = line.strip()
-      if not line:
-        continue
-      if line.startswith('#'):
-        continue
-      
+  for line in lines:
+    line = line.strip()
+    if not line:
+      continue
+    if line.startswith('#'):
+      continue
+    if new_format:
+      alias, rest = line.split('=')
+      decorators = rest.split(',')
+      fq_name = decorators.pop(0).strip()
+      function_registry[alias.strip()] = fq_name, decorators
+    else:
       alias, fq_name = line.split('=')
       fq_name = fq_name.strip()
       try:
@@ -74,12 +80,8 @@ def read_function_registry(filename):
       except ImportError:
         logging.warning('unable to import function registry symbol %s', fq_name)
         method = None
-                        
       function_registry[alias.strip()] = fq_name, method
-    return function_registry
-  finally:
-    f.close()
-    
+  return new_format, function_registry
     
 # compile a text file into a template object
 # this won't recursively import templates, it's just a convenience in the case
@@ -142,6 +144,7 @@ class Compiler(object):
     'optimizer_flags',
     'output_directory',
     'xspt_mode',
+    'include_path'
     ]
 
   @classmethod
@@ -172,7 +175,7 @@ class Compiler(object):
     self.message_catalogue_file = None
     self.extract_message_catalogue = False
     self.locale = None
-
+    self.include_path = '.'
     self.enable_filters = True
     # the function registry is for optimized access to 'first-class' functions
     # things that get accessed all the time that should be speedy
@@ -208,7 +211,7 @@ class Compiler(object):
         logging.warning('unknown optimizer flag: %s', flag_name)
 
     if self.function_registry_file:
-      self.function_name_registry = read_function_registry(
+      self.new_registry_format, self.function_name_registry = read_function_registry(
         self.function_registry_file)
 
     # register macros before the first pass by any SemanticAnalyzer
@@ -338,6 +341,11 @@ def add_common_options(op):
                 type="str", nargs=1,
                 help='alternate directory to store compiled templates')
 
+  op.add_option('--include-path', default='.',
+                action="callback", callback=validate_path,
+                type="str", nargs=1,
+                help='path to the templates hierarchy, where included files live. default: .')
+  
   op.add_option('--base-extends-package', default=None)
   op.add_option('--extract-message-catalogue', action='store_true',
                 default=False)

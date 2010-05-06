@@ -250,12 +250,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     # tune BufferWrite calls for these nodes
     if self.options.use_dependency_analysis:
       for n in template.extends_nodes:
-        for ext in template_extensions:
-          path = os.path.join(
+        path = os.path.join(
             *[ident_node.name
-              for ident_node in n.source_module_name_list]) + ext
-          template_function_names = get_template_functions(path)
-          template.template_methods.update(template_function_names)
+              for ident_node in n.source_module_name_list]) 
+        template_function_names = get_template_functions(self.compiler.include_path, path)
+        template.template_methods.update(template_function_names)
     
     self.visit_ast(template.main_function, template)
     for n in template.child_nodes:
@@ -741,25 +740,30 @@ class FinalPassAnalyzer(_BaseAnalyzer):
 template_function_re = re.compile('^[^#]*#(def|block)\s+(\w+)')
 extends_re = re.compile('^#extends\s+([\.\w]+)')
 template_extensions = ('.spt', '.tmpl')
+def _extend_to_real_path(base_dir, ex_path):
+  for ext in template_extensions:
+    rpath = os.path.join(base_dir, ex_path) + ext
+    if os.path.exists(rpath):
+      return rpath
+  raise Exception('could not find .spt or .tmpl file for %s during dependency check' % ex_path)
+
 # scan an spt file for template functions it will output
-def get_template_functions(path):
+def get_template_functions(base_dir, path):
   template_function_names = set()
-  if not os.path.exists(path):
-    logging.debug('no such template for dependecy check: %s', path)
-  else:
-    f = open(path)
-    for line in f:
-      match = template_function_re.match(line)
-      if match:
-        template_function_names.add(match.group(2))
-        continue
-      match = extends_re.match(line)
-      if match:
-        extend_name = match.group(1)
-        extend_path = extend_name.replace('.', '/')
-        for ext in template_extensions:
-          template_path = extend_path + ext
-          template_function_names.update(
-            get_template_functions(template_path))
-        
+  path = _extend_to_real_path(base_dir, path)
+  if not path:
+    return template_function_names
+  f = open(path)
+  for line in f:
+    match = template_function_re.match(line)
+    if match:
+      template_function_names.add(match.group(2))
+      continue
+    match = extends_re.match(line)
+    if match:
+      extend_name = match.group(1)
+      extend_path = extend_name.replace('.', '/')
+      template_function_names.update(
+              get_template_functions(base_dir, extend_path))
+  f.close()
   return template_function_names
