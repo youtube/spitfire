@@ -436,15 +436,20 @@ class SemanticAnalyzer(object):
       fname = ph_expression.expression.name
       registered_function = (fname in self.compiler.function_name_registry)
       if registered_function:
-        ph_function = self.compiler.function_name_registry[fname][-1]
-        skip_filter = getattr(ph_function, 'skip_filter', False)
-        cache_forever = getattr(ph_function, 'cache_forever', False)
         function_has_only_literal_args = (
           ph_expression.arg_list and
           not [_arg for _arg in ph_expression.arg_list
                if not isinstance(_arg, LiteralNode)])
-        never_cache = getattr(ph_function, 'never_cache', False)
-          
+        if self.compiler.new_registry_format:
+          decorators = self.compiler.function_name_registry[fname][-1]
+          skip_filter = 'skip_filter' in decorators
+          cache_forever = 'cache_forever' in decorators
+          never_cache = 'never_cache' in decorators
+        else:
+          ph_function = self.compiler.function_name_registry[fname][-1]
+          skip_filter = getattr(ph_function, 'skip_filter', False)
+          cache_forever = getattr(ph_function, 'cache_forever', False)
+          never_cache = getattr(ph_function, 'never_cache', False)
 
     if (self.compiler.enable_filters and
         format_string == default_format_string and
