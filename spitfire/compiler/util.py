@@ -21,7 +21,7 @@ valid_identfier = re.compile('[_a-z]\w*', re.IGNORECASE)
 
 def filename2classname(filename):
   classname = os.path.splitext(
-    os.path.basename(filename))[0].lower().replace('-', '_')
+    os.path.basename(filename))[0].replace('-', '_')
   if not valid_identfier.match(classname):
     raise SyntaxError(
       'filename "%s" must yield valid python identifier: %s' % (filename,
