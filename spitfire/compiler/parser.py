@@ -57,7 +57,7 @@ class SpitfireParserScanner(Scanner):
         ('PLACEHOLDER_OPEN_PAREN', re.compile('\\([ \t]*')),
         ('CLOSE_PAREN', re.compile('[ \t]*\\)')),
         ('OPEN_BRACKET', re.compile('[ \t]*\\[[ \t]*')),
-        ('CLOSE_BRACKET', re.compile('[ \t]*\\][ \t]*')),
+        ('CLOSE_BRACKET', re.compile('[ \t]*\\]')),
         ('PLACEHOLDER_OPEN_BRACE', re.compile('\\{[ \t]*')),
         ('PLACEHOLDER_CLOSE_BRACE', re.compile('[ \t]*\\}')),
         ('OPEN_BRACE', re.compile('[ \t]*\\{[ \t]*')),
