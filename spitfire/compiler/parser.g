@@ -30,7 +30,7 @@ parser SpitfireParser:
   # functions in text
   token CLOSE_PAREN: '[ \t]*\)'
   token OPEN_BRACKET: '[ \t]*\[[ \t]*'
-  token CLOSE_BRACKET: '[ \t]*\][ \t]*'
+  token CLOSE_BRACKET: '[ \t]*\]'
   token PLACEHOLDER_OPEN_BRACE: '\{[ \t]*'
   token PLACEHOLDER_CLOSE_BRACE: '[ \t]*\}'
   token OPEN_BRACE: '[ \t]*\{[ \t]*'
