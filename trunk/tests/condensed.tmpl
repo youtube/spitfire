@@ -1,0 +1,19 @@
+
+#set $here = "HERE"
+
+## <a> will be indented one tab in preserve-whitespace mode because the strip_lines block is indented one tab
+	#strip_lines
+		<a href="#">
+			<span>
+				Some text $here
+			</span>
+		</a>
+#set $there = "there"		
+	#set $everywhere = "everywhere"		
+  $there $everywhere         		        
+	#end strip_lines
+
+  <span>Regular tag</span>
+    More text
+$everywhere
+    $there
