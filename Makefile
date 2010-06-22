@@ -25,7 +25,8 @@ test_function_registry: parser
 	$(CRUNNER) -O3 --compile --test-input tests/input/search_list_data.pye -qt tests/test-function-registry.txtx tests/i18n-7.txtx --function-registry-file tests/test-function-registry.cnf
 
 .PHONY : no_whitespace_tests
-no_whitespace_tests: clean_tests parser
+no_whitespace_tests: parser
+	$(call _clean_tests)
 	$(COMPILER) tests/*.txt tests/*.tmpl
 	$(CRUNNER) --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
 	$(COMPILER) -O1 tests/*.txt tests/*.tmpl
@@ -36,7 +37,8 @@ no_whitespace_tests: clean_tests parser
 	$(CRUNNER) -O3 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
 
 .PHONY : whitespace_tests
-whitespace_tests: clean_tests parser
+whitespace_tests: parser
+	$(call _clean_tests)
 	$(COMPILER) --preserve-optional-whitespace tests/*.txt tests/*.tmpl
 	$(CRUNNER) --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
 	$(COMPILER) -O1 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
@@ -47,7 +49,8 @@ whitespace_tests: clean_tests parser
 	$(CRUNNER) -O3 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
 
 .PHONY : test_opt
-test_opt: clean_tests parser
+test_opt: parser
+	$(call _clean_tests)
 	$(COMPILER) -O4 tests/*.txt tests/*.tmpl tests/*.o4txt
 	$(CRUNNER) -O4 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl tests/*.o4txt
 	$(COMPILER) -O4 --preserve-optional-whitespace tests/*.txt tests/*.tmpl tests/*.o4txt
@@ -62,6 +65,12 @@ xhtml_tests: clean_tests parser
 .PHONY : tests
 tests: no_whitespace_tests whitespace_tests test_function_registry test_opt
 
+define _clean_tests
+	@rm -f tests/*.py
+	@rm -f tests/*.pyc
+	@find tests -name '*.failed' -exec rm {} \;
+	@touch tests/__init__.py
+endef
 
 .PHONY : clean
 clean: clean_tests
@@ -71,10 +80,7 @@ clean: clean_tests
 
 .PHONY : clean_tests
 clean_tests:
-	@rm -f tests/*.py
-	@rm -f tests/*.pyc
-	@find tests -name '*.failed' -exec rm {} \;
-	@touch tests/__init__.py
+	$(call _clean_tests)
 
 .PHONE : clean_all
 clean_all : clean clean_tests

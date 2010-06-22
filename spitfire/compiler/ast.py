@@ -392,6 +392,10 @@ class ForNode(ASTNode):
             (self.__class__.__name__, self.target_list, self.expression_list))
 
 
+class StripLinesNode(ASTNode):
+  """These are thrown away by the analyzer and do not make it to the codegen stage."""
+
+
 class FunctionNode(ASTNode):
   def __init__(self, *pargs, **kargs):
     ASTNode.__init__(self, *pargs, **kargs)
@@ -650,14 +654,14 @@ class TextNode(ASTNode):
       raise Exception('node type mismatch')
     self.value += node.value
 
-class NewlineNode(TextNode):
-  pass
-
 class WhitespaceNode(TextNode):
   def make_optional(self):
     return OptionalWhitespaceNode(self.value)
 
-class OptionalWhitespaceNode(TextNode):
+class NewlineNode(WhitespaceNode):
+  pass
+
+class OptionalWhitespaceNode(WhitespaceNode):
   pass
 
 class FragmentNode(ASTNode):
@@ -784,7 +788,7 @@ class OrderedDict(object):
 
 # this is sort of a hack to support optional white space nodes inside the
 # parse tree.  the reality is that this probably requires a more complex
-# parser, but we can get away with examining the node stake to fake it for now.
+# parser, but we can get away with faking it for now.
 def make_optional(node_list):
   try:
     if type(node_list[-1]) == WhitespaceNode:
@@ -795,6 +799,32 @@ def make_optional(node_list):
         node_list[-1] = OptionalWhitespaceNode(node_list[-1].value)
   except IndexError:
     pass
+
+# this is another hack to support line-wise stripping of white space nodes
+# inside a #strip_lines directive
+def strip_whitespace(node_list):
+  optional = True
+  for i, node in enumerate(node_list):
+    if isinstance(node, (OptionalWhitespaceNode, NewlineNode)):
+      optional = True
+      node_list[i] = OptionalWhitespaceNode('')
+    elif isinstance(node, WhitespaceNode):
+      if optional:
+        node_list[i] = OptionalWhitespaceNode('')
+      elif len(node_list) > i + 1 and isinstance(node_list[i+1], NewlineNode):
+        optional = True
+        node_list[i] = OptionalWhitespaceNode('')
+    elif isinstance(node, TextNode):
+      if optional:
+        node.value = node.value.lstrip()
+      optional = False
+    elif not node.statement and not node.child_nodes:
+      optional = False
+    
+    if optional and i > 0:
+      prev_node = node_list[i - 1]
+      if isinstance(prev_node, TextNode):
+        prev_node.value = prev_node.value.rstrip()
 
 def unsigned_hash(x):
   exp_hash = hash(x)

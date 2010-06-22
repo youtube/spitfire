@@ -7,7 +7,7 @@ from string import *
 import re
 from yappsrt import *
 
-class SpitfireParserScanner(Scanner):
+class _SpitfireParserScanner(Scanner):
     patterns = [
         ("'[ \\t]*\\+[ \\t]*'", re.compile('[ \t]*\\+[ \t]*')),
         ("'[ \\t]*\\%[ \\t]*'", re.compile('[ \t]*\\%[ \t]*')),
@@ -24,6 +24,7 @@ class SpitfireParserScanner(Scanner):
         ('\'"\'', re.compile('"')),
         ("'#else'", re.compile('#else')),
         ("'#elif'", re.compile('#elif')),
+        ("'strip_lines'", re.compile('strip_lines')),
         ("'for'", re.compile('for')),
         ("'[ \\t]*in[ \\t]*'", re.compile('[ \t]*in[ \t]*')),
         ("'for[ \\t]*'", re.compile('for[ \t]*')),
@@ -66,7 +67,7 @@ class SpitfireParserScanner(Scanner):
         ('COMMA_DELIMITER', re.compile('[ \t]*,[ \t]*')),
         ('COLON_DELIMITER', re.compile('[ \t]*:[ \t]*')),
         ('SPACE', re.compile('[ \t]+')),
-        ('CLOSE_DIRECTIVE_TOKEN', re.compile('[ \t]*[\n#]')),
+        ('CLOSE_DIRECTIVE_TOKEN', re.compile('[\n#]')),
         ('END_DIRECTIVE', re.compile('#end')),
         ('START_DIRECTIVE', re.compile('#')),
         ('START_PLACEHOLDER', re.compile('\\$')),
@@ -75,12 +76,27 @@ class SpitfireParserScanner(Scanner):
         ('PYTHON_LINE', re.compile('.+')),
         ('TEXT', re.compile('[^#\\$\n]+')),
         ('END', re.compile('$')),
-        ('I18N_BODY', re.compile('[^#]+')),
     ]
     def __init__(self, str):
         Scanner.__init__(self,None,[],str)
 
-class SpitfireParser(Parser):
+class _SpitfireParser(Parser):
+    def i18n_body(self):
+        value = ''
+        while 1:
+            _token_ = self._peek('TEXT', 'NEWLINE', 'START_PLACEHOLDER')
+            if _token_ == 'TEXT':
+                TEXT = self._scan('TEXT')
+                value += TEXT
+            elif _token_ == 'NEWLINE':
+                NEWLINE = self._scan('NEWLINE')
+                value += NEWLINE
+            else:# == 'START_PLACEHOLDER'
+                START_PLACEHOLDER = self._scan('START_PLACEHOLDER')
+                value += START_PLACEHOLDER
+            if self._peek('TEXT', 'NEWLINE', 'START_PLACEHOLDER', 'START_DIRECTIVE', 'END_DIRECTIVE') not in ['TEXT', 'NEWLINE', 'START_PLACEHOLDER']: break
+        return value
+
     def CLOSE_DIRECTIVE(self):
         if self._peek('SPACE', 'CLOSE_DIRECTIVE_TOKEN') == 'SPACE':
             SPACE = self._scan('SPACE')
@@ -227,7 +243,7 @@ class SpitfireParser(Parser):
     def directive(self):
         START_DIRECTIVE = self._scan('START_DIRECTIVE')
         _node_list = NodeList()
-        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'if'", "'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'filter'", "'set'", "'echo'", 'END', 'LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
+        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'strip_lines'", "'if'", "'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'filter'", "'set'", "'echo'", 'END', 'LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
         if _token_ == 'SINGLE_LINE_COMMENT':
             SINGLE_LINE_COMMENT = self._scan('SINGLE_LINE_COMMENT')
             _node_list.append(CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT))
@@ -244,7 +260,7 @@ class SpitfireParser(Parser):
             while self._peek('LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', 'TEXT') != 'END_DIRECTIVE':
                 block = self.block(start)
                 _block.append(block)
-            make_optional(_block.child_nodes)
+            self.make_optional(_block.child_nodes)
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'block'")
@@ -262,10 +278,10 @@ class SpitfireParser(Parser):
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
             start = CLOSE_DIRECTIVE.endswith('\n')
             _macro.value = ''
-            while self._peek('I18N_BODY', 'END_DIRECTIVE') == 'I18N_BODY':
-                I18N_BODY = self._scan('I18N_BODY')
-                _macro.value += I18N_BODY
-                if self._peek('START_DIRECTIVE', 'I18N_BODY', 'END_DIRECTIVE') == 'START_DIRECTIVE':
+            while self._peek('TEXT', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE') != 'END_DIRECTIVE':
+                i18n_body = self.i18n_body()
+                _macro.value += i18n_body
+                if self._peek('START_DIRECTIVE', 'TEXT', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE') == 'START_DIRECTIVE':
                     START_DIRECTIVE = self._scan('START_DIRECTIVE')
                     _macro.value += START_DIRECTIVE
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
@@ -289,7 +305,7 @@ class SpitfireParser(Parser):
             while self._peek('LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', 'TEXT') != 'END_DIRECTIVE':
                 block = self.block(start)
                 _def.append(block)
-            make_optional(_def.child_nodes)
+            self.make_optional(_def.child_nodes)
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'def'")
@@ -306,12 +322,28 @@ class SpitfireParser(Parser):
             while self._peek('LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', 'TEXT') != 'END_DIRECTIVE':
                 block = self.block(start)
                 _for_loop.append(block)
-            make_optional(_for_loop.child_nodes)
+            self.make_optional(_for_loop.child_nodes)
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'for'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
             _node_list.append(_for_loop)
+        elif _token_ == "'strip_lines'":
+            self._scan("'strip_lines'")
+            self.strip_whitespace = True
+            CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
+            _strip_lines_node = StripLinesNode()
+            start = CLOSE_DIRECTIVE.endswith('\n')
+            while self._peek('LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT', 'END_DIRECTIVE') != 'END_DIRECTIVE':
+                block = self.block(start)
+                _strip_lines_node.append(block)
+            self.make_optional(_strip_lines_node.child_nodes)
+            self.strip_whitespace = False
+            END_DIRECTIVE = self._scan('END_DIRECTIVE')
+            SPACE = self._scan('SPACE')
+            self._scan("'strip_lines'")
+            CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
+            _node_list.append(_strip_lines_node)
         elif _token_ == "'if'":
             self._scan("'if'")
             SPACE = self._scan('SPACE')
@@ -323,7 +355,7 @@ class SpitfireParser(Parser):
             while self._peek('LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', "'#elif'", 'TEXT', "'#else'", 'END_DIRECTIVE') not in ["'#elif'", "'#else'", 'END_DIRECTIVE']:
                 block = self.block(start)
                 _if_node.append(block)
-            make_optional(_if_node.child_nodes)
+            self.make_optional(_if_node.child_nodes)
             while self._peek("'#elif'", 'LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', "'#else'", 'TEXT', 'END_DIRECTIVE') == "'#elif'":
                 self._scan("'#elif'")
                 SPACE = self._scan('SPACE')
@@ -336,7 +368,7 @@ class SpitfireParser(Parser):
                 while self._peek('LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT', "'#elif'", "'#else'", 'END_DIRECTIVE') not in ["'#elif'", "'#else'", 'END_DIRECTIVE']:
                     block = self.block(start)
                     _elif_node.append(block)
-            make_optional(_last_condition_node.child_nodes)
+            self.make_optional(_last_condition_node.child_nodes)
             if self._peek("'#else'", 'END_DIRECTIVE') == "'#else'":
                 self._scan("'#else'")
                 CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
@@ -344,7 +376,7 @@ class SpitfireParser(Parser):
                 while self._peek('LITERAL_DOLLAR_SIGN', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT', 'END_DIRECTIVE') != 'END_DIRECTIVE':
                     block = self.block(start)
                     _last_condition_node.else_.append(block)
-                make_optional(_last_condition_node.else_.child_nodes)
+                self.make_optional(_last_condition_node.else_.child_nodes)
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'if'")
@@ -819,15 +851,17 @@ class SpitfireParser(Parser):
 
 
 def parse(rule, text):
-    P = SpitfireParser(SpitfireParserScanner(text))
+    P = _SpitfireParser(_SpitfireParserScanner(text))
     return wrap_error_reporter(P, rule)
 
-if __name__ == '__main__':
-    from sys import argv, stdin
-    if len(argv) >= 2:
-        if len(argv) >= 3:
-            f = open(argv[2],'r')
-        else:
-            f = stdin
-        print parse(argv[1], f.read())
-    else: print 'Args:  <rule> [<filename>]'
+
+
+
+class SpitfireParser(_SpitfireParser):
+  strip_whitespace = False
+
+  def make_optional(self, node_list):
+    if self.strip_whitespace:
+      return strip_whitespace(node_list)
+    else:
+      return make_optional(node_list)
