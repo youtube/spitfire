@@ -134,6 +134,7 @@ class TreeVisitor(object):
     self.visitDefault(node)
     for n in node.child_nodes:
       self.walk(n)
+  visitASTStripLinesNode = visitASTFragmentNode
 
   def visitASTLiteralNode(self, node):
     self.visitDefault(node)
