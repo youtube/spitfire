@@ -259,6 +259,8 @@ class TreeVisitor(object):
       
     return [v]
 
+  visitASTStripLinesNode = visitASTFragmentNode
+
   def visitASTLiteralNode(self, node):
     return [VisitNode("%s '%r'" % (node.__class__.__name__, node.value))]
   visitASTTextNode = visitASTLiteralNode  

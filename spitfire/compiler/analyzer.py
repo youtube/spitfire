@@ -147,6 +147,7 @@ class SemanticAnalyzer(object):
     self.compiler = compiler
     self.ast_root = None
     self.template = None
+    self.strip_lines = False
     
   def get_ast(self):
     ast_node_list = self.build_ast(self.parse_root)
@@ -207,6 +208,15 @@ class SemanticAnalyzer(object):
     for_node.child_nodes = self.optimize_buffer_writes(for_node.child_nodes)
 
     return [for_node]
+
+  def analyzeStripLinesNode(self, pnode):
+    if self.strip_lines:
+      raise SemanticAnalyzerError("can't nest #strip_lines")
+    self.strip_lines = True
+    optimized_nodes = self.optimize_parsed_nodes(pnode.child_nodes)
+    new_nodes = [self.build_ast(pn) for pn in optimized_nodes]
+    self.strip_lines = False
+    return self.optimize_buffer_writes(new_nodes)
 
   def analyzeGetUDNNode(self, pnode):
     expression = self.build_ast(pnode.expression)[0]

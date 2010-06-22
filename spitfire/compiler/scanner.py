@@ -7,7 +7,7 @@ import spitfire.compiler.parser
 # but it seems to have been the right solution for a number of small problems
 # allong the way.
 
-class SpitfireScanner(spitfire.compiler.parser.SpitfireParserScanner):
+class SpitfireScanner(spitfire.compiler.parser._SpitfireParserScanner):
   def scan(self, restrict):
     """Should scan another token and add it to the list, self.tokens,
     and add the restriction to self.restrictions"""
@@ -50,3 +50,5 @@ class SpitfireScanner(spitfire.compiler.parser.SpitfireParserScanner):
       else:
         # This token should be ignored ..
         self.pos = self.pos + best_match
+
+

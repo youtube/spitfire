@@ -59,9 +59,11 @@ class Scanner(object):
         for r in restrict:
           if r not in self.restrictions[i]:
             raise NotImplementedError(
-              "Unimplemented: restriction set changed")
+              "Unimplemented: restriction set changed", r, self.restrictions[i])
         return self.tokens[i]
-    raise NoMoreTokens()
+      elif not restrict and not self.restrictions[i]:
+        return self.tokens[i]
+    raise NoMoreTokens(i, len(self.tokens), self.tokens[i], restrict, self.restrictions[i], self.tokens)
   
   def __repr__(self):
     """Print the last 10 tokens that have been scanned in"""
@@ -128,7 +130,7 @@ class Parser(object):
     """Returns the matched text, and moves to the next token"""
     tok = self._scanner.token(self._pos, [type])
     if tok[2] != type:
-      raise SyntaxError(tok[0], 'Trying to find '+type)
+      raise SyntaxError(tok[0], 'Trying to find %s (%s)' % (type, tok[0]))
     self._pos = 1+self._pos
     return tok[3]
   
@@ -179,11 +181,12 @@ def wrap_error_reporter(parser, rule):
   try:
     return getattr(parser, rule)()
   except SyntaxError, e:
+    logging.exception('syntax error')
     input = parser._scanner.input
     try:
       error_msg = format_error(input, e, parser._scanner)
     except ImportError:
       error_msg = 'Syntax Error %s on line\n' % (e.msg, 1 + count(input[:e.pos]))
   except NoMoreTokens, e:
-    error_msg = 'Could not complete parsing; stopped around here:\n%s' % parser._scanner
+    error_msg = 'Could not complete parsing; stopped around here:\n%s\n%s' % (parser._scanner, e)
   raise FatalParseError(error_msg)

@@ -1,7 +1,18 @@
+0.7.12 - 2010-06-21
+added #strip_lines directive. it strips leading and trailing whitespace
+from each output line at compile time. this should improve readability of
+certain complex templates where spaces must be removed. logicially, it performs
+a .strip() on each line between #strip_lines and #end strip_lines before
+sending it through the compiler. actually, the implementations much more
+(needlessly?) complex.  Noted that other people aren't filling out the change
+log. :(
+
+
 0.7.7 - 2009-04-23
 fixed a bug in checking when function has literal-only arguments
 changed filter handling to generate better code, since the majority case
 involves having a filter more often than not.
+
 
 0.7.6 - 2009-02-22
 added _udn module to accelerate resolving functions
