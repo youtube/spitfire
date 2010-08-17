@@ -818,7 +818,7 @@ def strip_whitespace(node_list):
       if optional:
         node.value = node.value.lstrip()
       optional = False
-    elif not node.statement and not node.child_nodes:
+    elif not (node.statement or node.child_nodes or isinstance(node, CommentNode)):
       optional = False
     
     if optional and i > 0:
