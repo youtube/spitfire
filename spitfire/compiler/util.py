@@ -338,8 +338,8 @@ def add_common_options(op):
   op.add_option('-o', '--output-file',  dest='output_file', default=None)
   op.add_option('--xspt-mode', action='store_true', default=False,
                 help='enable attribute language syntax')
-  op.add_option('--x-disable-psyco', dest='x_psyco', default=True,
-                action='store_false',
+  op.add_option('--x-enable-psyco', dest='x_psyco', default=False,
+                action='store_true',
                 help='disable psyco')
   op.add_option('--x-psyco-profile',
                 action='store_true',
