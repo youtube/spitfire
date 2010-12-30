@@ -26,7 +26,7 @@ def load_search_list(filename):
   raw_data = f.read()
   ext = os.path.splitext(filename)[-1]
   if ext == '.pkl':
-    data = cPickle.loads(raw_data)
+    data = pickle.loads(raw_data)
   else:
     try:
       data = eval(raw_data)

@@ -46,7 +46,7 @@ parser _SpitfireParser:
   token START_DIRECTIVE: '#'
   token START_PLACEHOLDER: '\$'
   token LITERAL_DOLLAR_SIGN: '\\\\\$'
-  token LITERAL_FOWARD_SLASH: '\\\\'
+  token LITERAL_BACKSLASH: '\\\\'
   token NEWLINE: '\n'
   token PYTHON_LINE: '.+'
   #token TEXT: '[^#\$\n]+'
@@ -236,7 +236,7 @@ parser _SpitfireParser:
   rule block<<start=False>>:
     LITERAL_DOLLAR_SIGN {{ return TextNode(LITERAL_DOLLAR_SIGN) }}
     |
-    LITERAL_FOWARD_SLASH {{ return TextNode(LITERAL_FOWARD_SLASH) }}
+    LITERAL_BACKSLASH {{ return TextNode(LITERAL_BACKSLASH) }}
     |
     directive {{ return directive }}
     |
@@ -280,7 +280,7 @@ parser _SpitfireParser:
   rule text_or_placeholders<<start=False>>:
     LITERAL_DOLLAR_SIGN {{ return TextNode(LITERAL_DOLLAR_SIGN) }}
     |
-    LITERAL_FOWARD_SLASH {{ return TextNode(LITERAL_FOWARD_SLASH) }}
+    LITERAL_BACKSLASH {{ return TextNode(LITERAL_BACKSLASH) }}
     |
     ## in this context, a # is just a #
     START_DIRECTIVE {{ return TextNode(START_DIRECTIVE) }}
