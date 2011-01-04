@@ -395,10 +395,10 @@ class _SpitfireParser(Parser):
         _token_ = self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT')
         if _token_ == 'LITERAL_DOLLAR_SIGN':
             LITERAL_DOLLAR_SIGN = self._scan('LITERAL_DOLLAR_SIGN')
-            return TextNode(LITERAL_DOLLAR_SIGN)
+            return TextNode('$')
         elif _token_ == 'LITERAL_BACKSLASH':
             LITERAL_BACKSLASH = self._scan('LITERAL_BACKSLASH')
-            return TextNode(LITERAL_BACKSLASH)
+            return TextNode('\\')
         elif _token_ == 'START_DIRECTIVE':
             directive = self.directive()
             return directive
@@ -451,10 +451,10 @@ class _SpitfireParser(Parser):
         _token_ = self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT')
         if _token_ == 'LITERAL_DOLLAR_SIGN':
             LITERAL_DOLLAR_SIGN = self._scan('LITERAL_DOLLAR_SIGN')
-            return TextNode(LITERAL_DOLLAR_SIGN)
+            return TextNode('$')
         elif _token_ == 'LITERAL_BACKSLASH':
             LITERAL_BACKSLASH = self._scan('LITERAL_BACKSLASH')
-            return TextNode(LITERAL_BACKSLASH)
+            return TextNode('\\')
         elif _token_ == 'START_DIRECTIVE':
             START_DIRECTIVE = self._scan('START_DIRECTIVE')
             return TextNode(START_DIRECTIVE)
