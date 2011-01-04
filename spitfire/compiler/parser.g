@@ -234,9 +234,9 @@ parser _SpitfireParser:
   # optional. this is sort of a hack - but i can't quite figure out the right
   # way to describe this syntax
   rule block<<start=False>>:
-    LITERAL_DOLLAR_SIGN {{ return TextNode(LITERAL_DOLLAR_SIGN) }}
+    LITERAL_DOLLAR_SIGN {{ return TextNode('$') }}
     |
-    LITERAL_BACKSLASH {{ return TextNode(LITERAL_BACKSLASH) }}
+    LITERAL_BACKSLASH {{ return TextNode('\\') }}
     |
     directive {{ return directive }}
     |
@@ -278,9 +278,9 @@ parser _SpitfireParser:
     {{ return _primary }}
     
   rule text_or_placeholders<<start=False>>:
-    LITERAL_DOLLAR_SIGN {{ return TextNode(LITERAL_DOLLAR_SIGN) }}
+    LITERAL_DOLLAR_SIGN {{ return TextNode('$') }}
     |
-    LITERAL_BACKSLASH {{ return TextNode(LITERAL_BACKSLASH) }}
+    LITERAL_BACKSLASH {{ return TextNode('\\') }}
     |
     ## in this context, a # is just a #
     START_DIRECTIVE {{ return TextNode(START_DIRECTIVE) }}
