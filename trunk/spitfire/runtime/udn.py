@@ -9,7 +9,8 @@ import inspect
 import logging
 
 from spitfire.runtime import (
-  PlaceholderError, UDNResolveError, UnresolvedPlaceholder, UnresolvedEntity)
+  PlaceholderError, UDNResolveError, UnresolvedPlaceholder, 
+  UndefinedPlaceholder, UndefinedAttribute)
 
 # create a sentinel value for missing attributes
 class __MissingAttr(object):
@@ -20,27 +21,6 @@ MissingAttr = __MissingAttr()
 class __Unspecified(object):
   pass
 Unspecified = __Unspecified()
-
-# the idea is to have something that is always like None, but explodes when
-# you try to use it as a string. this means that you can resolve placeholders
-# and evaluate them in complex conditional expressions, allowing them to be
-# hoisted, and still protect conditional access to the values
-# it could also be that you might try to call the result - in that case, blow
-# and exception as well.
-class UndefinedPlaceholder(object):
-  def __init__(self, name, available_placeholders):
-    self.name = name
-    self.available_placeholders = available_placeholders
-
-  def __nonzero__(self):
-    return False
-
-  def __str__(self):
-    raise PlaceholderError(self.name, self.available_placeholders)
-
-  def __call__(self, *pargs, **kargs):
-    raise PlaceholderError(self.name, self.available_placeholders)
-
 
 # Cheetah supports autocalling - Spitfire does not. this stand-in class will
 # raise an exception if you do something like compare a function object.
@@ -68,46 +48,58 @@ class CallOnlyPlaceholder(object):
 
 
 # TODO - optimize performance
-def resolve_udn_prefer_attr(_object, name):
+def resolve_udn_prefer_attr(_object, name, raise_exception=False):
   try:
     return getattr(_object, name)
   except AttributeError:
     try:
       return _object[name]
     except (KeyError, TypeError):
-      raise UDNResolveError(name, dir(_object))
+      if raise_exception:
+        raise UDNResolveError(name, dir(_object))
+      else:
+        return UndefinedAttribute(name, dir(_object))
 
-def resolve_udn_prefer_dict(_object, name):
+def resolve_udn_prefer_dict(_object, name, raise_exception=False):
   try:
     return _object[name]
   except (KeyError, TypeError):
     try:
       return getattr(_object, name)
     except AttributeError:
-      raise UDNResolveError(name, dir(_object))
+      if raise_exception:
+        raise UDNResolveError(name, dir(_object))
+      else:
+        return UndefinedAttribute(name, dir(_object))
 
 # this is always faster than catching an exception when that exception isn't
 # truly exceptional,  but semi-expected
 # using a sentinel should be quicker than calling hasattr then getattr
 # this is true when the expected hit rate on an attribute is relatively
 # reasonable - say 50% chance
-def resolve_udn_prefer_attr2(_object, name):
+def resolve_udn_prefer_attr2(_object, name, raise_exception=False):
   val = getattr(_object, name, MissingAttr)
   if val is not MissingAttr:
     return val
   try:
     return _object[name]
   except (KeyError, TypeError):
-    raise UDNResolveError(name, dir(_object))
+    if raise_exception:
+      raise UDNResolveError(name, dir(_object))
+    else:
+      return UndefinedAttribute(name, dir(_object))
 
 # this version is slightly faster when there are a lot of misses on attributes
-def resolve_udn_prefer_attr3(_object, name):
+def resolve_udn_prefer_attr3(_object, name, raise_exception=False):
   if hasattr(_object, name):
     return getattr(_object, name)
   try:
     return _object[name]
   except (KeyError, TypeError):
-    raise UDNResolveError(name, dir(_object))
+    if raise_exception:
+      raise UDNResolveError(name, dir(_object))
+    else:
+      return UndefinedAttribute(name, dir(_object))
 
 _resolve_udn = resolve_udn_prefer_attr3
 

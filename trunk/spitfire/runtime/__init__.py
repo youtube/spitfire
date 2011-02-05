@@ -2,16 +2,34 @@ class __UnresolvedPlaceholder(object):
   pass
 UnresolvedPlaceholder = __UnresolvedPlaceholder()
 
-class __UnresolvedEntity(object):
-  pass
-UnresolvedEntity = __UnresolvedEntity()
-
 class PlaceholderError(KeyError):
   pass
 
 class UDNResolveError(Exception):
   pass
 
+# the idea is to have something that is always like None, but explodes when
+# you try to use it as a string. this means that you can resolve placeholders
+# and evaluate them in complex conditional expressions, allowing them to be
+# hoisted, and still protect conditional access to the values
+# it could also be that you might try to call the result - in that case, blow
+# and exception as well.
+class UndefinedPlaceholder(object):
+  def __init__(self, name, available_placeholders):
+    self.name = name
+    self.available_placeholders = available_placeholders
+
+  def __nonzero__(self):
+    return False
+
+  def __str__(self):
+    raise PlaceholderError(self.name, self.available_placeholders)
+
+  def __call__(self, *pargs, **kargs):
+    raise PlaceholderError(self.name, self.available_placeholders)
+
+class UndefinedAttribute(UndefinedPlaceholder):
+  pass
 
 def import_module_symbol(name):
   name_parts = name.split('.')
@@ -42,4 +60,3 @@ def cache_forever(function):
 def never_cache(function):
 	function.never_cache = True
 	return function
-

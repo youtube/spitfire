@@ -8,9 +8,9 @@ extern "C" {
 
 
 static PyObject *UDNResolveError;
-static PyObject *UnresolvedEntity;
 static PyObject *PlaceholderError; 
 static PyObject *UnresolvedPlaceholder;
+static PyObject *UndefinedAttribute;
 
 #define TRUE 1
 #define FALSE 0
@@ -41,11 +41,7 @@ _resolve_udn(PyObject *obj, char *name, int raise_exception)
     if (raise_exception) {
       set_udn_resolve_error(name, obj);
     } else {
-      /* other functions here return a new reference, so keep it consistent and
-         just increment the ref on UnresolvedEntity.
-      */
-      Py_INCREF(UnresolvedEntity);
-      return_value = UnresolvedEntity;
+      return_value = NULL;
     }
   }
 
@@ -58,7 +54,7 @@ _resolve_udn(PyObject *obj, char *name, int raise_exception)
 static PyObject *
 udn_resolve_udn(PyObject *self, PyObject *args, PyObject *kargs)
 {
-  PyObject *obj;
+  PyObject *obj, *return_value, *error_args;
   char *name;
   int raise_exception = 0;
 
@@ -69,7 +65,15 @@ udn_resolve_udn(PyObject *self, PyObject *args, PyObject *kargs)
     return NULL;
   }
 
-  return _resolve_udn(obj, name, raise_exception);
+  return_value =  _resolve_udn(obj, name, raise_exception);
+  /* return_value is NULL if the lookup failed, so return an UndefinedAttribute
+     placeholder */
+  if (return_value == NULL) {
+    error_args = Py_BuildValue("sN", name, PyObject_Dir(obj));
+    return_value = PyObject_CallObject(UndefinedAttribute, error_args);
+    Py_XDECREF(error_args);
+  }
+  return return_value;
 }
 
 
@@ -93,8 +97,7 @@ udn_resolve_from_search_list(PyObject *self, PyObject *args, PyObject *keywds)
 
   iterator = PyObject_GetIter(search_list);
   if (iterator == NULL) {
-    return_value = UnresolvedEntity;
-    Py_INCREF(return_value);
+    return_value = NULL;
     /* PyErr_SetString(PyExc_TypeError, "search_list is not iterable"); */
     goto done;
   }
@@ -102,22 +105,20 @@ udn_resolve_from_search_list(PyObject *self, PyObject *args, PyObject *keywds)
   while ((name_space = PyIter_Next(iterator))) {
     return_value = _resolve_udn(name_space, name, 0);
     Py_DECREF(name_space);
-    if (return_value != UnresolvedEntity) {
+    if (return_value != NULL) {
       goto done;
     }
   }
-  if (return_value == UnresolvedEntity) {
+done:
+  if (return_value == NULL) {
     if (default_value != NULL) {
       return_value = default_value;
       Py_INCREF(return_value);
     } else {
-      Py_DECREF(return_value);
       return_value = UnresolvedPlaceholder;
       Py_INCREF(return_value);
     }
-    goto done;
   }
- done:
   Py_XDECREF(iterator);
   /* change the return value to be a bit more compatible with the way things
      work in the python code.
@@ -150,8 +151,8 @@ init_udn(void)
   UDNResolveError = PyObject_GetAttrString(runtime_module, "UDNResolveError");
   UnresolvedPlaceholder = PyObject_GetAttrString(
     runtime_module, "UnresolvedPlaceholder");
-  UnresolvedEntity = PyObject_GetAttrString(
-    runtime_module, "UnresolvedEntity");
+  UndefinedAttribute = PyObject_GetAttrString(
+    runtime_module, "UndefinedAttribute");
   Py_DECREF(runtime_module);
 
   if (PyErr_Occurred())
