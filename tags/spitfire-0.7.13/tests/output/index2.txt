@@ -1,0 +1,9 @@
+<html>
+  <head>
+   <title>test index</title>
+  </head>
+  <body>
+    <b>Copyleft 2007</b>
+
+  </body>
+</html>

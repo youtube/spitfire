@@ -1,0 +1,14 @@
+#set $msg = 'Error'
+
+## the bug was in calculating the dependencies for $msg
+## you have to take into account the dependency of the
+## and conditions between you and the loop
+#for $i in $xrange(2)
+  #if $i % 2 == 0
+    #set $msg = 'Success: even'
+  #else
+    #set $msg = 'Success: odd'
+  #end if
+  ${i}. $msg
+#end for
+

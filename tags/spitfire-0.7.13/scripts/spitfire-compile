@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+
+import logging
+import os
+import os.path
+import sys
+
+import spitfire
+import spitfire.compiler.util
+
+from spitfire.compiler import analyzer
+from spitfire.compiler.util import Compiler
+
+
+def process_file(compiler, filename, options):
+  def print_output(*args):
+    if options.verbose:
+      print >> sys.stderr, ' '.join(args)
+
+  try:
+    if options.output_file:
+      compiler.write_file = False
+      if options.output_file == '-':
+        f = sys.stdout
+      else:
+        f = open(options.output_file, 'w')
+    else:
+      compiler.write_file = True
+    src_code = compiler.compile_file(filename)
+    if options.output_file:
+      f.write(src_code)
+      f.close()
+  except Exception, e:
+    error_msg = 'Failed processing file: %s' % filename
+    if options.verbose:
+      logging.exception(error_msg)
+    else:
+      print >> sys.stderr, error_msg
+      print >> sys.stderr, e
+    sys.exit(1)
+
+# selectively enable psyco on import methods
+def init_psyco(options):
+  if options.x_psyco:
+    try:
+      import psyco
+    except ImportError:
+      print >> sys.stderr, 'WARNING: unable to import psyco'
+      return
+    
+    import re
+    psyco.cannotcompile(re.compile)
+
+    if options.x_psyco_profile:
+      psyco.log()
+      psyco.profile()
+    else:
+      import spitfire.compiler.scanner
+      psyco.bind(spitfire.compiler.scanner.SpitfireScanner.scan)
+      import copy
+      psyco.bind(copy.deepcopy)
+      import yappsrt
+      psyco.bind(yappsrt.Scanner.token)
+      import spitfire.compiler.ast
+      psyco.bind(spitfire.compiler.ast.NodeList.__iter__)
+  
+
+if __name__ == '__main__':
+  reload(sys)
+  sys.setdefaultencoding('utf8')
+
+  from optparse import OptionParser
+  op = OptionParser()
+  spitfire.compiler.util.add_common_options(op)
+  (options, args) = op.parse_args()
+
+  if options.version:
+    print >> sys.stderr, 'spitfire %s' % spitfire.__version__
+    sys.exit(0)
+  
+  init_psyco(options)
+
+  compiler_args = Compiler.args_from_optparse(options)
+  compiler = Compiler(**compiler_args)
+  
+  for filename in args:
+    process_file(compiler, filename, options)

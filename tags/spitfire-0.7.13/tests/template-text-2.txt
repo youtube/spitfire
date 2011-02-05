@@ -1,0 +1,15 @@
+test line 1
+$
+
+$$
+
+\$var
+
+$$$
+
+$1.00
+
+test line 2
+
+literal forward \
+does it work\for\\most cases?

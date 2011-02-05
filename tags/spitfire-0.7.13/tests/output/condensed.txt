@@ -1,0 +1,7 @@
+
+
+<a href="#"><span>Some text HERE</span></a>there everywhere
+  <span>Regular tag</span>
+    More text
+everywhere
+    there

@@ -1,0 +1,18 @@
+#from spitfire.runtime.filters import escape_html
+#filter escape_html
+
+#def test_block
+<p>
+Demo web safe text: ${test_unwebsafe}.
+
+Demo web un-safe text: ${test_unwebsafe|raw}.
+
+Demo explicit filter: ${test_dict|filter=str}.
+</p>
+#end def
+
+#def test_block_2
+$test_block()
+#end def
+
+$test_block_2()
