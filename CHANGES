@@ -1,3 +1,8 @@
+0.7.13 - 2011-02-02 - Groundhog Day
+unskew the implementation of udn/_udn modules, particularly the handling
+of missing attributes.
+
+
 0.7.12 - 2010-06-21
 added #strip_lines directive. it strips leading and trailing whitespace
 from each output line at compile time. this should improve readability of

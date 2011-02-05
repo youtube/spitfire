@@ -62,6 +62,10 @@ class AnalyzerOptions(object):
     # when this is enabled, $a.b.c will cache only the result of the entire
     # expression. otherwise, each subexpression will be cached separately
     self.prefer_whole_udn_expressions = False
+
+    # Throw an exception when a udn resolution fails rather than providing a
+    # default value
+    self.raise_udn_exceptions = False
     
     # when adding an alias, detect if the alias is loop invariant and hoist
     # right there on the spot.  this has probably been superceded by
