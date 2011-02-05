@@ -275,7 +275,10 @@ class CodeGenerator(object):
     #print "codegenASTGetUDNNode", id(node), "name", node.name, "expr", node.expression
     expression = self.generate_python(self.build_code(node.expression)[0])
     name = node.name
-    return [CodeNode("resolve_udn(%(expression)s, '%(name)s')" % vars())]
+    if self.options and self.options.raise_udn_exceptions:
+      return [CodeNode("resolve_udn(%(expression)s, '%(name)s', raise_exception=True)" % vars())]
+    else:
+      return [CodeNode("resolve_udn(%(expression)s, '%(name)s')" % vars())]
 
   def codegenASTPlaceholderNode(self, node):
     name = node.name
