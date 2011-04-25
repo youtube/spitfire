@@ -13,7 +13,7 @@ copy this code into an file called example.spt:
 </html>
 }}}
 
-Run download, build and install spitfire in some convenient directory:
+Download spitfire into some convenient directory, then build and install it:
 {{{
 $ svn checkout http://spitfire.googlecode.com/svn/trunk/ spitfire-read-only
 $ cd spitfire-read-only
