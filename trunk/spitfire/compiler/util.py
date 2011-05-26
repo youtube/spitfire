@@ -1,4 +1,5 @@
 import copy
+import gc
 import logging
 import new
 import os.path
@@ -144,7 +145,8 @@ class Compiler(object):
     'optimizer_flags',
     'output_directory',
     'xspt_mode',
-    'include_path'
+    'include_path',
+    'tune_gc'
     ]
 
   @classmethod
@@ -177,6 +179,8 @@ class Compiler(object):
     self.locale = None
     self.include_path = '.'
     self.enable_filters = True
+    self.tune_gc = False
+    
     # the function registry is for optimized access to 'first-class' functions
     # things that get accessed all the time that should be speedy
     self.function_registry_file = None
@@ -264,9 +268,17 @@ class Compiler(object):
     self._source_code = None
     
   def compile_template(self, src_text, classname):
-    self._reset()
-    self._parse_tree = parse_template(src_text, self.xspt_mode)
-    return self._compile_ast(self._parse_tree, classname)
+    if self.tune_gc:
+      gc.disable()
+    try:
+      self._reset()
+      self._parse_tree = parse_template(src_text, self.xspt_mode)
+      return self._compile_ast(self._parse_tree, classname)
+    finally:
+      if self.tune_gc:
+        self._reset()
+        gc.enable()
+        gc.collect()
 
   def compile_file(self, filename):
     self.src_filename = filename
@@ -360,4 +372,5 @@ def add_common_options(op):
                 help='file to use as the function registry')
   op.add_option('-X', dest='optimizer_flags', action='append', default=[],
                 help=analyzer.AnalyzerOptions.get_help())
+  op.add_option('--tune-gc', action='store_true')
   
