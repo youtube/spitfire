@@ -8,6 +8,27 @@ import spitfire.compiler.parser
 # allong the way.
 
 class SpitfireScanner(spitfire.compiler.parser._SpitfireParserScanner):
+  def __init__(self, *args):
+    super(SpitfireScanner, self).__init__(*args)
+    self._restrict_cache = {}
+
+  def token(self, i, restrict=0):
+    """Get the i'th token, and if i is one past the end, then scan
+    for another token; restrict is a list of tokens that
+    are allowed, or 0 for any token."""
+    if i == len(self.tokens):
+      self.scan(restrict)
+    if i < len(self.tokens):
+      # Make sure the restriction is more restricted
+      if restrict and self.restrictions[i]:
+        if not self.restrictions[i].issuperset(restrict):
+          raise NotImplementedError(
+            "Unimplemented: restriction set changed", restrict, self.restrictions[i])
+        return self.tokens[i]
+      elif not restrict and not self.restrictions[i]:
+        return self.tokens[i]
+    raise yappsrt.NoMoreTokens(i, len(self.tokens), self.tokens[i], restrict, self.restrictions[i], self.tokens)
+  
   def scan(self, restrict):
     """Should scan another token and add it to the list, self.tokens,
     and add the restriction to self.restrictions"""
@@ -17,10 +38,15 @@ class SpitfireScanner(spitfire.compiler.parser._SpitfireParserScanner):
       # tokens in the list having preference
       best_match = -1
       best_pat = '(error)'
-      for p, regexp in self.patterns:
-        # First check to see if we're ignoring this token
-        if restrict and p not in restrict and p not in self.ignore:
-          continue
+
+      # Cache the list of patterns we check to avoid unnecessary iteration
+      restrict = frozenset(restrict)
+      patterns = self._restrict_cache.get(restrict, None)
+      if patterns is None:
+        patterns = [pair for pair in self.patterns if not restrict or pair[0] in restrict]
+        self._restrict_cache[restrict] = patterns
+
+      for p, regexp in patterns:
         m = regexp.match(self.input, self.pos)
         if m and len(m.group(0)) > best_match:
           # We got a match that's better than the previous one
@@ -50,5 +76,3 @@ class SpitfireScanner(spitfire.compiler.parser._SpitfireParserScanner):
       else:
         # This token should be ignored ..
         self.pos = self.pos + best_match
-
-
