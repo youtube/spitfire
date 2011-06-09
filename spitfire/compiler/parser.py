@@ -261,7 +261,7 @@ class _SpitfireParser(Parser):
             while self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', 'TEXT') != 'END_DIRECTIVE':
                 block = self.block(start)
                 _block.append(block)
-            self.make_optional(_block.child_nodes)
+            self.make_optional(_block.child_nodes, start)
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'block'")
@@ -306,7 +306,7 @@ class _SpitfireParser(Parser):
             while self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', 'TEXT') != 'END_DIRECTIVE':
                 block = self.block(start)
                 _def.append(block)
-            self.make_optional(_def.child_nodes)
+            self.make_optional(_def.child_nodes, start)
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'def'")
@@ -323,7 +323,7 @@ class _SpitfireParser(Parser):
             while self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', 'TEXT') != 'END_DIRECTIVE':
                 block = self.block(start)
                 _for_loop.append(block)
-            self.make_optional(_for_loop.child_nodes)
+            self.make_optional(_for_loop.child_nodes, start)
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'for'")
@@ -338,7 +338,7 @@ class _SpitfireParser(Parser):
             while self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT', 'END_DIRECTIVE') != 'END_DIRECTIVE':
                 block = self.block(start)
                 _strip_lines_node.append(block)
-            self.make_optional(_strip_lines_node.child_nodes)
+            self.make_optional(_strip_lines_node.child_nodes, start)
             self.strip_whitespace = False
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
@@ -356,8 +356,8 @@ class _SpitfireParser(Parser):
             while self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', "'#elif'", 'TEXT', "'#else'", 'END_DIRECTIVE') not in ["'#elif'", "'#else'", 'END_DIRECTIVE']:
                 block = self.block(start)
                 _if_node.append(block)
-            self.make_optional(_if_node.child_nodes)
-            while self._peek("'#elif'", 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', "'#else'", 'TEXT', 'END_DIRECTIVE') == "'#elif'":
+            self.make_optional(_if_node.child_nodes, start)
+            while self._peek("'#elif'", "'#else'", 'END_DIRECTIVE') == "'#elif'":
                 self._scan("'#elif'")
                 SPACE = self._scan('SPACE')
                 expression = self.expression()
@@ -369,7 +369,7 @@ class _SpitfireParser(Parser):
                 while self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT', "'#elif'", "'#else'", 'END_DIRECTIVE') not in ["'#elif'", "'#else'", 'END_DIRECTIVE']:
                     block = self.block(start)
                     _elif_node.append(block)
-            self.make_optional(_last_condition_node.child_nodes)
+                self.make_optional(_elif_node.child_nodes, start)
             if self._peek("'#else'", 'END_DIRECTIVE') == "'#else'":
                 self._scan("'#else'")
                 CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
@@ -377,7 +377,7 @@ class _SpitfireParser(Parser):
                 while self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT', 'END_DIRECTIVE') != 'END_DIRECTIVE':
                     block = self.block(start)
                     _last_condition_node.else_.append(block)
-                self.make_optional(_last_condition_node.else_.child_nodes)
+                self.make_optional(_last_condition_node.else_.child_nodes, start)
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
             SPACE = self._scan('SPACE')
             self._scan("'if'")
@@ -867,8 +867,8 @@ def parse(rule, text):
 class SpitfireParser(_SpitfireParser):
   strip_whitespace = False
 
-  def make_optional(self, node_list):
+  def make_optional(self, node_list, starts_new_line=False):
     if self.strip_whitespace:
-      return strip_whitespace(node_list)
+      return strip_whitespace(node_list, starts_new_line=starts_new_line)
     else:
       return make_optional(node_list)

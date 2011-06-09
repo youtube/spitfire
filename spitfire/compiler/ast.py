@@ -801,9 +801,10 @@ def make_optional(node_list):
     pass
 
 # this is another hack to support line-wise stripping of white space nodes
-# inside a #strip_lines directive
-def strip_whitespace(node_list):
-  optional = True
+# inside a #strip_lines directive.
+def strip_whitespace(node_list, starts_new_line=True):
+  # starts as optional only if we're at the beginning of a new line.
+  optional = starts_new_line
   for i, node in enumerate(node_list):
     if isinstance(node, (OptionalWhitespaceNode, NewlineNode)):
       optional = True
@@ -820,7 +821,7 @@ def strip_whitespace(node_list):
       optional = False
     elif not (node.statement or node.child_nodes or isinstance(node, CommentNode)):
       optional = False
-    
+
     if optional and i > 0:
       prev_node = node_list[i - 1]
       if isinstance(prev_node, TextNode):
