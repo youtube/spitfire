@@ -155,7 +155,7 @@ parser _SpitfireParser:
         'block' SPACE ID CLOSE_DIRECTIVE {{ _block = BlockNode(ID) }}
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
         ( block<<start>> {{ _block.append(block) }} ) *
-        {{ self.make_optional(_block.child_nodes) }}
+        {{ self.make_optional(_block.child_nodes, start) }}
         END_DIRECTIVE SPACE 'block' CLOSE_DIRECTIVE {{ _node_list.append(_block) }}
         |
         'i18n' {{ _macro = MacroNode('i18n') }}
@@ -180,14 +180,14 @@ parser _SpitfireParser:
         CLOSE_DIRECTIVE
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
         ( block<<start>> {{ _def.append(block) }} ) *
-        {{ self.make_optional(_def.child_nodes) }}
+        {{ self.make_optional(_def.child_nodes, start) }}
         END_DIRECTIVE SPACE 'def' CLOSE_DIRECTIVE {{ _node_list.append(_def) }}
         |
         'for[ \t]*' target_list '[ \t]*in[ \t]*' expression_list CLOSE_DIRECTIVE
         {{ _for_loop = ForNode(target_list, expression_list) }}
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
         ( block<<start>> {{ _for_loop.append(block) }} ) *
-        {{ self.make_optional(_for_loop.child_nodes) }}
+        {{ self.make_optional(_for_loop.child_nodes, start) }}
         END_DIRECTIVE SPACE 'for' CLOSE_DIRECTIVE {{ _node_list.append(_for_loop) }}
         |
         'strip_lines'
@@ -198,7 +198,7 @@ parser _SpitfireParser:
         {{ _strip_lines_node = StripLinesNode() }}
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
         ( block<<start>> {{ _strip_lines_node.append(block) }} ) *
-        {{ self.make_optional(_strip_lines_node.child_nodes) }}
+        {{ self.make_optional(_strip_lines_node.child_nodes, start) }}
         {{ self.strip_whitespace = False }}
         END_DIRECTIVE SPACE 'strip_lines' CLOSE_DIRECTIVE {{ _node_list.append(_strip_lines_node) }}
         |
@@ -206,19 +206,19 @@ parser _SpitfireParser:
         {{ _last_condition_node = _if_node }}
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
         ( block<<start>> {{ _if_node.append(block) }} ) *
-        {{ self.make_optional(_if_node.child_nodes) }}
+        {{ self.make_optional(_if_node.child_nodes, start) }}
         (
           '#elif' SPACE expression CLOSE_DIRECTIVE {{ _elif_node = IfNode(expression) }}
           {{ _last_condition_node.else_.append(_elif_node) }}
           {{ _last_condition_node = _elif_node }}
           {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
           ( block<<start>> {{ _elif_node.append(block) }} ) *
+          {{ self.make_optional(_elif_node.child_nodes, start) }}
         ) *
-        {{ self.make_optional(_last_condition_node.child_nodes) }}
         [ '#else' CLOSE_DIRECTIVE
           {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
           ( block<<start>> {{ _last_condition_node.else_.append(block) }} ) *
-          {{ self.make_optional(_last_condition_node.else_.child_nodes) }}
+          {{ self.make_optional(_last_condition_node.else_.child_nodes, start) }}
         ]
         END_DIRECTIVE SPACE 'if' CLOSE_DIRECTIVE {{ _node_list.append(_if_node) }}
         |
@@ -570,8 +570,8 @@ parser _SpitfireParser:
 class SpitfireParser(_SpitfireParser):
   strip_whitespace = False
 
-  def make_optional(self, node_list):
+  def make_optional(self, node_list, starts_new_line=False):
     if self.strip_whitespace:
-      return strip_whitespace(node_list)
+      return strip_whitespace(node_list, starts_new_line=starts_new_line)
     else:
       return make_optional(node_list)
