@@ -218,6 +218,8 @@ class CallFunctionNode(ASTNode):
   def __init__(self, expression=None, arg_list=None):
     ASTNode.__init__(self)
     self.expression = expression
+    # Whether we're calling into a library template.
+    self.library_function = False
     if arg_list:
       self.arg_list = arg_list
     else:
@@ -231,6 +233,7 @@ class CallFunctionNode(ASTNode):
 
   def __eq__(self, node):
     return bool(type(self) == type(node) and
+                self.library_function == node.library_function and
                 self.expression == node.expression and
                 self.arg_list == node.arg_list and
                 self.child_nodes == node.child_nodes)
@@ -486,15 +489,17 @@ class ImplementsNode(ASTNode):
   pass
 
 class ImportNode(ASTNode):
-  def __init__(self, module_name_list):
+  def __init__(self, module_name_list, library=False):
     ASTNode.__init__(self)
     self.module_name_list = module_name_list
+    self.library = library
     # in case you have a different target, save a copy of the
     # orginal name to use for dependency analysis
     self.source_module_name_list = module_name_list[:]
 
   def __eq__(self, node):
     return bool(type(self) == type(node) and
+                self.library == node.library and
                 self.module_name_list == node.module_name_list)
 
   def __hash__(self):
@@ -513,8 +518,8 @@ class AbsoluteExtendsNode(ExtendsNode):
   pass
 
 class FromNode(ImportNode):
-  def __init__(self, module_name_list, identifier, alias=None):
-    ImportNode.__init__(self, module_name_list)
+  def __init__(self, module_name_list, identifier, alias=None, library=False):
+    ImportNode.__init__(self, module_name_list, library=library)
     self.identifier = identifier
     self.alias = alias
     
@@ -686,6 +691,7 @@ class TemplateNode(ASTNode):
     self.global_identifiers = set()
     self.cached_identifiers = set()
     self.template_methods = set()
+    self.library_identifiers = set()
   
   def __str__(self):
     return '%s\nimport:%s\nfrom:%s\nextends:%s\nmain:%s' % (

@@ -31,6 +31,8 @@ class _SpitfireParserScanner(Scanner):
         ("'def'", re.compile('def')),
         ("'i18n'", re.compile('i18n')),
         ("'block'", re.compile('block')),
+        ("'_library'", re.compile('_library')),
+        ("'import'", re.compile('import')),
         ("'else'", re.compile('else')),
         ("'if'", re.compile('if')),
         ("'echo'", re.compile('echo')),
@@ -40,7 +42,6 @@ class _SpitfireParserScanner(Scanner):
         ("'continue'", re.compile('continue')),
         ("'break'", re.compile('break')),
         ("'slurp'", re.compile('slurp')),
-        ("'import'", re.compile('import')),
         ("'from'", re.compile('from')),
         ("'absolute_extends'", re.compile('absolute_extends')),
         ("'extends'", re.compile('extends')),
@@ -134,7 +135,7 @@ class _SpitfireParser(Parser):
         return fragment
 
     def statement(self):
-        _token_ = self._peek("'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'filter'", "'set'", "'echo'")
+        _token_ = self._peek("'implements'", "'extends'", "'absolute_extends'", "'from'", "'slurp'", "'break'", "'continue'", "'attr'", "'filter'", "'set'", "'echo'", "'import'")
         if _token_ == "'implements'":
             self._scan("'implements'")
             SPACE = self._scan('SPACE')
@@ -158,17 +159,17 @@ class _SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             modulename = self.modulename()
             SPACE = self._scan('SPACE')
-            self._scan("'import'")
+            importkeyword = self.importkeyword()
             SPACE = self._scan('SPACE')
             identifier = self.identifier()
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
-            return FromNode(modulename, identifier)
+            return FromNode(modulename, identifier, library=importkeyword)
         elif _token_ == "'import'":
-            self._scan("'import'")
+            importkeyword = self.importkeyword()
             SPACE = self._scan('SPACE')
             modulename = self.modulename()
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
-            return ImportNode(modulename)
+            return ImportNode(modulename, library=importkeyword)
         elif _token_ == "'slurp'":
             self._scan("'slurp'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
@@ -232,6 +233,14 @@ class _SpitfireParser(Parser):
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
             return EchoNode(_true_exp, _test_exp, _false_exp)
 
+    def importkeyword(self):
+        self._scan("'import'")
+        _library = False
+        if self._peek("'_library'", 'SPACE') == "'_library'":
+            self._scan("'_library'")
+            _library = True
+        return _library
+
     def modulename(self):
         identifier = self.identifier()
         _module_name_list = [identifier]
@@ -244,7 +253,7 @@ class _SpitfireParser(Parser):
     def directive(self):
         START_DIRECTIVE = self._scan('START_DIRECTIVE')
         _node_list = NodeList()
-        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'strip_lines'", "'if'", "'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'filter'", "'set'", "'echo'", 'END', 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
+        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'strip_lines'", "'if'", "'implements'", "'extends'", "'absolute_extends'", "'from'", "'slurp'", "'break'", "'continue'", "'attr'", "'filter'", "'set'", "'echo'", "'import'", 'END', 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
         if _token_ == 'SINGLE_LINE_COMMENT':
             SINGLE_LINE_COMMENT = self._scan('SINGLE_LINE_COMMENT')
             _node_list.append(CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT))

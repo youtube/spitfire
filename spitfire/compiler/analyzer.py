@@ -189,6 +189,14 @@ class SemanticAnalyzer(object):
     self.template = pnode.copy(copy_children=False)
     self.template.classname = self.classname
 
+    # Need to build a full list of template_methods before analyzing so we can
+    # modify CallFunctionNodes as we walk the tree below.
+    for child_node in tree_walker(pnode):
+      if isinstance(child_node, DefNode) and not isinstance(child_node, MacroNode):
+        if child_node.name in self.template.template_methods:
+          raise SemanticAnalyzerError('Redefining #def/#block %s' % child_node.name)
+        self.template.template_methods.add(child_node.name)
+
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
       built_nodes = self.build_ast(pn)
       if built_nodes:
@@ -196,6 +204,9 @@ class SemanticAnalyzer(object):
 
     self.template.main_function.child_nodes = self.optimize_buffer_writes(
       self.template.main_function.child_nodes)
+
+    if self.template.extends_nodes and self.template.library:
+      raise SemanticAnalyzerError("library template can't have extends.")
 
     return [self.template]
 
@@ -283,7 +294,13 @@ class SemanticAnalyzer(object):
     return []
 
   def analyzeImportNode(self, pnode):
-    node = ImportNode([self.build_ast(n)[0] for n in pnode.module_name_list])
+    node = ImportNode([self.build_ast(n)[0] for n in pnode.module_name_list], library=pnode.library)
+    if node.library:
+      self.template.library_identifiers.add('.'.join(node.name for node in node.module_name_list))
+      base_extends_identifiers = self.get_base_extends_identifiers()
+      if base_extends_identifiers:
+        node.module_name_list[0:0] = base_extends_identifiers
+
     if node not in self.template.import_nodes:
       self.template.import_nodes.append(node)
     return []
@@ -294,17 +311,10 @@ class SemanticAnalyzer(object):
     # anything else
     import_node = ImportNode(pnode.module_name_list[:])
     extends_node = ExtendsNode(pnode.module_name_list[:])
-    if (type(pnode) != AbsoluteExtendsNode and
-        self.compiler.base_extends_package):
-      # this means that extends are supposed to all happen relative to some
-      # other package - this is handy for assuring all templates reference
-      # within a tree, say for localization, where each local might have its
-      # own package
-      package_pieces = [IdentifierNode(module_name) for module_name in
-                        self.compiler.base_extends_package.split('.')]
-      import_node.module_name_list[0:0] = package_pieces
-      extends_node.module_name_list[0:0] = package_pieces
-      
+    base_extends_identifiers = self.get_base_extends_identifiers()
+    if (type(pnode) != AbsoluteExtendsNode and base_extends_identifiers):
+      import_node.module_name_list[0:0] = base_extends_identifiers
+      extends_node.module_name_list[0:0] = base_extends_identifiers
 
     self.analyzeImportNode(import_node)
 
@@ -317,6 +327,11 @@ class SemanticAnalyzer(object):
   analyzeAbsoluteExtendsNode = analyzeExtendsNode
 
   def analyzeFromNode(self, pnode):
+    if pnode.library:
+      self.template.library_identifiers.add(pnode.identifier.name)
+      base_extends_identifiers = self.get_base_extends_identifiers()
+      if base_extends_identifiers:
+        pnode.module_name_list[0:0] = base_extends_identifiers
     if pnode not in self.template.from_nodes:
       self.template.from_nodes.append(pnode)
     return []
@@ -343,17 +358,13 @@ class SemanticAnalyzer(object):
     #if not isinstance(pnode.parent, TemplateNode):
     #  raise SemanticAnalyzerError("Nested #def or #block directives are not allowed")
 
-    if pnode.name in self.template.template_methods:
-      raise SemanticAnalyzerError('Redefining #def/#block %s' % pnode.name)
-    
-    self.template.template_methods.add(pnode.name)
     function = FunctionNode(pnode.name)
     if pnode.parameter_list:
       function.parameter_list = self.build_ast(pnode.parameter_list)[0]
 
     function.parameter_list.child_nodes.insert(0,
                                                ParameterNode(name='self'))
-    
+
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
       function.extend(self.build_ast(pn))
     function = self.build_ast(function)[0]
@@ -465,6 +476,10 @@ class SemanticAnalyzer(object):
           cache_forever = getattr(ph_function, 'cache_forever', False)
           never_cache = getattr(ph_function, 'never_cache', False)
 
+      elif ph_expression.library_function:
+        # Don't escape function calls into library templates.
+        skip_filter = True
+
     if (self.compiler.enable_filters and
         format_string == default_format_string and
         not isinstance(ph_expression, LiteralNode)):
@@ -526,11 +541,35 @@ class SemanticAnalyzer(object):
 
   def analyzeCallFunctionNode(self, pnode):
     fn = pnode
+
+    # The fully qualified library function name iff we figure out
+    # that this is calling into a library.
+    library_function = None
+
     if isinstance(fn.expression, PlaceholderNode):
       macro_handler_name = 'macro_function_%s' % fn.expression.name
       macro_function = self.compiler.macro_registry.get(macro_handler_name)
       if macro_function:
         return self.handleMacro(fn, macro_function)
+      elif self.template.library and fn.expression.name in self.template.template_methods:
+        # Calling another library function from this library function.
+        library_function = fn.expression.name
+
+    elif isinstance(fn.expression, GetUDNNode):
+      module_identifier = [node.name for node in fn.expression.getChildNodes()]
+      module_identifier = '.'.join(module_identifier)
+      if module_identifier in self.template.library_identifiers:
+        # Calling library functions from other templates.
+        library_function = '%s.%s' % (module_identifier, fn.expression.name)
+
+    if library_function:
+      # Replace the placeholder node or UDN resolution with a direct reference
+      # to the library function, either in another imported module or here.
+      fn.expression = IdentifierNode(library_function)
+      # Pass the current template instance into the library function.
+      fn.arg_list.child_nodes.insert(0, IdentifierNode('self'))
+      fn.library_function = True
+
     fn.expression = self.build_ast(fn.expression)[0]
     fn.arg_list = self.build_ast(fn.arg_list)[0]
     return [fn]
@@ -541,6 +580,17 @@ class SemanticAnalyzer(object):
     fn = pnode
     fn.expression = self.build_ast(fn.expression)[0]
     return [fn]
+
+  def get_base_extends_identifiers(self):
+    if not self.compiler.base_extends_package:
+      return None
+
+    # this means that extends are supposed to all happen relative to some
+    # other package - this is handy for assuring all templates reference
+    # within a tree, say for localization, where each locale might have its
+    # own package
+    return [IdentifierNode(module_name) for module_name in
+                      self.compiler.base_extends_package.split('.')]
 
   # go over the parsed nodes and weed out the parts we don't need
   # it's easier to do this before we morph the AST to look more like python
