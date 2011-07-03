@@ -111,9 +111,9 @@ parser _SpitfireParser:
         |
         'absolute_extends' SPACE modulename CLOSE_DIRECTIVE {{ return AbsoluteExtendsNode(modulename) }}
         |
-        'from' SPACE modulename SPACE 'import' SPACE identifier CLOSE_DIRECTIVE {{ return FromNode(modulename, identifier) }}
+        'from' SPACE modulename SPACE importkeyword SPACE identifier CLOSE_DIRECTIVE {{ return FromNode(modulename, identifier, library=importkeyword) }}
         |
-        'import' SPACE modulename CLOSE_DIRECTIVE {{ return ImportNode(modulename) }}
+        importkeyword SPACE modulename CLOSE_DIRECTIVE {{ return ImportNode(modulename, library=importkeyword) }}
         |
         'slurp' CLOSE_DIRECTIVE {{ return CommentNode('slurp') }}
         |
@@ -132,13 +132,21 @@ parser _SpitfireParser:
         CLOSE_DIRECTIVE {{ return AssignNode(_lhs, _rhs) }}
         |
         'echo' SPACE literal {{ _true_exp = literal }}
-         {{ _test_exp, _false_exp = None, None }}
-         [ SPACE 'if' SPACE expression {{ _test_exp = expression }}
-           [ SPACE 'else' SPACE literal {{ _false_exp = literal }}
-           ]
-         ]
-         CLOSE_DIRECTIVE {{ return EchoNode(_true_exp, _test_exp, _false_exp) }}
-        
+        {{ _test_exp, _false_exp = None, None }}
+        [ SPACE 'if' SPACE expression {{ _test_exp = expression }}
+          [ SPACE 'else' SPACE literal {{ _false_exp = literal }}
+          ]
+        ]
+        CLOSE_DIRECTIVE {{ return EchoNode(_true_exp, _test_exp, _false_exp) }}
+
+  rule importkeyword:
+    'import'
+    {{ _library = False }} [
+      '_library'
+      {{ _library = True }}
+    ]
+    {{ return _library }}
+
   rule modulename:
     identifier {{ _module_name_list = [identifier] }}
     ( DOT identifier {{ _module_name_list.append(identifier) }} ) *

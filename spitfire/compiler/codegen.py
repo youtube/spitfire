@@ -88,6 +88,7 @@ class CodeGenerator(object):
       for n in node.from_nodes:
         module_code.extend(self.build_code(n))
       module_code.append_line('')
+
     extends = []
     for n in node.extends_nodes:
       extends.append(self.generate_python(self.build_code(n)[0]))
@@ -106,28 +107,36 @@ class CodeGenerator(object):
     else:
       module_code.append_line('from spitfire.runtime.udn import resolve_placeholder')
       module_code.append_line('from spitfire.runtime.udn import resolve_udn')
+
     module_code.append_line('from spitfire.runtime.template import template_method')
     module_code.append_line('')
+
     if node.cached_identifiers:
       module_code.append_line('# cached identifiers')
       for cached_ph in node.cached_identifiers:
         module_code.append_line('%s = None' % cached_ph.name)
       module_code.append_line('')
-    
-    class_code = CodeNode(
-      'class %(classname)s(%(extends_clause)s):' % vars())
-    module_code.append(class_code)
-    for n in node.attr_nodes:
-      class_code.extend(self.build_code(n))
-      class_code.append_line('')
-    
+
+    if not node.library:
+      class_code = CodeNode(
+        'class %(classname)s(%(extends_clause)s):' % vars())
+      module_code.append(class_code)
+      for n in node.attr_nodes:
+        class_code.extend(self.build_code(n))
+        class_code.append_line('')
+      def_parent_code = class_code
+    else:
+      # Library functions are written to the module directly.
+      module_code.append_line('')
+      def_parent_code = module_code
+
     for n in node.child_nodes:
-      class_code.extend(self.build_code(n))
-      class_code.append_line('')
+      def_parent_code.extend(self.build_code(n))
+      def_parent_code.append_line('')
 
     # if we aren't extending a template, build out the main function
-    if (not node.extends_nodes and not node.library) or node.implements:
-      class_code.extend(self.build_code(node.main_function))
+    if not node.library and (not node.extends_nodes or node.implements):
+      def_parent_code.extend(self.build_code(node.main_function))
 
     # NOTE(msolo): originally, i thought this would be helpful in case a bit of
     # human error - however, a more robust check is necessary here to make the
@@ -137,7 +146,9 @@ class CodeGenerator(object):
     #   logging.warning("throwing away defined main function because it is not a base class %s %s", self.ast_root.source_path)
     #   logging.warning("%s", flatten_tree(node.main_function))
 
-    if self.options and self.options.enable_psyco:
+    # Don't enable psyco for libraries since there is no class. We might want
+    # to iterate over the library functions and enable it for them instead.
+    if not node.library and self.options and self.options.enable_psyco:
       module_code.append_line('spitfire.runtime.template.enable_psyco(%(classname)s)' % vars())
 
     module_code.append_line(run_tmpl % vars(node))
