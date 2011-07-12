@@ -1,0 +1,19 @@
+
+
+Magic <foo>
+foo <library fn> output
+
+
+foo <library fn> output
+
+
+  Magic <y var>
+foo <library fn> output
+
+
+
+
+<<barbarbar>>
+
+
+barbarbar

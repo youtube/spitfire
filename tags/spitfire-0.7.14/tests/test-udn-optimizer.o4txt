@@ -1,0 +1,8 @@
+resolve_x $tier1.tier2.resolve_x
+
+#if $tier1.tier2.resolve_x == 'resolve_x1'
+Success
+#else
+Failure
+#end if
+

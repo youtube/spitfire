@@ -1,0 +1,22 @@
+	#strip_lines
+		<crap>
+#set $there = "there"		
+
+  #if $there
+    <span> everywhere </span>
+  #end if
+
+  ## Test for a bug where the space after #if $foo# is considered optional.
+  #if $there# <span> somewhere </span> #end if#
+    
+  ## Test for a bug where the space is preserved only inside the #elif.
+	#if not $there
+<span> will not evaluate </span> 
+    #elif $there.strip()
+      <span> nowhere </span>    
+      #elif $there
+    <span> will not evaluate </span>
+  #end if
+  $there          		        
+	#end strip_lines
+

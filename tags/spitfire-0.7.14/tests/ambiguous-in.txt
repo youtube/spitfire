@@ -1,0 +1,5 @@
+## the placeholder $indented was getting mis-parsed
+#def make_folder_link($folder, $title, $selected=False, $indented=False)
+A OK.
+#end def
+$make_folder_link('folder', 'title')

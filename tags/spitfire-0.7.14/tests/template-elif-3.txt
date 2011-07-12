@@ -1,0 +1,9 @@
+#if 0
+test if $test_x
+#elif 0
+test elif $test_x
+#elif 0
+test elif $test_x
+#else
+test else $test_x
+#end if

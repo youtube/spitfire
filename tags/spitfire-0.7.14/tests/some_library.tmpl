@@ -1,0 +1,22 @@
+
+#implements library
+
+
+#def library_fn($available_var)
+## This variable is in the display dict from the "uses_library" template.
+#if $test_x#Magic#end if# <$available_var>
+$foo_library_fn()
+#end def
+
+#def foo_library_fn
+foo <library fn> output
+#end def
+
+#def bar_library_fn
+barbarbar#slurp
+#end def
+
+#def bar_library_fn_output
+#set $bar = $bar_library_fn()
+<<$bar>>
+#end def

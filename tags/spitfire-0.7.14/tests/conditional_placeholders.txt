@@ -1,0 +1,7 @@
+<html>
+#if $has_var('test_number_list')
+<!--
+  $test_str_function($test_object_list)
+-->
+#end if
+</html>

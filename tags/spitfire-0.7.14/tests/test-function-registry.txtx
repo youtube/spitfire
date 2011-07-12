@@ -1,0 +1,12 @@
+#def escape_html($var)
+resolved escape_html
+#end def
+
+$escape_html('<bad html>')
+$escape_html('<bad html>')
+
+$escape_html_function('<bad html>')
+${escape_html_function('<bad html>')}
+
+$escape_html_function($i18n('Demo #1 - block of internationalized text.'))
+
