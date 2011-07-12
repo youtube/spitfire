@@ -111,9 +111,9 @@ parser _SpitfireParser:
         |
         'absolute_extends' SPACE modulename CLOSE_DIRECTIVE {{ return AbsoluteExtendsNode(modulename) }}
         |
-        'from' SPACE modulename SPACE importkeyword SPACE identifier CLOSE_DIRECTIVE {{ return FromNode(modulename, identifier, library=importkeyword) }}
+        'from' SPACE modulename SPACE 'import' SPACE library_keyword identifier CLOSE_DIRECTIVE {{ return FromNode(modulename, identifier, library=library_keyword) }}
         |
-        importkeyword SPACE modulename CLOSE_DIRECTIVE {{ return ImportNode(modulename, library=importkeyword) }}
+        'import' SPACE library_keyword modulename CLOSE_DIRECTIVE {{ return ImportNode(modulename, library=library_keyword) }}
         |
         'slurp' CLOSE_DIRECTIVE {{ return CommentNode('slurp') }}
         |
@@ -139,12 +139,9 @@ parser _SpitfireParser:
         ]
         CLOSE_DIRECTIVE {{ return EchoNode(_true_exp, _test_exp, _false_exp) }}
 
-  rule importkeyword:
-    'import'
-    {{ _library = False }} [
-      '_library'
-      {{ _library = True }}
-    ]
+  rule library_keyword:
+    {{ _library = False }}
+    ['library' SPACE {{ _library = True }} ]
     {{ return _library }}
 
   rule modulename:
