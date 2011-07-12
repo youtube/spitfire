@@ -1,3 +1,8 @@
+0.7.14 - 2011-07-12
+added "library" implementation. this allows template code to be reused
+without relying on class hierarchy.
+includes fixes for optional whitespace.
+
 0.7.13 - 2011-02-02 - Groundhog Day
 unskew the implementation of udn/_udn modules, particularly the handling
 of missing attributes.
