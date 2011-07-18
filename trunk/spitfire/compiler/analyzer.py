@@ -87,7 +87,10 @@ class AnalyzerOptions(object):
     self.cheetah_compatibility = False
     # use Cheetah NameMapper to resolve placeholders and UDN
     self.cheetah_cheats = False
-    
+
+    # the nested def doesn't make sense - unlike block, so raise an error.
+    # default off for now to let people ease into it.
+    self.fail_nested_defs = False
 
     self.enable_psyco = False
     self.__dict__.update(kargs)
@@ -211,6 +214,9 @@ class SemanticAnalyzer(object):
     return [self.template]
 
   def analyzeForNode(self, pnode):
+    if not pnode.child_nodes:
+      raise SemanticAnalyzerError("can't define an empty #for loop")
+
     for_node = ForNode()
 
     for pn in pnode.target_list.child_nodes:
@@ -244,6 +250,9 @@ class SemanticAnalyzer(object):
     return [get_attr_node]
 
   def analyzeIfNode(self, pnode):
+    if not pnode.child_nodes:
+      raise SemanticAnalyzerError("can't define an empty #if block")
+
     if_node = IfNode()
     if_node.test_expression = self.build_ast(pnode.test_expression)[0]
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
@@ -352,11 +361,9 @@ class SemanticAnalyzer(object):
   def analyzeFunctionNode(self, pnode):
     return [pnode]
 
-  def analyzeDefNode(self, pnode):
-    #if not pnode.child_nodes:
-    #  raise SemanticAnalyzerError("DefNode must have children")
-    #if not isinstance(pnode.parent, TemplateNode):
-    #  raise SemanticAnalyzerError("Nested #def or #block directives are not allowed")
+  def analyzeDefNode(self, pnode, allow_nesting=False):
+    if self.options.fail_nested_defs and not isinstance(pnode.parent, TemplateNode):
+      raise SemanticAnalyzerError("nested #def directives are not allowed")
 
     function = FunctionNode(pnode.name)
     if pnode.parameter_list:
@@ -373,9 +380,7 @@ class SemanticAnalyzer(object):
     return []
 
   def analyzeBlockNode(self, pnode):
-    #if not pnode.child_nodes:
-    #  raise SemanticAnalyzerError("BlockNode must have children")
-    self.analyzeDefNode(pnode)
+    self.analyzeDefNode(pnode, allow_nesting=True)
     function_node = CallFunctionNode()
     function_node.expression = self.build_ast(PlaceholderNode(pnode.name))[0]
     p = PlaceholderSubstitutionNode(function_node)
