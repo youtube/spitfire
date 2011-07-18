@@ -362,7 +362,8 @@ class SemanticAnalyzer(object):
     return [pnode]
 
   def analyzeDefNode(self, pnode, allow_nesting=False):
-    if self.options.fail_nested_defs and not isinstance(pnode.parent, TemplateNode):
+    if (self.options.fail_nested_defs and not allow_nesting
+        and not isinstance(pnode.parent, TemplateNode)):
       raise SemanticAnalyzerError("nested #def directives are not allowed")
 
     function = FunctionNode(pnode.name)
