@@ -38,6 +38,7 @@ class _SpitfireParserScanner(Scanner):
         ("'set'", re.compile('set')),
         ("'filter'", re.compile('filter')),
         ("'attr'", re.compile('attr')),
+        ("'global'", re.compile('global')),
         ("'continue'", re.compile('continue')),
         ("'break'", re.compile('break')),
         ("'slurp'", re.compile('slurp')),
@@ -135,7 +136,7 @@ class _SpitfireParser(Parser):
         return fragment
 
     def statement(self):
-        _token_ = self._peek("'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'filter'", "'set'", "'echo'")
+        _token_ = self._peek("'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'global'", "'attr'", "'filter'", "'set'", "'echo'")
         if _token_ == "'implements'":
             self._scan("'implements'")
             SPACE = self._scan('SPACE')
@@ -184,6 +185,12 @@ class _SpitfireParser(Parser):
             self._scan("'continue'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
             return ContinueNode()
+        elif _token_ == "'global'":
+            self._scan("'global'")
+            SPACE = self._scan('SPACE')
+            placeholder = self.placeholder()
+            CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
+            return GlobalNode(placeholder.name)
         elif _token_ == "'attr'":
             self._scan("'attr'")
             SPACE = self._scan('SPACE')
@@ -255,7 +262,7 @@ class _SpitfireParser(Parser):
     def directive(self):
         START_DIRECTIVE = self._scan('START_DIRECTIVE')
         _node_list = NodeList()
-        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'strip_lines'", "'if'", "'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'attr'", "'filter'", "'set'", "'echo'", 'END', 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
+        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'strip_lines'", "'if'", "'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'global'", "'attr'", "'filter'", "'set'", "'echo'", 'END', 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
         if _token_ == 'SINGLE_LINE_COMMENT':
             SINGLE_LINE_COMMENT = self._scan('SINGLE_LINE_COMMENT')
             _node_list.append(CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT))
