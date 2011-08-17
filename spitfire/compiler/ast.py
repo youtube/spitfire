@@ -551,6 +551,10 @@ class LiteralNode(ASTNode):
     return '%s value:%r' % (self.__class__.__name__, self.value)
 
 
+class GlobalNode(ASTNode):
+  pass
+
+
 class ParameterNode(ASTNode):
   def __init__(self, name, default=None):
     ASTNode.__init__(self, name)
@@ -688,6 +692,7 @@ class TemplateNode(ASTNode):
     self.attr_nodes = NodeList()
     self.library = False
     self.implements = False
+    self.global_placeholders = set()
     self.global_identifiers = set()
     self.cached_identifiers = set()
     self.template_methods = set()
