@@ -422,6 +422,14 @@ class SemanticAnalyzer(object):
                                   % macro_handler_name)
     return self.handleMacro(pnode, macro_function)
 
+  def analyzeGlobalNode(self, pnode):
+    if not self.template.library:
+      raise SemanticAnalyzerError("Can't use #global in non-library templates.")
+    if not isinstance(pnode.parent, TemplateNode):
+      raise SemanticAnalyzerError("#global must be a top-level directive.")
+    self.template.global_placeholders.add(pnode.name)
+    return []
+
   def analyzeAttributeNode(self, pnode):
     self.template.attr_nodes.append(pnode)
     return []
@@ -524,6 +532,11 @@ class SemanticAnalyzer(object):
 
 
   def analyzePlaceholderNode(self, pnode):
+    if (self.template.library and
+        pnode.name not in self.template.global_placeholders):
+      # Only do placeholder resolutions for placeholders declared with #global
+      # in library templates.
+      return [IdentifierNode(pnode.name)]
     return [pnode]
 
   analyzeEchoNode = analyzePlaceholderNode

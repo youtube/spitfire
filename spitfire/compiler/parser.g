@@ -121,6 +121,8 @@ parser _SpitfireParser:
         |
         'continue' CLOSE_DIRECTIVE {{ return ContinueNode() }}
         |
+        'global' SPACE placeholder CLOSE_DIRECTIVE {{ return GlobalNode(placeholder.name) }}
+        |
         'attr' SPACE placeholder SPACE ASSIGN_OPERATOR SPACE literal CLOSE_DIRECTIVE
         {{ return AttributeNode(placeholder.name, literal) }}
         |
