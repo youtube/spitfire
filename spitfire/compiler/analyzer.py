@@ -197,7 +197,7 @@ class SemanticAnalyzer(object):
     for child_node in tree_walker(pnode):
       if isinstance(child_node, DefNode) and not isinstance(child_node, MacroNode):
         if child_node.name in self.template.template_methods:
-          raise SemanticAnalyzerError('Redefining #def/#block %s' % child_node.name)
+          raise SemanticAnalyzerError('Redefining #def/#block %s (duplicate def in file?)' % child_node.name)
         self.template.template_methods.add(child_node.name)
 
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
