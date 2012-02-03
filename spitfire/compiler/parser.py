@@ -87,8 +87,14 @@ class _SpitfireParser(Parser):
     def i18n_body(self):
         value = ''
         while 1:
-            _token_ = self._peek('TEXT', 'NEWLINE', 'START_PLACEHOLDER')
-            if _token_ == 'TEXT':
+            _token_ = self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'TEXT', 'NEWLINE', 'START_PLACEHOLDER')
+            if _token_ == 'LITERAL_DOLLAR_SIGN':
+                LITERAL_DOLLAR_SIGN = self._scan('LITERAL_DOLLAR_SIGN')
+                value += LITERAL_DOLLAR_SIGN
+            elif _token_ == 'LITERAL_BACKSLASH':
+                LITERAL_BACKSLASH = self._scan('LITERAL_BACKSLASH')
+                value += LITERAL_BACKSLASH
+            elif _token_ == 'TEXT':
                 TEXT = self._scan('TEXT')
                 value += TEXT
             elif _token_ == 'NEWLINE':
@@ -97,7 +103,7 @@ class _SpitfireParser(Parser):
             else:# == 'START_PLACEHOLDER'
                 START_PLACEHOLDER = self._scan('START_PLACEHOLDER')
                 value += START_PLACEHOLDER
-            if self._peek('TEXT', 'NEWLINE', 'START_PLACEHOLDER', 'START_DIRECTIVE', 'END_DIRECTIVE') not in ['TEXT', 'NEWLINE', 'START_PLACEHOLDER']: break
+            if self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'TEXT', 'NEWLINE', 'START_PLACEHOLDER', 'START_DIRECTIVE', 'END_DIRECTIVE') not in ['LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'TEXT', 'NEWLINE', 'START_PLACEHOLDER']: break
         return value
 
     def CLOSE_DIRECTIVE(self):
@@ -297,10 +303,10 @@ class _SpitfireParser(Parser):
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
             start = CLOSE_DIRECTIVE.endswith('\n')
             _macro.value = ''
-            while self._peek('TEXT', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE') != 'END_DIRECTIVE':
+            while self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'TEXT', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE') != 'END_DIRECTIVE':
                 i18n_body = self.i18n_body()
                 _macro.value += i18n_body
-                if self._peek('START_DIRECTIVE', 'TEXT', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE') == 'START_DIRECTIVE':
+                if self._peek('START_DIRECTIVE', 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'TEXT', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE') == 'START_DIRECTIVE':
                     START_DIRECTIVE = self._scan('START_DIRECTIVE')
                     _macro.value += START_DIRECTIVE
             END_DIRECTIVE = self._scan('END_DIRECTIVE')
