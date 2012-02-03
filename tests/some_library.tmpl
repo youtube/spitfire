@@ -8,7 +8,8 @@
 #def library_fn($available_var)
 ## This variable is in the display dict from the "uses_library" template.
 #if $test_x#Magic#end if# <$available_var>
-$foo_library_fn()
+#set $foo = {'foo': $foo_library_fn()}
+$foo.foo
 #end def
 
 #def foo_library_fn

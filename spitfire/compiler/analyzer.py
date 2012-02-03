@@ -282,6 +282,13 @@ class SemanticAnalyzer(object):
       tuple_node.extend(self.build_ast(n))
     return [tuple_node]
 
+  def analyzeDictLiteralNode(self, pnode):
+    dict_node = DictLiteralNode()
+    for key_node, value_node in pnode.child_nodes:
+      key_value = [key_node, self.build_ast(value_node)[0]]
+      dict_node.child_nodes.extend([key_value])
+    return [dict_node]
+
   def analyzeParameterNode(self, pnode):
     param = pnode
     param.default = self.build_ast(pnode.default)[0]
