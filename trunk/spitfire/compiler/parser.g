@@ -59,6 +59,10 @@ parser _SpitfireParser:
   rule i18n_body:
     {{ value = '' }}
     (
+      LITERAL_DOLLAR_SIGN {{ value += LITERAL_DOLLAR_SIGN }}
+      |
+      LITERAL_BACKSLASH {{ value += LITERAL_BACKSLASH }}
+      |
       TEXT {{ value += TEXT }}
       |
       NEWLINE {{ value += NEWLINE }}
