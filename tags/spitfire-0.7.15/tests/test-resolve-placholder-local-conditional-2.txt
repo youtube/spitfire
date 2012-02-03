@@ -1,0 +1,12 @@
+#def test()
+  #if True
+    #if False
+      #set $icon = 'Failure'
+    #else
+      #set $icon = 'Success'
+    #end if
+    $icon
+  #end if
+#end def
+
+$test()

@@ -1,0 +1,31 @@
+
+#implements library
+
+#import string
+
+#global $test_x
+
+#def library_fn($available_var)
+## This variable is in the display dict from the "uses_library" template.
+#if $test_x#Magic#end if# <$available_var>
+#set $foo = {'foo': $foo_library_fn()}
+$foo.foo
+#end def
+
+#def foo_library_fn
+## Using $string here to ensure the #import works.
+foo <library fn> $string.Template("$foo").substitute(foo="output")
+#end def
+
+#def bar_library_fn
+barbarbar#slurp
+#end def
+
+#def bar_library_fn_output
+#set $bar = $bar_library_fn()
+<<$bar>>
+#end def
+
+#def explosive_fn
+  This should blow up when executed; $test_y is not declared as a global!
+#end def

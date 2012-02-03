@@ -1,0 +1,9 @@
+## fixme: this test doesn't help much unless you inspect the generated code
+## you shouldn't see multiple aliases for _buffer_write or _filter_function
+#for $x in [False]
+  #if $x
+  Error: $x.y
+  #else
+  Success: $x
+  #end if
+#end for

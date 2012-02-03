@@ -1,0 +1,11 @@
+## test if reserved words are confusing the parser for placeholders
+#set $influences = True
+#set $orfluence = True
+
+#if $influences
+  Success
+#end if
+
+#if $orfluence
+  Double Success
+#end if

@@ -1,0 +1,5 @@
+#for $x in [0, 1, 2]
+  #if $x
+  test $x
+  #end if
+#end for

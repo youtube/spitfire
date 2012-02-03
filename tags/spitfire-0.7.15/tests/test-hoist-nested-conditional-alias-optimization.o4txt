@@ -1,0 +1,13 @@
+#if True
+  #if False
+    $resolve_test_x
+  #end if
+  $resolve_test_x
+#end if
+
+$resolve_test_x
+#if $resolve_test_x == 'resolve_test_x1'
+Unexpected Success
+#else
+Expected Error
+#end if
