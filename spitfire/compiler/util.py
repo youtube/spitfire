@@ -141,6 +141,7 @@ class Compiler(object):
     'locale',
     'message_catalogue_file',
     'normalize_whitespace',
+    'fail_library_searchlist_access',
     'optimizer_level',
     'optimizer_flags',
     'output_directory',
@@ -171,6 +172,7 @@ class Compiler(object):
     self.debug_flags = []
     self.ignore_optional_whitespace = False
     self.normalize_whitespace = False
+    self.fail_library_searchlist_access = False
     
     self.base_extends_package = None
     self.message_catalogue = None
@@ -200,6 +202,7 @@ class Compiler(object):
       self.analyzer_options = analyzer.optimizer_map[self.optimizer_level]
       self.analyzer_options.ignore_optional_whitespace = self.ignore_optional_whitespace
       self.analyzer_options.normalize_whitespace = self.normalize_whitespace
+      self.analyzer_options.fail_library_searchlist_access = self.fail_library_searchlist_access
 
     # slightly crappy code to support turning flags on and off from the
     # command line - probably should go in analyzer options?
@@ -332,6 +335,9 @@ def add_common_options(op):
   op.add_option('--normalize-whitespace', action='store_true',
                 default=False,
                 help='normalize all runs of whitespace to one character')
+  op.add_option('--fail-library-searchlist-access', action='store_true',
+                default=False,
+                help='disallow searchlist accesses inside template libraries not declared with #global')
   op.add_option('-v', '--verbose', action='store_true', default=False)
   op.add_option('-V', '--version', action='store_true', default=False)
   op.add_option('-O', dest='optimizer_level', type='int', default=0)

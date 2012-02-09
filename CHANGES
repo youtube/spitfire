@@ -1,3 +1,10 @@
+0.7.15 - 2012-02-09
+add ability to restrict searchlist access in library templates by adding
+#global declarations.
+add ability to blow up on nested #defs.
+fix escaping in i18n blocks.
+fix some library function calls.
+
 0.7.14 - 2011-07-12
 added "library" implementation. this allows template code to be reused
 without relying on class hierarchy.

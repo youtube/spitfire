@@ -92,6 +92,10 @@ class AnalyzerOptions(object):
     # default off for now to let people ease into it.
     self.fail_nested_defs = False
 
+    # whether to explode on library search list accesses that are not declared
+    # with #global $foo beforehand
+    self.fail_library_searchlist_access = False
+
     self.enable_psyco = False
     self.__dict__.update(kargs)
 
@@ -285,7 +289,7 @@ class SemanticAnalyzer(object):
   def analyzeDictLiteralNode(self, pnode):
     dict_node = DictLiteralNode()
     for key_node, value_node in pnode.child_nodes:
-      key_value = [key_node, self.build_ast(value_node)[0]]
+      key_value = (key_node, self.build_ast(value_node)[0])
       dict_node.child_nodes.extend([key_value])
     return [dict_node]
 
@@ -539,7 +543,8 @@ class SemanticAnalyzer(object):
 
 
   def analyzePlaceholderNode(self, pnode):
-    if (self.template.library and
+    if (self.options.fail_library_searchlist_access and
+        self.template.library and
         pnode.name not in self.template.global_placeholders):
       # Only do placeholder resolutions for placeholders declared with #global
       # in library templates.
