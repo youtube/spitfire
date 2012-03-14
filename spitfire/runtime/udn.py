@@ -232,7 +232,8 @@ def get_available_placeholders(scope):
   if isinstance(scope, dict):
     return scope.keys()
   else:
-    return dir(scope)
+    return [a for a in dir(scope)
+            if not (a.startswith('__') and a.endswith('__'))]
 
 
 # apply some acceleration if this c module is available
