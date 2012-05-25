@@ -17,32 +17,38 @@ static PyObject *UndefinedAttribute;
 
 
 static void
-set_udn_resolve_error(char *name, PyObject *namespace)
+set_udn_resolve_error(PyObject *name, PyObject *namespace)
 {
   PyObject *exception_args = NULL;
 
-  exception_args = Py_BuildValue("s", name);
-  /* exception_args = Py_BuildValue("sO", name, namespace); */
+  exception_args = PyTuple_Pack(1, name);
+  /* exception_args = PyTuple_Pack(2, name, namespace); */
   PyErr_SetObject(UDNResolveError, exception_args);
   Py_DECREF(exception_args);
 }
 
 
 static PyObject *
-_resolve_udn(PyObject *obj, char *name, int raise_exception)
+_resolve_udn(PyObject *obj, PyObject *name, int raise_exception)
 {
   PyObject *return_value = NULL;
 
-  if (PyObject_HasAttrString(obj, name)) {
-    return_value = PyObject_GetAttrString(obj, name);
-  } else if (PyMapping_Check(obj) && PyMapping_HasKeyString(obj, name)) {
-    return_value = PyMapping_GetItemString(obj, name);
-  } else {
-    if (raise_exception) {
-      set_udn_resolve_error(name, obj);
-    } else {
-      return_value = NULL;
+  return_value = PyObject_GetAttr(obj, name);
+  if (return_value != NULL) {
+    return return_value;
+  }
+
+  PyErr_Clear();
+  if (PyMapping_Check(obj)) {
+    return_value = PyObject_GetItem(obj, name);
+    if (return_value != NULL) {
+      return return_value;
     }
+  }
+
+  PyErr_Clear();
+  if (raise_exception) {
+    set_udn_resolve_error(name, obj);
   }
 
   return return_value;
@@ -54,14 +60,18 @@ _resolve_udn(PyObject *obj, char *name, int raise_exception)
 static PyObject *
 udn_resolve_udn(PyObject *self, PyObject *args, PyObject *kargs)
 {
-  PyObject *obj, *return_value, *error_args;
-  char *name;
+  PyObject *obj, *name, *return_value, *error_args;
   int raise_exception = 0;
 
   static char *karg_list[] = {"obj", "name", "raise_exception", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kargs, "Os|i", karg_list,
+  if (!PyArg_ParseTupleAndKeywords(args, kargs, "OO|i", karg_list,
                                    &obj, &name, &raise_exception)) {
+    return NULL;
+  }
+
+  if (!(PyUnicode_Check(name) || PyString_Check(name))) {
+    PyErr_SetString(PyExc_ValueError, "name must be string");
     return NULL;
   }
 
@@ -69,7 +79,7 @@ udn_resolve_udn(PyObject *self, PyObject *args, PyObject *kargs)
   /* return_value is NULL if the lookup failed, so return an UndefinedAttribute
      placeholder */
   if (return_value == NULL) {
-    error_args = Py_BuildValue("sN", name, PyObject_Dir(obj));
+    error_args = Py_BuildValue("ON", name, PyObject_Dir(obj));
     return_value = PyObject_CallObject(UndefinedAttribute, error_args);
     Py_XDECREF(error_args);
   }
@@ -85,13 +95,18 @@ udn_resolve_from_search_list(PyObject *self, PyObject *args, PyObject *keywds)
   PyObject *iterator = NULL;
 
   PyObject *search_list = NULL;
-  char *name;
+  PyObject *name;
   PyObject *default_value = NULL;
 
   static char *kwlist[] = {"search_list", "name", "default", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "Os|O", kwlist,
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "OO|O", kwlist,
                                    &search_list, &name, &default_value)) {
+    return NULL;
+  }
+
+  if (!(PyUnicode_Check(name) || PyString_Check(name))) {
+    PyErr_SetString(PyExc_ValueError, "name must be string");
     return NULL;
   }
 
