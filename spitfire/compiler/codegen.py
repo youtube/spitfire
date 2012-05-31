@@ -301,11 +301,11 @@ class CodeGenerator(object):
         % vars())]
     elif self.options and self.options.omit_local_scope_search:
       return [CodeNode(
-        "resolve_placeholder('%(name)s', template=self, global_vars=_globals)"
+        "resolve_placeholder('%(name)s', self, None, _globals)"
         % vars())]
     else:
       return [CodeNode(
-        "resolve_placeholder('%(name)s', template=self, local_vars=locals(), global_vars=_globals)"
+        "resolve_placeholder('%(name)s', self, locals(), _globals)"
         % vars())]
 
   def codegenASTReturnNode(self, node):

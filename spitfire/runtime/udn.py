@@ -107,16 +107,15 @@ _resolve_udn = resolve_udn_prefer_attr3
 # FIXME: i'm sure this is a little pokey - might be able to speed this up
 # somehow. not sure if it's better to look before leaping or raise.
 # might also want to let users tune whether to prefer keys or attributes
-def _resolve_placeholder(name, template=None, local_vars=None,
-                         global_vars=None, default=Unspecified):
+def _resolve_placeholder(name, template, local_vars, global_vars):
   if local_vars is not None:
     try:
       return local_vars[name]
+    except KeyError:
+      pass
     except TypeError:
       raise PlaceholderError('unexpected type for local_vars: %s' %
                              type(local_vars))
-    except KeyError:
-      pass
 
   if template is not None:
     try:
@@ -132,15 +131,15 @@ def _resolve_placeholder(name, template=None, local_vars=None,
   if global_vars is not None:
     try:
       return global_vars[name]
+    except KeyError:
+      pass
     except TypeError:
       raise PlaceholderError('unexpected type for global_vars: %s' %
                              type(global_vars))
-    except KeyError:
-      pass
 
   # fixme: finally try to resolve builtins - this should be configurable
   # if you compile optimized modes, this isn't necessary
-  default = getattr(__builtin__, name, default)
+  default = getattr(__builtin__, name, Unspecified)
 
   if default is not Unspecified:
     return default
@@ -150,15 +149,15 @@ def _resolve_placeholder(name, template=None, local_vars=None,
                                  for scope in template.search_list])
 
 
-def _resolve_placeholder_2(name, template=None, local_vars=None,
-                           global_vars=None, default=Unspecified):
+# TODO: should this unused function be removed?
+def _resolve_placeholder_2(name, template, local_vars, global_vars):
   """A slightly different version of resolve_placeholder that relies mostly on
   the accelerated C resolving stuff.
   """
   search_list = [local_vars, template]
   search_list += template.search_list
   search_list += (global_vars, __builtin__)
-  return_value = _resolve_from_search_list(search_list, name, default)
+  return_value = _resolve_from_search_list(search_list, name, Unspecified)
   if return_value is not Unspecified:
     return return_value
   else:
