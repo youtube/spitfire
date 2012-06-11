@@ -157,88 +157,86 @@ parser _SpitfireParser:
 
   rule directive:
     START_DIRECTIVE
-    {{ _node_list = NodeList() }}
+    (
+      SINGLE_LINE_COMMENT {{ return CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT) }}
+      |
+      MULTI_LINE_COMMENT {{ return CommentNode(START_DIRECTIVE +MULTI_LINE_COMMENT) }}
+      |
+      'block' SPACE ID CLOSE_DIRECTIVE {{ _block = BlockNode(ID) }}
+      {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
+      ( block<<start>> {{ _block.append(block) }} ) *
+      {{ self.make_optional(_block.child_nodes, start) }}
+      END_DIRECTIVE SPACE 'block' CLOSE_DIRECTIVE {{ return _block }}
+      |
+      'i18n' {{ _macro = MacroNode('i18n') }}
+      [ OPEN_PAREN
+        [ macro_parameter_list {{ _macro.parameter_list = macro_parameter_list }} ]
+        CLOSE_PAREN
+      ]
+      CLOSE_DIRECTIVE
+      {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
+      {{ _macro.value = '' }}
       (
-        SINGLE_LINE_COMMENT {{ _node_list.append(CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT)) }}
-        |
-        MULTI_LINE_COMMENT {{ _node_list.append(CommentNode(START_DIRECTIVE +MULTI_LINE_COMMENT)) }}
-        |
-        'block' SPACE ID CLOSE_DIRECTIVE {{ _block = BlockNode(ID) }}
-        {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-        ( block<<start>> {{ _block.append(block) }} ) *
-        {{ self.make_optional(_block.child_nodes, start) }}
-        END_DIRECTIVE SPACE 'block' CLOSE_DIRECTIVE {{ _node_list.append(_block) }}
-        |
-        'i18n' {{ _macro = MacroNode('i18n') }}
-        [ OPEN_PAREN
-          [ macro_parameter_list {{ _macro.parameter_list = macro_parameter_list }} ]
-          CLOSE_PAREN
+        i18n_body {{ _macro.value += i18n_body }}
+        [ START_DIRECTIVE {{ _macro.value += START_DIRECTIVE }}
         ]
-        CLOSE_DIRECTIVE
+      )*
+      END_DIRECTIVE SPACE 'i18n' CLOSE_DIRECTIVE {{ return _macro }}
+      |
+      'def' SPACE ID {{ _def = DefNode(ID) }}
+      [ OPEN_PAREN
+        [ parameter_list {{ _def.parameter_list = parameter_list }} ]
+        CLOSE_PAREN ]
+      CLOSE_DIRECTIVE
+      {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
+      ( block<<start>> {{ _def.append(block) }} ) *
+      {{ self.make_optional(_def.child_nodes, start) }}
+      END_DIRECTIVE SPACE 'def' CLOSE_DIRECTIVE {{ return _def }}
+      |
+      'for[ \t]*' target_list '[ \t]*in[ \t]*' expression_list CLOSE_DIRECTIVE
+      {{ _for_loop = ForNode(target_list, expression_list) }}
+      {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
+      ( block<<start>> {{ _for_loop.append(block) }} ) *
+      {{ self.make_optional(_for_loop.child_nodes, start) }}
+      END_DIRECTIVE SPACE 'for' CLOSE_DIRECTIVE {{ return _for_loop }}
+      |
+      'strip_lines'
+      # Switch the close directive call to actively clean up whitespace
+      # on the following line while inside this condense directive
+      {{ self.strip_whitespace = True }}
+      CLOSE_DIRECTIVE
+      {{ _strip_lines_node = StripLinesNode() }}
+      {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
+      ( block<<start>> {{ _strip_lines_node.append(block) }} ) *
+      {{ self.make_optional(_strip_lines_node.child_nodes, start) }}
+      {{ self.strip_whitespace = False }}
+      END_DIRECTIVE SPACE 'strip_lines' CLOSE_DIRECTIVE {{ return _strip_lines_node }}
+      |
+      'if' SPACE expression CLOSE_DIRECTIVE {{ _if_node = IfNode(expression) }}
+      {{ _last_condition_node = _if_node }}
+      {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
+      ( block<<start>> {{ _if_node.append(block) }} ) *
+      {{ self.make_optional(_if_node.child_nodes, start) }}
+      (
+        '#elif' SPACE expression CLOSE_DIRECTIVE {{ _elif_node = IfNode(expression) }}
+        {{ _last_condition_node.else_.append(_elif_node) }}
+        {{ _last_condition_node = _elif_node }}
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-        {{ _macro.value = '' }}
-        (
-          i18n_body {{ _macro.value += i18n_body }}
-          [ START_DIRECTIVE {{ _macro.value += START_DIRECTIVE }}
-          ]
-        )*
-        END_DIRECTIVE SPACE 'i18n' CLOSE_DIRECTIVE {{ _node_list.append(_macro) }}
-        |
-        'def' SPACE ID {{ _def = DefNode(ID) }}
-        [ OPEN_PAREN
-          [ parameter_list {{ _def.parameter_list = parameter_list }} ]
-          CLOSE_PAREN ]
-        CLOSE_DIRECTIVE
+        ( block<<start>> {{ _elif_node.append(block) }} ) *
+        {{ self.make_optional(_elif_node.child_nodes, start) }}
+      ) *
+      [ '#else' CLOSE_DIRECTIVE
         {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-        ( block<<start>> {{ _def.append(block) }} ) *
-        {{ self.make_optional(_def.child_nodes, start) }}
-        END_DIRECTIVE SPACE 'def' CLOSE_DIRECTIVE {{ _node_list.append(_def) }}
-        |
-        'for[ \t]*' target_list '[ \t]*in[ \t]*' expression_list CLOSE_DIRECTIVE
-        {{ _for_loop = ForNode(target_list, expression_list) }}
-        {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-        ( block<<start>> {{ _for_loop.append(block) }} ) *
-        {{ self.make_optional(_for_loop.child_nodes, start) }}
-        END_DIRECTIVE SPACE 'for' CLOSE_DIRECTIVE {{ _node_list.append(_for_loop) }}
-        |
-        'strip_lines'
-        # Switch the close directive call to actively clean up whitespace
-        # on the following line while inside this condense directive
-        {{ self.strip_whitespace = True }}
-        CLOSE_DIRECTIVE
-        {{ _strip_lines_node = StripLinesNode() }}
-        {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-        ( block<<start>> {{ _strip_lines_node.append(block) }} ) *
-        {{ self.make_optional(_strip_lines_node.child_nodes, start) }}
-        {{ self.strip_whitespace = False }}
-        END_DIRECTIVE SPACE 'strip_lines' CLOSE_DIRECTIVE {{ _node_list.append(_strip_lines_node) }}
-        |
-        'if' SPACE expression CLOSE_DIRECTIVE {{ _if_node = IfNode(expression) }}
-        {{ _last_condition_node = _if_node }}
-        {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-        ( block<<start>> {{ _if_node.append(block) }} ) *
-        {{ self.make_optional(_if_node.child_nodes, start) }}
-        (
-          '#elif' SPACE expression CLOSE_DIRECTIVE {{ _elif_node = IfNode(expression) }}
-          {{ _last_condition_node.else_.append(_elif_node) }}
-          {{ _last_condition_node = _elif_node }}
-          {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-          ( block<<start>> {{ _elif_node.append(block) }} ) *
-          {{ self.make_optional(_elif_node.child_nodes, start) }}
-        ) *
-        [ '#else' CLOSE_DIRECTIVE
-          {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
-          ( block<<start>> {{ _last_condition_node.else_.append(block) }} ) *
-          {{ self.make_optional(_last_condition_node.else_.child_nodes, start) }}
-        ]
-        END_DIRECTIVE SPACE 'if' CLOSE_DIRECTIVE {{ _node_list.append(_if_node) }}
-        |
-        statement {{ statement.statement = True }}
-        {{ _node_list.append(statement) }}
-        |
-        {{ _node_list.append(TextNode(START_DIRECTIVE)) }}
-      )
-    {{ return _node_list }}
+        ( block<<start>> {{ _last_condition_node.else_.append(block) }} ) *
+        {{ self.make_optional(_last_condition_node.else_.child_nodes, start) }}
+      ]
+      END_DIRECTIVE SPACE 'if' CLOSE_DIRECTIVE {{ return _if_node }}
+      |
+      statement {{ statement.statement = True }}
+      {{ return statement }}
+      |
+      {{ return TextNode(START_DIRECTIVE) }}
+    )
 
 
   # NOTE: if we are at the start of a line, we mark the initial whitespace as
@@ -298,9 +296,7 @@ parser _SpitfireParser:
     |
     text {{ return text }}
     |
-    SPACE {{ _node_list = NodeList() }}
-    {{ _node_list.append(WhitespaceNode(SPACE)) }}
-    {{ return _node_list }}
+    SPACE {{ return WhitespaceNode(SPACE) }}
     |
     NEWLINE {{ _node_list = NodeList() }}
     {{ _node_list.append(NewlineNode(NEWLINE)) }}
@@ -578,6 +574,7 @@ parser _SpitfireParser:
 
 %%
 
+@track_line_numbers(exempt_methods="make_optional")
 class SpitfireParser(_SpitfireParser):
   strip_whitespace = False
 

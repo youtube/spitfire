@@ -13,10 +13,13 @@ class ASTNode(object):
     self.child_nodes = NodeList()
     # optimization annotations
     self.hint_map = {}
+    # Start and end position of a text or placeholder node within an I18n'd message.
     self.start = self.end = None
-    # tag items generated from a sigle line statment
+    # tag items generated from a single line statment
     # this makes it easier to invent new ways to mangle optional whitespace
     self.statement = False
+    # Position in the input string (measured in characters).
+    self.pos = None
 
   def __str__(self):
     if self.value:
@@ -39,7 +42,7 @@ class ASTNode(object):
 
   def getChildNodes(self):
     return [n for n in self.child_nodes if isinstance(n, ASTNode)]
-  
+
   def append(self, node):
     if isinstance(node, list):
       self.extend(node)
@@ -843,3 +846,29 @@ def unsigned_hash(x):
   if exp_hash < 0:
     exp_hash = -exp_hash | 0x80000000
   return exp_hash
+
+def track_line_numbers(exempt_methods=()):
+  """Class decorator: Change a parser class to track line numbers in
+  the AST nodes returned by the given grammar rules.
+
+  This will wrap all methods except the ones starting with an underscore
+  or that are explicitly exempt."""
+  
+  def make_execute_rule(rule):
+    def _execute_rule(self, *args, **kwargs):
+      saved_position = self._scanner.pos
+      result = rule(self, *args, **kwargs)
+      if isinstance(result, ASTNode):
+        result.pos = saved_position
+      return result
+    return _execute_rule
+
+  def decorator(cls):
+    for method_name in dir(cls):
+      if method_name in exempt_methods or method_name.startswith('_'):
+        continue
+      rule = getattr(cls, method_name)
+      if hasattr(rule, '__call__'):
+        setattr(cls, method_name, make_execute_rule(rule))
+    return cls
+  return decorator
