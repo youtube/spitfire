@@ -267,14 +267,13 @@ class _SpitfireParser(Parser):
 
     def directive(self):
         START_DIRECTIVE = self._scan('START_DIRECTIVE')
-        _node_list = NodeList()
         _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'strip_lines'", "'if'", "'implements'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'global'", "'attr'", "'filter'", "'set'", "'echo'", 'END', 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
         if _token_ == 'SINGLE_LINE_COMMENT':
             SINGLE_LINE_COMMENT = self._scan('SINGLE_LINE_COMMENT')
-            _node_list.append(CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT))
+            return CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT)
         elif _token_ == 'MULTI_LINE_COMMENT':
             MULTI_LINE_COMMENT = self._scan('MULTI_LINE_COMMENT')
-            _node_list.append(CommentNode(START_DIRECTIVE +MULTI_LINE_COMMENT))
+            return CommentNode(START_DIRECTIVE +MULTI_LINE_COMMENT)
         elif _token_ == "'block'":
             self._scan("'block'")
             SPACE = self._scan('SPACE')
@@ -290,7 +289,7 @@ class _SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             self._scan("'block'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
-            _node_list.append(_block)
+            return _block
         elif _token_ == "'i18n'":
             self._scan("'i18n'")
             _macro = MacroNode('i18n')
@@ -313,7 +312,7 @@ class _SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             self._scan("'i18n'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
-            _node_list.append(_macro)
+            return _macro
         elif _token_ == "'def'":
             self._scan("'def'")
             SPACE = self._scan('SPACE')
@@ -335,7 +334,7 @@ class _SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             self._scan("'def'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
-            _node_list.append(_def)
+            return _def
         elif _token_ == "'for[ \\t]*'":
             self._scan("'for[ \\t]*'")
             target_list = self.target_list()
@@ -352,7 +351,7 @@ class _SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             self._scan("'for'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
-            _node_list.append(_for_loop)
+            return _for_loop
         elif _token_ == "'strip_lines'":
             self._scan("'strip_lines'")
             self.strip_whitespace = True
@@ -368,7 +367,7 @@ class _SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             self._scan("'strip_lines'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
-            _node_list.append(_strip_lines_node)
+            return _strip_lines_node
         elif _token_ == "'if'":
             self._scan("'if'")
             SPACE = self._scan('SPACE')
@@ -406,14 +405,13 @@ class _SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             self._scan("'if'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
-            _node_list.append(_if_node)
+            return _if_node
         elif _token_ not in ['END', 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'"]:
             statement = self.statement()
             statement.statement = True
-            _node_list.append(statement)
+            return statement
         else:
-            _node_list.append(TextNode(START_DIRECTIVE))
-        return _node_list
+            return TextNode(START_DIRECTIVE)
 
     def block(self, start=False):
         _token_ = self._peek('LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'TEXT')
@@ -487,9 +485,7 @@ class _SpitfireParser(Parser):
             return text
         elif _token_ == 'SPACE':
             SPACE = self._scan('SPACE')
-            _node_list = NodeList()
-            _node_list.append(WhitespaceNode(SPACE))
-            return _node_list
+            return WhitespaceNode(SPACE)
         elif _token_ == 'NEWLINE':
             NEWLINE = self._scan('NEWLINE')
             _node_list = NodeList()
@@ -888,6 +884,7 @@ def parse(rule, text):
 
 
 
+@track_line_numbers(exempt_methods="make_optional")
 class SpitfireParser(_SpitfireParser):
   strip_whitespace = False
 
