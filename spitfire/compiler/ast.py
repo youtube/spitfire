@@ -859,7 +859,7 @@ def track_line_numbers(exempt_methods=()):
       saved_position = self._scanner.pos
       result = rule(self, *args, **kwargs)
       if isinstance(result, ASTNode):
-        result.pos = position
+        result.pos = saved_position
       return result
     return _execute_rule
 
