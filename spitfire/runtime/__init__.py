@@ -16,17 +16,17 @@ class UDNResolveError(Exception):
 # and exception as well.
 class UndefinedPlaceholder(object):
   def __init__(self, name, available_placeholders):
-    self.name = name
-    self.available_placeholders = available_placeholders
+    self.__name = name
+    self.__available_placeholders = available_placeholders
 
   def __nonzero__(self):
     return False
 
   def __str__(self):
-    raise PlaceholderError(self.name, self.available_placeholders)
+    raise PlaceholderError(self.__name, self.__available_placeholders)
 
   def __call__(self, *pargs, **kargs):
-    raise PlaceholderError(self.name, self.available_placeholders)
+    raise PlaceholderError(self.__name, self.__available_placeholders)
 
 class UndefinedAttribute(UndefinedPlaceholder):
   pass
