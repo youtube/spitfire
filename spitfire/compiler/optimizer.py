@@ -232,7 +232,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeTemplateNode(self, template):
     # at this point, if we have a function registry, add in the nodes before we
     # begin optimizing
-    for alias, (fq_name, method) in self.compiler.function_name_registry.iteritems():
+    for alias in sorted(self.compiler.function_name_registry):
+      fq_name, method = self.compiler.function_name_registry[alias]
       fq_name_parts = fq_name.split('.')
       self.ast_root.from_nodes.append(FromNode(
         [IdentifierNode(x) for x in fq_name_parts[:-1]],
