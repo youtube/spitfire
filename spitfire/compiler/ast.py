@@ -298,6 +298,8 @@ class EchoNode(ASTNode):
 class __DefaultFilterFunction(object):
   def __eq__(self, o):
     return isinstance(o, self.__class__)
+  def __hash__(self):
+    return hash(self.__class__.__name__)
 DefaultFilterFunction = __DefaultFilterFunction()
 
 # encapsulate the idea that you want to run a filter over this expression
