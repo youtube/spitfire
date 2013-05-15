@@ -8,7 +8,7 @@ extern "C" {
 
 
 static PyObject *UDNResolveError;
-static PyObject *PlaceholderError; 
+static PyObject *PlaceholderError;
 static PyObject *UnresolvedPlaceholder;
 static PyObject *UndefinedAttribute;
 
@@ -29,7 +29,7 @@ set_udn_resolve_error(PyObject *name, PyObject *namespace)
 
 
 static PyObject *
-_resolve_udn(PyObject *obj, PyObject *name, int raise_exception)
+_resolve_udn(PyObject *obj, PyObject *name)
 {
   PyObject *return_value = NULL;
 
@@ -47,9 +47,6 @@ _resolve_udn(PyObject *obj, PyObject *name, int raise_exception)
   }
 
   PyErr_Clear();
-  if (raise_exception) {
-    set_udn_resolve_error(name, obj);
-  }
 
   return return_value;
 }
@@ -75,13 +72,16 @@ udn_resolve_udn(PyObject *self, PyObject *args, PyObject *kargs)
     return NULL;
   }
 
-  return_value =  _resolve_udn(obj, name, raise_exception);
-  /* return_value is NULL if the lookup failed, so return an UndefinedAttribute
-     placeholder */
+  return_value =  _resolve_udn(obj, name);
+  /* return_value is NULL if the lookup failed */
   if (return_value == NULL) {
-    error_args = Py_BuildValue("ON", name, PyObject_Dir(obj));
-    return_value = PyObject_CallObject(UndefinedAttribute, error_args);
-    Py_XDECREF(error_args);
+    if (raise_exception) {
+      set_udn_resolve_error(name, obj);
+    } else {
+      error_args = Py_BuildValue("ON", name, PyObject_Dir(obj));
+      return_value = PyObject_CallObject(UndefinedAttribute, error_args);
+      Py_XDECREF(error_args);
+    }
   }
   return return_value;
 }
@@ -118,7 +118,7 @@ udn_resolve_from_search_list(PyObject *self, PyObject *args, PyObject *keywds)
   }
 
   while ((name_space = PyIter_Next(iterator))) {
-    return_value = _resolve_udn(name_space, name, 0);
+    return_value = _resolve_udn(name_space, name);
     Py_DECREF(name_space);
     if (return_value != NULL) {
       goto done;
@@ -137,7 +137,7 @@ done:
   Py_XDECREF(iterator);
   /* change the return value to be a bit more compatible with the way things
      work in the python code.
-   */ 
+   */
   return return_value;
 }
 
@@ -159,7 +159,7 @@ init_udn(void)
   PyObject *m, *runtime_module;
 
   m = Py_InitModule("_udn", udn_methods);
-  
+
   runtime_module = PyImport_ImportModule("spitfire.runtime");
   PlaceholderError = PyObject_GetAttrString(
     runtime_module, "PlaceholderError");
