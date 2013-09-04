@@ -702,7 +702,8 @@ class TemplateNode(ASTNode):
     self.cached_identifiers = set()
     self.template_methods = set()
     self.library_identifiers = set()
-  
+    self.trusted_module_identifiers = set()
+
   def __str__(self):
     return '%s\nimport:%s\nfrom:%s\nextends:%s\nmain:%s' % (
       self.__class__.__name__,

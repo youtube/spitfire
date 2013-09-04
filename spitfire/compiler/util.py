@@ -136,18 +136,19 @@ class Compiler(object):
     'debug_flags',
     'enable_filters',
     'extract_message_catalogue',
+    'fail_library_searchlist_access',
     'function_registry_file',
     'ignore_optional_whitespace',
+    'include_path',
     'locale',
     'message_catalogue_file',
     'normalize_whitespace',
-    'fail_library_searchlist_access',
-    'optimizer_level',
     'optimizer_flags',
+    'optimizer_level',
     'output_directory',
+    'skip_import_udn_resolution',
+    'tune_gc',
     'xspt_mode',
-    'include_path',
-    'tune_gc'
     ]
 
   @classmethod
@@ -173,6 +174,7 @@ class Compiler(object):
     self.ignore_optional_whitespace = False
     self.normalize_whitespace = False
     self.fail_library_searchlist_access = False
+    self.skip_import_udn_resolution = False
     
     self.base_extends_package = None
     self.message_catalogue = None
@@ -203,6 +205,7 @@ class Compiler(object):
       self.analyzer_options.ignore_optional_whitespace = self.ignore_optional_whitespace
       self.analyzer_options.normalize_whitespace = self.normalize_whitespace
       self.analyzer_options.fail_library_searchlist_access = self.fail_library_searchlist_access
+      self.analyzer_options.skip_import_udn_resolution = self.skip_import_udn_resolution
 
     # slightly crappy code to support turning flags on and off from the
     # command line - probably should go in analyzer options?
@@ -338,6 +341,9 @@ def add_common_options(op):
   op.add_option('--fail-library-searchlist-access', action='store_true',
                 default=False,
                 help='disallow searchlist accesses inside template libraries not declared with #global')
+  op.add_option('--skip-import-udn-resolution', action='store_true',
+                default=False,
+                help='Skip UDN resolution for imported moudles')
   op.add_option('-v', '--verbose', action='store_true', default=False)
   op.add_option('-V', '--version', action='store_true', default=False)
   op.add_option('-O', dest='optimizer_level', type='int', default=0)
@@ -363,7 +369,7 @@ def add_common_options(op):
                 action="callback", callback=validate_path,
                 type="str", nargs=1,
                 help='path to the templates hierarchy, where included files live. default: .')
-  
+
   op.add_option('--base-extends-package', default=None)
   op.add_option('--extract-message-catalogue', action='store_true',
                 default=False)
@@ -379,4 +385,3 @@ def add_common_options(op):
   op.add_option('-X', dest='optimizer_flags', action='append', default=[],
                 help=analyzer.AnalyzerOptions.get_help())
   op.add_option('--tune-gc', action='store_true')
-  

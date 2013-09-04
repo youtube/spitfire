@@ -9,7 +9,7 @@ def tree_walker(node):
   for n in node.child_nodes:
     for ng in tree_walker(n):
       yield ng
-  
+
 class SemanticAnalyzerError(Exception):
   pass
 
@@ -23,7 +23,7 @@ class AnalyzerOptions(object):
 
   def __init__(self, **kargs):
     self.debug = False
-    
+
     self.ignore_optional_whitespace = False
 
     # adjacent text nodes become one single node
@@ -31,10 +31,10 @@ class AnalyzerOptions(object):
 
     # generate templates with unicode() instead of str()
     self.generate_unicode = True
-    
+
     # runs of whitespace characters are replace with one space
     self.normalize_whitespace = False
-    
+
     # expensive dotted notations are aliased to a local variable for faster
     # lookups: write = self.buffer.write
     self.alias_invariants = False
@@ -66,7 +66,7 @@ class AnalyzerOptions(object):
     # Throw an exception when a udn resolution fails rather than providing a
     # default value
     self.raise_udn_exceptions = False
-    
+
     # when adding an alias, detect if the alias is loop invariant and hoist
     # right there on the spot.  this has probably been superceded by
     # hoist_loop_invariant_aliases, but does have the advantage of not needing
@@ -96,6 +96,10 @@ class AnalyzerOptions(object):
     # with #global $foo beforehand
     self.fail_library_searchlist_access = False
 
+    # If we can skip udn resolution and instead directly access modules
+    # imported via #import and #from directives.
+    self.skip_import_udn_resolution = False
+
     self.enable_psyco = False
     self.__dict__.update(kargs)
 
@@ -107,7 +111,7 @@ class AnalyzerOptions(object):
     return ', '.join(['[no-]' + name.replace('_', '-')
                     for name, value in vars(cls()).iteritems()
                     if not name.startswith('__') and type(value) == bool])
-  
+
 default_options = AnalyzerOptions()
 o1_options = copy.copy(default_options)
 o1_options.collapse_adjacent_text = True
@@ -159,7 +163,7 @@ class SemanticAnalyzer(object):
     self.ast_root = None
     self.template = None
     self.strip_lines = False
-    
+
   def get_ast(self):
     ast_node_list = self.build_ast(self.parse_root)
     if len(ast_node_list) != 1:
@@ -172,6 +176,7 @@ class SemanticAnalyzer(object):
   def build_ast(self, node):
     method_name = 'analyze%s' % node.__class__.__name__
     method = getattr(self, method_name, self.default_analyze_node)
+    # print method_name, node.name, node
     ast_node_list = method(node)
     try:
       if len(ast_node_list) != 1:
@@ -180,6 +185,7 @@ class SemanticAnalyzer(object):
       raise SemanticAnalyzerError('method: %s, result: %s' % (
         method, ast_node_list))
 
+    # print '<', ast_node_list[0].name, ast_node_list[0]
     return ast_node_list
 
   def default_analyze_node(self, pnode):
@@ -244,6 +250,14 @@ class SemanticAnalyzer(object):
     return self.optimize_buffer_writes(new_nodes)
 
   def analyzeGetUDNNode(self, pnode):
+    children = pnode.getChildNodes()
+    if isinstance(children[0], PlaceholderNode):
+      identifier = '.'.join([node.name for node in children])
+      # Some modules are trusted not to need UDN resolution.
+      if self._identifier_can_skip_UDN_resolution(identifier):
+        expr = '%s.%s' % (identifier, pnode.name)
+        return [IdentifierNode(expr)]
+
     expression = self.build_ast(pnode.expression)[0]
     get_udn_node = GetUDNNode(expression, pnode.name)
     return [get_udn_node]
@@ -323,6 +337,8 @@ class SemanticAnalyzer(object):
 
     if node not in self.template.import_nodes:
       self.template.import_nodes.append(node)
+      # Modules imported via "from" are trusted to not need UDN resolution.
+      self.template.trusted_module_identifiers.add('.'.join(node.name for node in node.module_name_list))
     return []
 
   def analyzeExtendsNode(self, pnode):
@@ -354,6 +370,8 @@ class SemanticAnalyzer(object):
         pnode.module_name_list[0:0] = base_extends_identifiers
     if pnode not in self.template.from_nodes:
       self.template.from_nodes.append(pnode)
+      # Modules imported via "from" are trusted to not need UDN resolution.
+      self.template.trusted_module_identifiers.add(pnode.identifier.name)
     return []
 
   def analyzeTextNode(self, pnode):
@@ -577,6 +595,8 @@ class SemanticAnalyzer(object):
     # that this is calling into a library.
     library_function = None
 
+    imported_function = None
+
     if isinstance(fn.expression, PlaceholderNode):
       macro_handler_name = 'macro_function_%s' % fn.expression.name
       macro_function = self.compiler.macro_registry.get(macro_handler_name)
@@ -587,11 +607,13 @@ class SemanticAnalyzer(object):
         library_function = fn.expression.name
 
     elif isinstance(fn.expression, GetUDNNode):
-      module_identifier = [node.name for node in fn.expression.getChildNodes()]
-      module_identifier = '.'.join(module_identifier)
-      if module_identifier in self.template.library_identifiers:
+      identifier = [node.name for node in fn.expression.getChildNodes()]
+      identifier = '.'.join(identifier)
+      if identifier in self.template.library_identifiers:
         # Calling library functions from other templates.
-        library_function = '%s.%s' % (module_identifier, fn.expression.name)
+        library_function = '%s.%s' % (identifier, fn.expression.name)
+      elif self._identifier_can_skip_UDN_resolution(identifier):
+        imported_function = '%s.%s' % (identifier, fn.expression.name)
 
     if library_function:
       # Replace the placeholder node or UDN resolution with a direct reference
@@ -600,6 +622,8 @@ class SemanticAnalyzer(object):
       # Pass the current template instance into the library function.
       fn.arg_list.child_nodes.insert(0, IdentifierNode('self'))
       fn.library_function = True
+    elif imported_function:
+      fn.expression = IdentifierNode(imported_function)
 
     fn.expression = self.build_ast(fn.expression)[0]
     fn.arg_list = self.build_ast(fn.arg_list)[0]
@@ -661,7 +685,13 @@ class SemanticAnalyzer(object):
         optimized_nodes.append(n)
     return optimized_nodes
 
+  # Imported modules are trusted to not need UDN resolution.
+  def _identifier_can_skip_UDN_resolution(self, identifier):
+    if not self.options.skip_import_udn_resolution:
+      return False
+    return identifier in self.template.trusted_module_identifiers
+
+
 def is_text_write(node):
   return (isinstance(node, BufferWrite) and
           isinstance(node.expression, LiteralNode))
-  
