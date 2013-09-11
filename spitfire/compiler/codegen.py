@@ -42,7 +42,8 @@ class CodeGenerator(object):
     self.ast_root = ast_root
     self.options = options
     self.output = StringIO.StringIO()
-    
+    self.template = None
+
 
   def get_code(self):
     code_root = self.build_code(self.ast_root)[0]
@@ -74,6 +75,8 @@ class CodeGenerator(object):
     return method(ast_node)
 
   def codegenASTTemplateNode(self, node):
+    self.template = node.copy(copy_children=False)
+
     module_code = CodeNode()
     module_code.append_line('#!/usr/bin/env python')
     module_code.append_line('# -*- coding: %s -*-' % node.encoding)
@@ -271,7 +274,7 @@ class CodeGenerator(object):
   def codegenASTFilterAttributeNode(self, node):
     return [CodeNode('%s = staticmethod(%s)' % (node.name, self.generate_python(
       self.build_code(node.default)[0])))]
-    
+
   def codegenASTParameterListNode(self, node):
     if len(node.child_nodes) == 1:
       return self.build_code(node.child_nodes[0])
@@ -281,11 +284,14 @@ class CodeGenerator(object):
          for n in node.child_nodes]))]
 
   codegenASTArgListNode = codegenASTParameterListNode
-    
+
   def codegenASTGetUDNNode(self, node):
     #print "codegenASTGetUDNNode", id(node), "name", node.name, "expr", node.expression
     expression = self.generate_python(self.build_code(node.expression)[0])
     name = node.name
+    if (self.options and self.options.default_to_strict_resolution and
+        self.template and not self.template.use_loose_resolution):
+      return [CodeNode("%(expression)s.%(name)s" % vars())]
     if self.options and self.options.raise_udn_exceptions:
       return [CodeNode("resolve_udn(%(expression)s, '%(name)s', raise_exception=True)" % vars())]
     else:

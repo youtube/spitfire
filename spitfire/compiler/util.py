@@ -134,6 +134,7 @@ class Compiler(object):
   setting_names = [
     'base_extends_package',
     'debug_flags',
+    'default_to_strict_resolution',
     'enable_filters',
     'extract_message_catalogue',
     'fail_library_searchlist_access',
@@ -175,6 +176,7 @@ class Compiler(object):
     self.normalize_whitespace = False
     self.fail_library_searchlist_access = False
     self.skip_import_udn_resolution = False
+    self.default_to_strict_resolution = False
     
     self.base_extends_package = None
     self.message_catalogue = None
@@ -206,6 +208,7 @@ class Compiler(object):
       self.analyzer_options.normalize_whitespace = self.normalize_whitespace
       self.analyzer_options.fail_library_searchlist_access = self.fail_library_searchlist_access
       self.analyzer_options.skip_import_udn_resolution = self.skip_import_udn_resolution
+      self.analyzer_options.default_to_strict_resolution = self.default_to_strict_resolution
 
     # slightly crappy code to support turning flags on and off from the
     # command line - probably should go in analyzer options?
@@ -344,6 +347,9 @@ def add_common_options(op):
   op.add_option('--skip-import-udn-resolution', action='store_true',
                 default=False,
                 help='Skip UDN resolution for imported moudles')
+  op.add_option('--default-to-strict-resolution', action='store_true',
+                default=False,
+                help='Resolve dotted values in python instead of using resolve_UDN')
   op.add_option('-v', '--verbose', action='store_true', default=False)
   op.add_option('-V', '--version', action='store_true', default=False)
   op.add_option('-O', dest='optimizer_level', type='int', default=0)

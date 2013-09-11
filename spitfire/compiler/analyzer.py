@@ -100,6 +100,12 @@ class AnalyzerOptions(object):
     # imported via #import and #from directives.
     self.skip_import_udn_resolution = False
 
+    # By default Spitfire will jump through hoops to resolve dot notation.
+    # This flag disables this resolution and instead uses direct python access.
+    # If this flag can be overriden on a per-file basis by using the
+    # "#loose_resolution" directive.
+    self.default_to_strict_resolution = False
+
     self.enable_psyco = False
     self.__dict__.update(kargs)
 
@@ -325,6 +331,10 @@ class SemanticAnalyzer(object):
     else:
       self.template.main_function.name = pnode.name
       self.template.implements = True
+    return []
+
+  def analyzeLooseResolutionNode(self, pnode):
+    self.template.use_loose_resolution = True
     return []
 
   def analyzeImportNode(self, pnode):
@@ -595,8 +605,6 @@ class SemanticAnalyzer(object):
     # that this is calling into a library.
     library_function = None
 
-    imported_function = None
-
     if isinstance(fn.expression, PlaceholderNode):
       macro_handler_name = 'macro_function_%s' % fn.expression.name
       macro_function = self.compiler.macro_registry.get(macro_handler_name)
@@ -612,8 +620,6 @@ class SemanticAnalyzer(object):
       if identifier in self.template.library_identifiers:
         # Calling library functions from other templates.
         library_function = '%s.%s' % (identifier, fn.expression.name)
-      elif self._identifier_can_skip_UDN_resolution(identifier):
-        imported_function = '%s.%s' % (identifier, fn.expression.name)
 
     if library_function:
       # Replace the placeholder node or UDN resolution with a direct reference
@@ -622,8 +628,6 @@ class SemanticAnalyzer(object):
       # Pass the current template instance into the library function.
       fn.arg_list.child_nodes.insert(0, IdentifierNode('self'))
       fn.library_function = True
-    elif imported_function:
-      fn.expression = IdentifierNode(imported_function)
 
     fn.expression = self.build_ast(fn.expression)[0]
     fn.arg_list = self.build_ast(fn.arg_list)[0]

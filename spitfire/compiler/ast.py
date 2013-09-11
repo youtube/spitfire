@@ -493,6 +493,9 @@ class ElseNode(ASTNode):
 class ImplementsNode(ASTNode):
   pass
 
+class LooseResolutionNode(ASTNode):
+  pass
+
 class ImportNode(ASTNode):
   def __init__(self, module_name_list, library=False):
     ASTNode.__init__(self)
@@ -697,6 +700,7 @@ class TemplateNode(ASTNode):
     self.attr_nodes = NodeList()
     self.library = False
     self.implements = False
+    self.use_loose_resolution = False
     self.global_placeholders = set()
     self.global_identifiers = set()
     self.cached_identifiers = set()
