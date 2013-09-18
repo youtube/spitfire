@@ -19,7 +19,10 @@ class CodeNode(object):
     
   def append(self, code_node):
     self.child_nodes.append(code_node)
-    
+
+  def insert(self, index, code_node):
+    self.child_nodes.insert(index, code_node)
+
   def extend(self, code_nodes):
     try:
       self.child_nodes.extend(code_nodes)
@@ -40,10 +43,14 @@ class CodeGenerator(object):
   # options - an AnalyzerOptions object
   def __init__(self, ast_root, options=None):
     self.ast_root = ast_root
+    # This stack of FunctionNodes represents the functions we are
+    # currently inside. When we enter a function node, we push that
+    # onto the stack and when we leave that function, we pop it from
+    # the stack.
+    self.function_stack = []
     self.options = options
     self.output = StringIO.StringIO()
     self.template = None
-
 
   def get_code(self):
     code_root = self.build_code(self.ast_root)[0]
@@ -192,6 +199,8 @@ class CodeGenerator(object):
   def codegenASTCallFunctionNode(self, node):
     expression = self.generate_python(
       self.build_code(node.expression)[0])
+    if expression == '_self_filter_function':
+      self.function_stack[-1].uses_filter_function = True
     if node.arg_list:
       arg_list = self.generate_python(
         self.build_code(node.arg_list)[0])
@@ -306,10 +315,12 @@ class CodeGenerator(object):
         "resolve_placeholder(_self_search_list, '%(name)s')"
         % vars())]
     elif self.options and self.options.omit_local_scope_search:
+      self.function_stack[-1].uses_globals = True
       return [CodeNode(
         "resolve_placeholder('%(name)s', self, None, _globals)"
         % vars())]
     else:
+      self.function_stack[-1].uses_globals = True
       return [CodeNode(
         "resolve_placeholder('%(name)s', self, locals(), _globals)"
         % vars())]
@@ -355,6 +366,9 @@ class CodeGenerator(object):
 
   def codegenASTFunctionNode(self, node):
     name = node.name
+    node.uses_globals = False
+    node.uses_filter_function = False
+    self.function_stack.append(node)
     if node.parameter_list:
       parameter_list = self.generate_python(
         self.build_code(node.parameter_list)[0])
@@ -383,21 +397,32 @@ class CodeGenerator(object):
     else:
       code_node.append(CodeNode('_buffer = self.new_buffer()'))
     code_node.append(CodeNode('_buffer_write = _buffer.write'))
-    code_node.append(CodeNode('_globals = globals()'))
-    code_node.append(CodeNode('_self_filter_function = self.filter_function'))
-    
+
+    # Save the point where _globals and self_filter_funtion will go if
+    # used. We don't append these here because we have to determine if
+    # these two functions are used in the scope of the current FunctionNode.
+    insertion_point = len(code_node.child_nodes)
+
     if self.options and self.options.cheetah_cheats:
+      node.uses_globals = True
       code_node.append(CodeNode('_self_search_list = self.search_list + [_globals]'))
 
     for n in node.child_nodes:
       code_child_nodes = self.build_code(n)
       code_node.extend(code_child_nodes)
+
+    if node.uses_globals:
+      code_node.insert(insertion_point, CodeNode('_globals = globals()'))
+      insertion_point += 1
+    if node.uses_filter_function:
+      code_node.insert(insertion_point, CodeNode('_self_filter_function = self.filter_function'))
     if self.options.cheetah_compatibility:
       if_cheetah = CodeNode("if 'trans' not in kargs:")
       if_cheetah.append(CodeNode('return _buffer.getvalue()'))
       code_node.append(if_cheetah)
     else:
       code_node.append(CodeNode('return _buffer.getvalue()'))
+    self.function_stack.pop()
     return [decorator_node, code_node]
   
   # fixme: don't know if i still need this - a 'template function'
@@ -436,6 +461,7 @@ class CodeGenerator(object):
     return node_list
 
   def codegenASTCacheNode(self, node):
+    self.function_stack[-1].uses_globals = True
     cached_name = node.name
     expression = self.generate_python(self.build_code(node.expression)[0])
     # use dictionary syntax to get around coalescing 'global' statements
@@ -446,8 +472,8 @@ class CodeGenerator(object):
 
   def codegenASTFilterNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
-    
     if node.filter_function_node == DefaultFilterFunction:
+      self.function_stack[-1].uses_filter_function = True
       filter_expression = '_self_filter_function'
     elif node.filter_function_node:
       filter_expression = self.generate_python(
