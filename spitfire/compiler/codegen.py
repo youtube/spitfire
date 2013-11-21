@@ -13,10 +13,10 @@ class CodeNode(object):
   def __init__(self, src_line=None):
     self.src_line = src_line
     self.child_nodes = []
-    
+
   def append_line(self, line):
     self.append(CodeNode(line))
-    
+
   def append(self, code_node):
     self.child_nodes.append(code_node)
 
@@ -32,7 +32,7 @@ class CodeNode(object):
   def __repr__(self):
     return '%s:%s' % (self.__class__.__name__, self.src_line)
 
-    
+
 # perform an in-order traversal of the AST and call the generate methods
 # in this case, we are generating python source code that should be somewhat
 # human-readable
@@ -63,12 +63,13 @@ class CodeGenerator(object):
     except AttributeError, e:
       raise CodegenError(
         "can't write code_node: %s\n\t%s" % (code_node, e))
-    
+
   def write_python(self, code_node, indent_level):
     try:
       if code_node.src_line is not None:
-        self.output.write(self.indent_str * indent_level)
-        self.output.write(code_node.src_line)
+        if code_node.src_line:
+          self.output.write(self.indent_str * indent_level)
+          self.output.write(code_node.src_line)
         self.output.write('\n')
     except AttributeError:
       raise CodegenError("can't write code_node: %s" % code_node)
@@ -107,7 +108,7 @@ class CodeGenerator(object):
 
     extends_clause = ', '.join(extends)
     classname = node.classname
-    
+
     module_code.append_line('import spitfire.runtime')
     module_code.append_line('import spitfire.runtime.template')
 
@@ -249,7 +250,7 @@ class CodeGenerator(object):
     else:
       # generate unicode by default
       return [CodeNode('%(value)r' % vars(node))]
-      
+
 
   def codegenASTListLiteralNode(self, node):
     return [CodeNode('[%s]' % ', '.join([
@@ -268,7 +269,7 @@ class CodeGenerator(object):
       '%s: %s' % (self.generate_python(self.build_code(kn)[0]),
                   self.generate_python(self.build_code(vn)[0]))
       for kn, vn in node.child_nodes]))]
-  
+
   def codegenASTParameterNode(self, node):
     if node.default:
       return [CodeNode('%s=%s' % (node.name, self.generate_python(
@@ -424,7 +425,7 @@ class CodeGenerator(object):
       code_node.append(CodeNode('return _buffer.getvalue()'))
     self.function_stack.pop()
     return [decorator_node, code_node]
-  
+
   # fixme: don't know if i still need this - a 'template function'
   # has an implicit return of the buffer built in - might be simpler
   # to code that rather than adding a return node during the analyze
@@ -438,7 +439,7 @@ class CodeGenerator(object):
 
   def codegenASTEchoNode(self, node):
     node_list = []
-    
+
     true_expression = self.generate_python(
       self.build_code(node.true_expression)[0])
     true_code = CodeNode('_buffer_write(%(true_expression)s)' % vars())
