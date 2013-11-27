@@ -20,6 +20,7 @@ class ASTNode(object):
     self.statement = False
     # Position in the input string (measured in characters).
     self.pos = None
+    self.end_pos = None
 
   def __str__(self):
     if self.value:
@@ -105,16 +106,28 @@ class ASTNode(object):
 
 
 class NodeList(list):
+  def __init__(self):
+    # Position in the input string (measured in characters).
+    self.pos = None
+    self.end_pos = None
+
   # note: need to iterate over a copy due to the way i modify the tree in-place
   # this is probably an indication that this approach is fundamentally flawed
   def __iter__(self):
     return iter(list(list.__iter__(self)))
-  
+
   def append(self, node):
     if isinstance(node, list):
       self.extend(node)
     else:
       list.append(self, node)
+
+  def __hash__(self):
+    # Equality is list equality.
+    result = 0
+    for item in self:
+      result ^= hash(item)
+    return result
 
 
 class _ListNode(ASTNode):
@@ -126,7 +139,7 @@ class _ListNode(ASTNode):
       self.extend(parg_list)
     else:
       self.parg_list = []
-      
+
     if karg_list:
       self.extend(karg_list)
     else:
@@ -134,10 +147,10 @@ class _ListNode(ASTNode):
 
   def __len__(self):
     return len(self.child_nodes)
-      
+
   def __iter__(self):
     return iter(self.child_nodes)
-    
+
   def __str__(self):
     return '%s %s' % (ASTNode.__str__(self),
                       ', '.join(str(n) for n in self.child_nodes))
@@ -169,11 +182,11 @@ class _ListNode(ASTNode):
 
   def get_parg_list(self):
     return self.parg_list
-    
+
 
 class ArgListNode(_ListNode):
   pass
-    
+
 
 class BinOpNode(ASTNode):
   def __init__(self, operator, left, right):
@@ -189,7 +202,7 @@ class BinOpNode(ASTNode):
       self.right = replacement_node
     else:
       raise Exception("neither left nor right expression matches target")
-  
+
   def __str__(self):
     return '%s (%s %s %s)' % (
       self.__class__.__name__, self.left, self.operator, self.right)
@@ -201,8 +214,8 @@ class BinOpNode(ASTNode):
                 self.right == node.right)
 
   def __hash__(self):
-    return hash('%s%s%s%s%s' %
-                (type(self), self.name, self.operator,
+    return hash('%s%s%s%s' %
+                (type(self), self.operator,
                  hash(self.left), hash(self.right)))
 
 # fixme: are both BinOpNode and BinOpExpressionNode needed?
@@ -215,7 +228,7 @@ class AssignNode(BinOpNode):
 
 class BreakNode(ASTNode):
   pass
-  
+
 
 class CallFunctionNode(ASTNode):
   def __init__(self, expression=None, arg_list=None):
@@ -242,10 +255,11 @@ class CallFunctionNode(ASTNode):
                 self.child_nodes == node.child_nodes)
 
   def __hash__(self):
-    return hash('%s%s%s%s' %
-                (type(self), hash(self.expression), hash(self.arg_list),
+    return hash('%s%s%s%s%s' %
+                (type(self), hash(self.library_function),
+                 hash(self.expression), hash(self.arg_list),
                  hash(tuple(self.child_nodes))))
-    
+
   def __str__(self):
     return '%s expr:%s arg_list:%s' % (
       self.__class__.__name__, self.expression, self.arg_list)
@@ -263,6 +277,7 @@ class CacheNode(CallFunctionNode):
   def __init__(self, expression=None):
     ASTNode.__init__(self, '_cph%08X' % unsigned_hash(expression))
     self.expression = expression
+
   def __eq__(self, node):
     return bool(type(self) == type(node) and
                 self.expression == node.expression)
@@ -270,7 +285,7 @@ class CacheNode(CallFunctionNode):
   def __hash__(self):
     return hash('%s%s' %
                 (type(self), hash(self.expression)))
-    
+
   def __str__(self):
     return '%s expr:%s' % (
       self.__class__.__name__, self.expression)
@@ -343,10 +358,21 @@ class DefNode(ASTNode):
   def __init__(self, *pargs, **kargs):
     ASTNode.__init__(self, *pargs, **kargs)
     self.parameter_list = ParameterListNode()
-    
+
   def __str__(self):
     return '%s name:%s parameter_list:%s' % (
       self.__class__.__name__, self.name, self.parameter_list)
+
+  def __eq__(self, other):
+    return bool(type(self) == type(other) and
+                self.name == other.name and
+                self.parameter_list == other.parameter_list and
+                self.child_nodes == other.child_nodes)
+
+  def __hash__(self):
+    return hash('%s%s%s%s' % (
+        type(self), hash(self.name),
+        hash(tuple(self.parameter_list)), hash(tuple(self.child_nodes))))
 
 class BlockNode(DefNode):
   pass
@@ -394,7 +420,7 @@ class ForNode(ASTNode):
       self.expression_list = ExpressionListNode()
     self.scope = Scope('ForNode')
     self.loop_variant_set = None
-    
+
   def __str__(self):
     return ('%s target_list:%s expr_list:%s' %
             (self.__class__.__name__, self.target_list, self.expression_list))
@@ -411,7 +437,7 @@ class FunctionNode(ASTNode):
     # PSEUDOCODE moved to codegen phase
     self.parameter_list = ParameterListNode()
     self.scope = Scope('Function')
-    
+
   def __str__(self):
     return '%s %s parameter_list:%r' % (
       self.__class__.__name__, self.name, self.parameter_list)
@@ -430,7 +456,7 @@ class GetAttrNode(ASTNode):
 
   def __hash__(self):
     return hash('%s%s%s' %
-                (type(self), self.name, self.expression))
+                (type(self), hash(self.name), hash(self.expression)))
 
   def __str__(self):
     return '%s expr:%s . name:%s' % (
@@ -476,10 +502,22 @@ class IfNode(ASTNode):
       self.test_expression = replacement_node
     else:
       ASTNode.replace(self, node, replacement_node)
-    
+
   def __str__(self):
     return '%s test_expr:%s\nScope:%s\nelse:\n  %s' % (
       self.__class__.__name__, self.test_expression, self.scope, self.else_)
+
+  def __eq__(self, other):
+    return bool(type(self) == type(other) and
+                self.test_expression == other.test_expression and
+                self.else_ == other.else_ and
+                self.scope == other.scope and
+                self.child_nodes == other.child_nodes)
+
+  def __hash__(self):
+    return hash("%s%s%s%s%s" % (
+        type(self), hash(self.test_expression), hash(self.else_),
+        hash(self.scope), hash(self.child_nodes)))
 
 class ElseNode(ASTNode):
   def __init__(self, parent=None):
@@ -530,7 +568,7 @@ class FromNode(ImportNode):
     ImportNode.__init__(self, module_name_list, library=library)
     self.identifier = identifier
     self.alias = alias
-    
+
   def __eq__(self, node):
     return bool(type(self) == type(node) and
                 self.module_name_list == node.module_name_list and
@@ -671,6 +709,13 @@ class TextNode(ASTNode):
       raise Exception('node type mismatch')
     self.value += node.value
 
+  def __eq__(self, other):
+    return bool(type(self) == type(other) and
+                self.value == other.value)
+
+  def __hash__(self):
+    return hash("%s%s" % (type(self), self.value))
+
 class WhitespaceNode(TextNode):
   def make_optional(self):
     return OptionalWhitespaceNode(self.value)
@@ -715,7 +760,7 @@ class TemplateNode(ASTNode):
       self.from_nodes,
       self.extends_nodes,
       self.main_function)
-  
+
 class TupleLiteralNode(ASTNode):
   pass
 
@@ -759,11 +804,22 @@ class Scope(object):
   def __str__(self):
     return "<Scope %(name)s> %(alias_name_set)s" % vars(self)
 
+  def __eq__(self, other):
+    # TODO: Is this accurate enough?
+    return (type(self) == type(other) and
+            self.name == other.name and
+            self.local_identifiers == other.local_identifiers)
+
+  def __hash__(self):
+    # local_identifiers is not hashable.
+    return hash("%s%s" % (type(self), self.name))
+
+
 class ScopeSet(set):
   pass
   #def add(self, o):
   #  set.add(self, o)
-    
+
 class OrderedDict(object):
   def __init__(self):
     self._dict = {}
@@ -863,10 +919,11 @@ def track_line_numbers(exempt_methods=()):
 
   def make_execute_rule(rule):
     def _execute_rule(self, *args, **kwargs):
-      saved_position = self._scanner.pos
+      saved_position = self.file_position
       result = rule(self, *args, **kwargs)
-      if isinstance(result, ASTNode):
+      if isinstance(result, (ASTNode, NodeList)):
         result.pos = saved_position
+        result.end_pos = self.file_position
       return result
     return _execute_rule
 
