@@ -1,3 +1,4 @@
+import __builtin__
 import copy
 import traceback
 
@@ -730,6 +731,8 @@ class FragmentNode(ASTNode):
   pass
 
 class TemplateNode(ASTNode):
+  __builtin_set = frozenset(dir(__builtin__))
+
   def __init__(self, classname=None, **kargs):
     ASTNode.__init__(self, **kargs)
     self.source_path = None
@@ -752,6 +755,7 @@ class TemplateNode(ASTNode):
     self.template_methods = set()
     self.library_identifiers = set()
     self.trusted_module_identifiers = set()
+    self.local_scope_identifiers = set()
 
   def __str__(self):
     return '%s\nimport:%s\nfrom:%s\nextends:%s\nmain:%s' % (
@@ -760,6 +764,14 @@ class TemplateNode(ASTNode):
       self.from_nodes,
       self.extends_nodes,
       self.main_function)
+
+  def has_identifier(self, name):
+    return (
+        name in self.__builtin_set
+        or name in self.local_scope_identifiers
+        or name in self.template_methods
+        or name in self.trusted_module_identifiers
+        or name in [node.name for node in self.attr_nodes])
 
 class TupleLiteralNode(ASTNode):
   pass

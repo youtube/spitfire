@@ -229,11 +229,26 @@ class SemanticAnalyzer(object):
 
     return [self.template]
 
+  # Recursively grabs identifiers from a TargetListNode, such as in a ForNode.
+  def _getIdentifiersFromListNode(self, identifier_set, target_list_node):
+    for pn in target_list_node.child_nodes:
+      if isinstance(pn, TargetNode):
+        identifier_set.add(pn.name)
+      elif isinstance(pn, TargetListNode):
+        self._getIdentifiersFromListNode(identifier_set, pn)
+
   def analyzeForNode(self, pnode):
     if not pnode.child_nodes:
       raise SemanticAnalyzerError("can't define an empty #for loop")
 
     for_node = ForNode()
+
+    # Backup original scope identifiers for analysis.
+    template_local_scope_identifiers = set(
+        self.template.local_scope_identifiers)
+
+    self._getIdentifiersFromListNode(
+        self.template.local_scope_identifiers, pnode.target_list)
 
     for pn in pnode.target_list.child_nodes:
       for_node.target_list.extend(self.build_ast(pn))
@@ -243,6 +258,9 @@ class SemanticAnalyzer(object):
       for_node.extend(self.build_ast(pn))
 
     for_node.child_nodes = self.optimize_buffer_writes(for_node.child_nodes)
+
+    # Restore original scope identifiers after children have been analyzed.
+    self.template.local_scope_identifiers = template_local_scope_identifiers
 
     return [for_node]
 
@@ -406,7 +424,15 @@ class SemanticAnalyzer(object):
       raise SemanticAnalyzerError("nested #def directives are not allowed")
 
     function = FunctionNode(pnode.name)
+    # Backup original scope identifiers for analysis.
+    template_local_scope_identifiers = set(
+        self.template.local_scope_identifiers)
+
     if pnode.parameter_list:
+      # Add parameters to local template scope for static analysis in children.
+      self.template.local_scope_identifiers = (
+          self.template.local_scope_identifiers.union(
+              [parameter.name for parameter in pnode.parameter_list]))
       function.parameter_list = self.build_ast(pnode.parameter_list)[0]
 
     function.parameter_list.child_nodes.insert(0,
@@ -417,6 +443,9 @@ class SemanticAnalyzer(object):
     function = self.build_ast(function)[0]
     function.child_nodes = self.optimize_buffer_writes(function.child_nodes)
     self.template.append(function)
+
+    # Restore original scope identifiers after children have been analyzed.
+    self.template.local_scope_identifiers = template_local_scope_identifiers
     return []
 
   def analyzeBlockNode(self, pnode):
@@ -462,8 +491,6 @@ class SemanticAnalyzer(object):
     return self.handleMacro(pnode, macro_function)
 
   def analyzeGlobalNode(self, pnode):
-    if not self.template.library:
-      raise SemanticAnalyzerError("Can't use #global in non-library templates.")
     if not isinstance(pnode.parent, TemplateNode):
       raise SemanticAnalyzerError("#global must be a top-level directive.")
     self.template.global_placeholders.add(pnode.name)
@@ -571,11 +598,23 @@ class SemanticAnalyzer(object):
 
 
   def analyzePlaceholderNode(self, pnode):
-    if (self.options.fail_library_searchlist_access and
-        self.template.library and
-        pnode.name not in self.template.global_placeholders):
+    use_strict_static_analysis = (
+        not self.template.use_loose_resolution
+        and self.options.strict_static_analysis)
+
+    if (self.options.fail_library_searchlist_access
+        and (self.template.library or use_strict_static_analysis)
+        and pnode.name not in self.template.global_placeholders):
       # Only do placeholder resolutions for placeholders declared with #global
       # in library templates.
+      if use_strict_static_analysis and (
+          not self.template.has_identifier(pnode.name)
+          and pnode.name not in self.compiler.function_name_registry):
+        # Break compile if no #loose_resolution and variable is not available
+        # in any reasonable scope.
+        raise SemanticAnalyzerError(
+            'identifier %s is unavailable and is not declared as a #global'
+            ' display variable' % pnode.name)
       return [IdentifierNode(pnode.name)]
     return [pnode]
 
@@ -588,8 +627,13 @@ class SemanticAnalyzer(object):
     return [n]
 
   analyzeBinOpExpressionNode = analyzeBinOpNode
-  analyzeAssignNode = analyzeBinOpNode
-  
+
+  def analyzeAssignNode(self, pnode):
+    # Add to template's scope, which will be removed after stepping out of
+    # a DefNode or ForNode.
+    self.template.local_scope_identifiers.add(pnode.left.name)
+    return self.analyzeBinOpNode(pnode)
+
   def analyzeUnaryOpNode(self, pnode):
     n = pnode
     n.expression = self.build_ast(n.expression)[0]

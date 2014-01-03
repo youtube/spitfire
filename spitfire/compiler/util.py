@@ -148,6 +148,7 @@ class Compiler(object):
     'optimizer_level',
     'output_directory',
     'skip_import_udn_resolution',
+    'strict_static_analysis',
     'tune_gc',
     'xspt_mode',
     ]
@@ -208,6 +209,7 @@ class Compiler(object):
       self.analyzer_options.normalize_whitespace = self.normalize_whitespace
       self.analyzer_options.fail_library_searchlist_access = self.fail_library_searchlist_access
       self.analyzer_options.skip_import_udn_resolution = self.skip_import_udn_resolution
+      self.analyzer_options.strict_static_analysis = self.strict_static_analysis
       self.analyzer_options.default_to_strict_resolution = self.default_to_strict_resolution
 
     # slightly crappy code to support turning flags on and off from the
@@ -347,6 +349,10 @@ def add_common_options(op):
   op.add_option('--skip-import-udn-resolution', action='store_true',
                 default=False,
                 help='Skip UDN resolution for imported moudles')
+  op.add_option('--strict-static-analysis', action='store_true',
+                default=False,
+                help='Throw compiler errors if display vars or extended methods'
+                ' are not declared #global. Overridden by #loose_resolution')
   op.add_option('--default-to-strict-resolution', action='store_true',
                 default=False,
                 help='Resolve dotted values in python instead of using resolve_UDN')
