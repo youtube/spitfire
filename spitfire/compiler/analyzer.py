@@ -598,16 +598,9 @@ class SemanticAnalyzer(object):
 
 
   def analyzePlaceholderNode(self, pnode):
-    use_strict_static_analysis = (
-        not self.template.use_loose_resolution
-        and self.options.strict_static_analysis)
-
     if (self.options.fail_library_searchlist_access
-        and (self.template.library or use_strict_static_analysis)
         and pnode.name not in self.template.global_placeholders):
-      # Only do placeholder resolutions for placeholders declared with #global
-      # in library templates.
-      if use_strict_static_analysis and (
+      if self.options.strict_static_analysis and (
           not self.template.has_identifier(pnode.name)
           and pnode.name not in self.compiler.function_name_registry):
         # Break compile if no #loose_resolution and variable is not available
@@ -615,7 +608,10 @@ class SemanticAnalyzer(object):
         raise SemanticAnalyzerError(
             'identifier %s is unavailable and is not declared as a #global'
             ' display variable' % pnode.name)
-      return [IdentifierNode(pnode.name)]
+      elif self.template.library:
+        # Only do placeholder resolutions for placeholders declared with #global
+        # in library templates.
+        return [IdentifierNode(pnode.name)]
     return [pnode]
 
   analyzeEchoNode = analyzePlaceholderNode
