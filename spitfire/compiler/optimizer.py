@@ -316,6 +316,10 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       self.visit_ast(key_node, dict_literal_node)
       self.visit_ast(value_node, dict_literal_node)
 
+  def analyzeListLiteralNode(self, list_literal_node):
+    for n in list_literal_node.child_nodes:
+      self.visit_ast(n, list_literal_node)
+
   def analyzeCallFunctionNode(self, function_call):
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
@@ -397,7 +401,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       local_var = IdentifierNode(placeholder.name)
       cached_placeholder = IdentifierNode('_rph_%s' % local_var.name)
       local_identifiers = self.get_local_identifiers(placeholder)
-      #print "local_identifiers", local_identifiers
+      # print "local_identifiers", local_identifiers
       if local_var in local_identifiers:
         placeholder.parent.replace(placeholder, local_var)
       elif placeholder.name in self.ast_root.template_methods:
