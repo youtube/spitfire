@@ -228,7 +228,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeParameterNode(self, parameter):
     self.visit_ast(parameter.default, parameter)
     return
-  
+
   def analyzeTemplateNode(self, template):
     # at this point, if we have a function registry, add in the nodes before we
     # begin optimizing
@@ -262,8 +262,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       self.visit_ast(n, template)
 
   def analyzeFunctionNode(self, function):
-    function.scope.local_identifiers.extend([IdentifierNode(n.name)
-                                             for n in function.parameter_list])
+    function.scope.local_identifiers.update([IdentifierNode(n.name)
+                                          for n in function.parameter_list])
     for n in function.child_nodes:
       self.visit_ast(n, function)
 
@@ -277,7 +277,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeAssignNode(self, node):
     _identifier = IdentifierNode(node.left.name)
     scope = self.get_parent_scope(node)
-    scope.local_identifiers.append(_identifier)
+    scope.local_identifiers.add(_identifier)
     # note: this hack is here so you can partially analyze alias nodes
     # without double-processing
     if node.right:
@@ -391,7 +391,51 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         insert_block.insert_before(insert_marker, assign_alias)
 
       filter_node.parent.replace(filter_node, alias)
-        
+
+
+  def _placeholdernode_replacement(self, placeholder, local_var,
+                                   cached_placeholder, local_identifiers):
+    """This function tries to replace a PlaceholderNode with a node type
+    that does not need to be resolved such as an IdentifierNode or a
+    cached placeholder.
+    """
+    if local_var in local_identifiers:
+      placeholder.parent.replace(placeholder, local_var)
+    elif placeholder.name in self.ast_root.template_methods:
+      placeholder.parent.replace(
+          placeholder, TemplateMethodIdentifierNode(
+              placeholder.name))
+    elif local_var in self.ast_root.global_identifiers:
+      placeholder.parent.replace(placeholder, local_var)
+    elif cached_placeholder in local_identifiers:
+      placeholder.parent.replace(placeholder, cached_placeholder)
+    elif local_var.name in builtin_names:
+      placeholder.parent.replace(placeholder,
+                                 IdentifierNode(local_var.name))
+    elif self.options.cache_resolved_placeholders:
+      scope = self.get_parent_scope(placeholder)
+      scope.alias_name_set.add(cached_placeholder.name)
+      scope.aliased_expression_map[placeholder] = cached_placeholder
+
+      insert_block, insert_marker = self.get_insert_block_and_point(
+          placeholder)
+      # note: this is sketchy enough that it requires some explanation
+      # basically, you need to visit the node for the parent function to
+      # get the memo that this value is aliased. unfortunately, the naive
+      # case of just calling visit_ast blows up since it tries to double
+      # analyze a certain set of nodes. you only really need to analyze
+      # that the assignment took place, then you can safely alias the
+      # actual function call. definitely sketchy, but it does seem to work
+      assign_rph = AssignNode(cached_placeholder, None)
+      cached_placeholder.parent = assign_rph
+      #print "optimize scope:", insert_block
+      #print "optimize marker:", insert_marker
+      insert_block.insert_before(
+          insert_marker, assign_rph)
+      self.visit_ast(assign_rph, insert_block)
+      assign_rph.right = placeholder
+      placeholder.parent.replace(placeholder, cached_placeholder)
+
 
   def analyzePlaceholderNode(self, placeholder):
     if self.options.directly_access_defined_variables:
@@ -401,45 +445,24 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       local_var = IdentifierNode(placeholder.name)
       cached_placeholder = IdentifierNode('_rph_%s' % local_var.name)
       local_identifiers = self.get_local_identifiers(placeholder)
+      parent_scope = self.get_parent_scope(placeholder)
+      partial_local_identifiers = parent_scope.partial_local_identifiers
+      attrs = set([IdentifierNode(node.name) for node in self.ast_root.attr_nodes])
+      non_local_identifiers = (partial_local_identifiers -
+                               local_identifiers - attrs)
+      if (self.options.strict_static_analysis and
+          local_var in non_local_identifiers):
+        raise SemanticAnalyzerError(
+            ('Variable %s is not guaranteed to be in scope. '
+            'Define the variable in all branches of the conditional '
+            'or before the conditional.') % local_var)
       # print "local_identifiers", local_identifiers
-      if local_var in local_identifiers:
-        placeholder.parent.replace(placeholder, local_var)
-      elif placeholder.name in self.ast_root.template_methods:
-        placeholder.parent.replace(
-          placeholder, TemplateMethodIdentifierNode(
-          placeholder.name))
-      elif local_var in self.ast_root.global_identifiers:
-        placeholder.parent.replace(placeholder, local_var)
-      elif cached_placeholder in local_identifiers:
-        placeholder.parent.replace(placeholder, cached_placeholder)
-      elif local_var.name in builtin_names:
-        placeholder.parent.replace(placeholder,
-                                   IdentifierNode(local_var.name))
-      elif self.options.cache_resolved_placeholders:
-        scope = self.get_parent_scope(placeholder)
-        scope.alias_name_set.add(cached_placeholder.name)
-        scope.aliased_expression_map[placeholder] = cached_placeholder
+      self._placeholdernode_replacement(placeholder,
+                                        local_var,
+                                        cached_placeholder,
+                                        local_identifiers)
 
-        insert_block, insert_marker = self.get_insert_block_and_point(
-          placeholder)
-        # note: this is sketchy enough that it requires some explanation
-        # basically, you need to visit the node for the parent function to
-        # get the memo that this value is aliased. unfortunately, the naive
-        # case of just calling visit_ast blows up since it tries to double
-        # analyze a certain set of nodes. you only really need to analyze
-        # that the assignment took place, then you can safely alias the
-        # actual function call. definitely sketchy, but it does seem to work
-        assign_rph = AssignNode(cached_placeholder, None)
-        cached_placeholder.parent = assign_rph
-        #print "optimize scope:", insert_block
-        #print "optimize marker:", insert_marker
-        insert_block.insert_before(
-          insert_marker, assign_rph)
-        self.visit_ast(assign_rph, insert_block)
-        assign_rph.right = placeholder
-        placeholder.parent.replace(placeholder, cached_placeholder)
 
-      
   def analyzePlaceholderSubstitutionNode(self, placeholder_substitution):
     self.visit_ast(placeholder_substitution.expression,
                    placeholder_substitution)
@@ -529,7 +552,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       self.visit_ast(n, if_node.else_)
 
     parent_scope = self.get_parent_scope(if_node)
-    
+    if_scope_vars = if_node.scope.local_identifiers
+
     # once both branches are optimized, walk the scopes for any variables that
     # are defined in both places. those will be promoted to function scope
     # since it is safe to assume that those will defined
@@ -543,30 +567,38 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     # scope after the conditional block. you *need* to hoist those, or you will
     # have errors when the branch fails. essentially you have to detect and
     # hoist 'branch invariant' optimizations.
+    #
+    # TODO: we can try to hoist up invariants if they don't depend on the
+    # condition. this is somewhat hard to know, so the best way to do so
+    # without multiple passes of the optimizer is to hoist only things that
+    # were already defined in the parent scope - like _buffer, or things on
+    # self.
     if if_node.else_.child_nodes:
-      if_scope_vars = set(if_node.scope.local_identifiers)
-      common_local_identifiers = list(if_scope_vars.intersection(
-        if_node.else_.scope.local_identifiers))
-      common_alias_name_set = if_node.scope.alias_name_set.intersection(
-        if_node.else_.scope.alias_name_set)
+      common_local_identifiers = (if_scope_vars &
+                                  if_node.else_.scope.local_identifiers)
+      # The set of nodes that are not defined in both the if and else branches.
+      partial_local_identifiers = ((if_scope_vars ^
+                                    if_node.else_.scope.local_identifiers) |
+                                   if_node.scope.partial_local_identifiers |
+                                   if_node.else_.scope.partial_local_identifiers)
+      common_alias_name_set = (if_node.scope.alias_name_set &
+                               if_node.else_.scope.alias_name_set)
       common_keys = (
-        set(if_node.scope.aliased_expression_map.iterkeys()) &
-        set(if_node.else_.scope.aliased_expression_map.iterkeys()))
+          set(if_node.scope.aliased_expression_map.iterkeys()) &
+          set(if_node.else_.scope.aliased_expression_map.iterkeys()))
       common_aliased_expression_map = {}
       for key in common_keys:
         common_aliased_expression_map[key] = if_node.scope.aliased_expression_map[key]
 
-      parent_scope.local_identifiers.extend(common_local_identifiers)
+      parent_scope.local_identifiers.update(common_local_identifiers)
       parent_scope.alias_name_set.update(common_alias_name_set)
       parent_scope.aliased_expression_map.update(common_aliased_expression_map)
     else:
-      # we can try to hoist up invariants if they don't depend on the
-      # condition. this is somewhat hard to know, so the best way to do so
-      # without multiple passes of the optimizer is to hoist only things that
-      # were already defined in the parent scope - like _buffer, or things on
-      # self.
-      pass
-      
+      partial_local_identifiers = if_scope_vars
+
+    non_parent_scope_identifiers = (partial_local_identifiers -
+                                    parent_scope.local_identifiers)
+    parent_scope.partial_local_identifiers.update(non_parent_scope_identifiers)
 
   def analyzeBinOpNode(self, n):
     # if you are trying to use short-circuit behavior, these two optimizations
@@ -613,7 +645,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         break
       node = node.parent
     return frozenset(local_identifiers)
-  
+
   def analyzeGetUDNNode(self, node):
     if not self.options.prefer_whole_udn_expressions:
       self.visit_ast(node.expression, node)

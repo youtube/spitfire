@@ -807,11 +807,15 @@ class Scope(object):
       self.name = name
     else:
       self.name = hex(id(self))
-    self.local_identifiers = []
+    self.local_identifiers = set()
     self.aliased_expression_map = OrderedDict()
     self.alias_name_set = ScopeSet()
     self.filtered_expression_map = {}
     self.hoisted_aliases = []
+    # This set holds local identifiers that may or may not be defined
+    # in the current scope. For example a variable defined in only the
+    # if or the else clause of an if statement.
+    self.partial_local_identifiers = set()
 
   def __str__(self):
     return "<Scope %(name)s> %(alias_name_set)s" % vars(self)
