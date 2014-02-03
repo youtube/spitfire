@@ -148,6 +148,7 @@ class Compiler(object):
     'optimizer_level',
     'output_directory',
     'skip_import_udn_resolution',
+    'static_analysis',
     'strict_static_analysis',
     'tune_gc',
     'xspt_mode',
@@ -178,7 +179,8 @@ class Compiler(object):
     self.fail_library_searchlist_access = False
     self.skip_import_udn_resolution = False
     self.default_to_strict_resolution = False
-    
+    self.static_analysis = False
+
     self.base_extends_package = None
     self.message_catalogue = None
     self.message_catalogue_file = None
@@ -187,7 +189,7 @@ class Compiler(object):
     self.include_path = '.'
     self.enable_filters = True
     self.tune_gc = False
-    
+
     # the function registry is for optimized access to 'first-class' functions
     # things that get accessed all the time that should be speedy
     self.function_registry_file = None
@@ -202,13 +204,14 @@ class Compiler(object):
 
     for key, value in kargs.iteritems():
       setattr(self, key, value)
-    
+
     if self.analyzer_options is None:
       self.analyzer_options = analyzer.optimizer_map[self.optimizer_level]
       self.analyzer_options.ignore_optional_whitespace = self.ignore_optional_whitespace
       self.analyzer_options.normalize_whitespace = self.normalize_whitespace
       self.analyzer_options.fail_library_searchlist_access = self.fail_library_searchlist_access
       self.analyzer_options.skip_import_udn_resolution = self.skip_import_udn_resolution
+      self.analyzer_options.static_analysis = self.static_analysis
       self.analyzer_options.strict_static_analysis = self.strict_static_analysis
       self.analyzer_options.default_to_strict_resolution = self.default_to_strict_resolution
 
@@ -353,6 +356,10 @@ def add_common_options(op):
                 default=False,
                 help='Throw compiler errors if display vars or extended methods'
                 ' are not declared #global. Overridden by #loose_resolution')
+  op.add_option('--static-analysis', action='store_true',
+                default=False,
+                help='Throw compiler errors if variables are used outside '
+                'of their scope.')
   op.add_option('--default-to-strict-resolution', action='store_true',
                 default=False,
                 help='Resolve dotted values in python instead of using resolve_UDN')

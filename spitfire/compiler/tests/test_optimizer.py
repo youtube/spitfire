@@ -38,7 +38,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
 
   def setUp(self):
     options = analyzer.default_options
-    options.update(strict_static_analysis=True,
+    options.update(static_analysis=True,
                    directly_access_defined_variables=True)
     self.compiler = util.Compiler(
         analyzer_options=options,

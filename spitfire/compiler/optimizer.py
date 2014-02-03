@@ -450,8 +450,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       attrs = set([IdentifierNode(node.name) for node in self.ast_root.attr_nodes])
       non_local_identifiers = (partial_local_identifiers -
                                local_identifiers - attrs)
-      if (self.options.strict_static_analysis and
-          local_var in non_local_identifiers):
+      if (self.options.static_analysis and local_var in non_local_identifiers):
         raise SemanticAnalyzerError(
             ('Variable %s is not guaranteed to be in scope. '
             'Define the variable in all branches of the conditional '
