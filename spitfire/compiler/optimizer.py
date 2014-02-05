@@ -444,9 +444,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       # placeholder name
       local_var = IdentifierNode(placeholder.name)
       cached_placeholder = IdentifierNode('_rph_%s' % local_var.name)
-      local_identifiers = self.get_local_identifiers(placeholder)
-      parent_scope = self.get_parent_scope(placeholder)
-      partial_local_identifiers = parent_scope.partial_local_identifiers
+      (local_identifiers, partial_local_identifiers) = (
+          self.get_local_identifiers(placeholder))
       attrs = set([IdentifierNode(node.name) for node in self.ast_root.attr_nodes])
       non_local_identifiers = (partial_local_identifiers -
                                local_identifiers - attrs)
@@ -623,6 +622,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 
   def get_local_identifiers(self, node):
     local_identifiers = []
+    partial_local_identifiers = []
     
     # search the parent scopes
     # fixme: should this be recursive?
@@ -631,19 +631,23 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       if isinstance(node, ForNode):
         local_identifiers.extend(node.loop_variant_set)
         local_identifiers.extend(node.scope.local_identifiers)
+        partial_local_identifiers.extend(node.scope.partial_local_identifiers)
       elif isinstance(node, IfNode):
         local_identifiers.extend(node.scope.local_identifiers)
+        partial_local_identifiers.extend(node.scope.partial_local_identifiers)
       elif isinstance(node, ElseNode):
         # in this case, we don't want to go to the parent node, which is the
         # IfNode - we want to go to the parent 'scope'
         local_identifiers.extend(node.scope.local_identifiers)
+        partial_local_identifiers.extend(node.scope.partial_local_identifiers)
         node = node.parent.parent
         continue
       elif isinstance(node, FunctionNode):
         local_identifiers.extend(node.scope.local_identifiers)
+        partial_local_identifiers.extend(node.scope.partial_local_identifiers)
         break
       node = node.parent
-    return frozenset(local_identifiers)
+    return (frozenset(local_identifiers), frozenset(partial_local_identifiers))
 
   def analyzeGetUDNNode(self, node):
     if not self.options.prefer_whole_udn_expressions:
@@ -651,7 +655,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     
     if self.options.cache_resolved_udn_expressions:
       cached_udn = IdentifierNode('_rudn_%s' % unsigned_hash(node))
-      local_identifiers = self.get_local_identifiers(node)
+      (local_identifiers, _) = self.get_local_identifiers(node)
       if cached_udn in local_identifiers:
         node.parent.replace(node, cached_udn)
       else:

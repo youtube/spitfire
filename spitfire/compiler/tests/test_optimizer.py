@@ -380,6 +380,40 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     except analyzer.SemanticAnalyzerError:
       self.fail('visit_ast raised SemanticAnalyzerError unexpectedly.')
 
+  def test_nested_partial_use(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #if True
+        #set $foo = 1
+      #end if
+      #if True
+        $foo
+      #end if
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    if_node = IfNode(LiteralNode(True))
+    function_node.append(if_node)
+    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    if_node_2 = IfNode(LiteralNode(True))
+    if_node_2.append(PlaceholderNode('foo'))
+    function_node.append(if_node_2)
+
+    optimization_analyzer = optimizer.OptimizationAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+
+    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+        optimization_analyzer.visit_ast)
+
+    self.assertRaises(analyzer.SemanticAnalyzerError,
+                      optimization_analyzer.visit_ast,
+                      ast_root)
+
 
 if __name__ == '__main__':
   unittest.main()
