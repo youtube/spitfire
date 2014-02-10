@@ -149,7 +149,7 @@ class Compiler(object):
     'output_directory',
     'skip_import_udn_resolution',
     'static_analysis',
-    'strict_static_analysis',
+    'strict_global_check',
     'tune_gc',
     'xspt_mode',
     ]
@@ -180,6 +180,7 @@ class Compiler(object):
     self.skip_import_udn_resolution = False
     self.default_to_strict_resolution = False
     self.static_analysis = False
+    self.strict_global_check = False
 
     self.base_extends_package = None
     self.message_catalogue = None
@@ -212,7 +213,7 @@ class Compiler(object):
       self.analyzer_options.fail_library_searchlist_access = self.fail_library_searchlist_access
       self.analyzer_options.skip_import_udn_resolution = self.skip_import_udn_resolution
       self.analyzer_options.static_analysis = self.static_analysis
-      self.analyzer_options.strict_static_analysis = self.strict_static_analysis
+      self.analyzer_options.strict_global_check = self.strict_global_check
       self.analyzer_options.default_to_strict_resolution = self.default_to_strict_resolution
 
     # slightly crappy code to support turning flags on and off from the

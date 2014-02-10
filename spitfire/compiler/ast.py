@@ -532,6 +532,9 @@ class ElseNode(ASTNode):
 class ImplementsNode(ASTNode):
   pass
 
+class AllowUndeclaredGlobalsNode(ASTNode):
+  pass
+
 class LooseResolutionNode(ASTNode):
   pass
 
@@ -748,6 +751,7 @@ class TemplateNode(ASTNode):
     self.attr_nodes = NodeList()
     self.library = False
     self.implements = False
+    self.allow_undeclared_globals = False
     self.use_loose_resolution = False
     self.global_placeholders = set()
     self.global_identifiers = set()

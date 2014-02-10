@@ -352,6 +352,10 @@ class SemanticAnalyzer(object):
       self.template.implements = True
     return []
 
+  def analyzeAllowUndeclaredGlobalsNode(self, pnode):
+    self.template.allow_undeclared_globals = True
+    return []
+
   def analyzeLooseResolutionNode(self, pnode):
     self.template.use_loose_resolution = True
     return []
@@ -601,9 +605,10 @@ class SemanticAnalyzer(object):
   def analyzePlaceholderNode(self, pnode):
     if (self.options.fail_library_searchlist_access
         and pnode.name not in self.template.global_placeholders):
-      if self.options.strict_static_analysis and (
-          not self.template.has_identifier(pnode.name)
-          and pnode.name not in self.compiler.function_name_registry):
+      if (self.options.strict_global_check
+          and not self.template.allow_undeclared_globals and (
+              not self.template.has_identifier(pnode.name)
+              and pnode.name not in self.compiler.function_name_registry)):
         # Break compile if no #loose_resolution and variable is not available
         # in any reasonable scope.
         raise SemanticAnalyzerError(

@@ -46,6 +46,7 @@ class _SpitfireParserScanner(Scanner):
         ("'from'", re.compile('from')),
         ("'absolute_extends'", re.compile('absolute_extends')),
         ("'extends'", re.compile('extends')),
+        ("'allow_undeclared_globals'", re.compile('allow_undeclared_globals')),
         ("'loose_resolution'", re.compile('loose_resolution')),
         ("'implements'", re.compile('implements')),
         ('DOT', re.compile('\\.')),
@@ -143,13 +144,17 @@ class _SpitfireParser(Parser):
         return fragment
 
     def statement(self):
-        _token_ = self._peek("'implements'", "'loose_resolution'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'global'", "'attr'", "'filter'", "'set'", "'echo'")
+        _token_ = self._peek("'implements'", "'allow_undeclared_globals'", "'loose_resolution'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'global'", "'attr'", "'filter'", "'set'", "'echo'")
         if _token_ == "'implements'":
             self._scan("'implements'")
             SPACE = self._scan('SPACE')
             ID = self._scan('ID')
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
             return ImplementsNode(ID)
+        elif _token_ == "'allow_undeclared_globals'":
+            self._scan("'allow_undeclared_globals'")
+            CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
+            return AllowUndeclaredGlobalsNode()
         elif _token_ == "'loose_resolution'":
             self._scan("'loose_resolution'")
             CLOSE_DIRECTIVE = self.CLOSE_DIRECTIVE()
@@ -272,7 +277,7 @@ class _SpitfireParser(Parser):
 
     def directive(self):
         START_DIRECTIVE = self._scan('START_DIRECTIVE')
-        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'strip_lines'", "'if'", "'implements'", "'loose_resolution'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'global'", "'attr'", "'filter'", "'set'", "'echo'", 'END', 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
+        _token_ = self._peek('SINGLE_LINE_COMMENT', 'MULTI_LINE_COMMENT', "'block'", "'i18n'", "'def'", "'for[ \\t]*'", "'strip_lines'", "'if'", "'implements'", "'allow_undeclared_globals'", "'loose_resolution'", "'extends'", "'absolute_extends'", "'from'", "'import'", "'slurp'", "'break'", "'continue'", "'global'", "'attr'", "'filter'", "'set'", "'echo'", 'END', 'LITERAL_DOLLAR_SIGN', 'LITERAL_BACKSLASH', 'START_DIRECTIVE', 'SPACE', 'NEWLINE', 'START_PLACEHOLDER', 'END_DIRECTIVE', "'#elif'", 'TEXT', "'#else'")
         if _token_ == 'SINGLE_LINE_COMMENT':
             SINGLE_LINE_COMMENT = self._scan('SINGLE_LINE_COMMENT')
             return CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT)
