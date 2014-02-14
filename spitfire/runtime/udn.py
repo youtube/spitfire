@@ -40,7 +40,7 @@ class CallOnlyPlaceholder(object):
   def skip_filter(self):
     return getattr(self.function, 'skip_filter')
   
-  def __cmp__(self):
+  def __cmp__(self, unused_other):
     raise PlaceholderError(self.name, 'function placeholder was not called')
 
   def __nonzero__(self):
