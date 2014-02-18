@@ -353,7 +353,7 @@ def add_common_options(op):
   op.add_option('--skip-import-udn-resolution', action='store_true',
                 default=False,
                 help='Skip UDN resolution for imported moudles')
-  op.add_option('--strict-static-analysis', action='store_true',
+  op.add_option('--strict-global-check', action='store_true',
                 default=False,
                 help='Throw compiler errors if display vars or extended methods'
                 ' are not declared #global. Overridden by #loose_resolution')
