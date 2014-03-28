@@ -117,14 +117,16 @@ def _resolve_placeholder(name, template, local_vars, global_vars):
       raise PlaceholderError('unexpected type for local_vars: %s' %
                              type(local_vars))
 
-  if template is not None:
-    try:
-      return getattr(template, name)
-    except AttributeError:
-      pass
+  try:
+    # Note: getattr with 3 args is somewhat slower if the attribute
+    # is found, but much faster if the attribute is not found.
+    return getattr(template, name)
+  except AttributeError:
+    pass
 
-  if template.search_list is not None:
-    ph = _resolve_from_search_list(template.search_list, name)
+  search_list = template.search_list
+  if search_list:
+    ph = _resolve_from_search_list(search_list, name)
     if ph is not UnresolvedPlaceholder:
       return ph
 
@@ -147,23 +149,6 @@ def _resolve_placeholder(name, template, local_vars, global_vars):
     return UndefinedPlaceholder(name,
                                 [get_available_placeholders(scope)
                                  for scope in template.search_list])
-
-
-# TODO: should this unused function be removed?
-def _resolve_placeholder_2(name, template, local_vars, global_vars):
-  """A slightly different version of resolve_placeholder that relies mostly on
-  the accelerated C resolving stuff.
-  """
-  search_list = [local_vars, template]
-  search_list += template.search_list
-  search_list += (global_vars, __builtin__)
-  return_value = _resolve_from_search_list(search_list, name, Unspecified)
-  if return_value is not Unspecified:
-    return return_value
-  else:
-    return UndefinedPlaceholder(name,
-                                [get_available_placeholders(scope)
-                                 for scope in search_list])
 
 resolve_placeholder = _resolve_placeholder
 
@@ -205,28 +190,6 @@ def _resolve_from_search_list(search_list, name, default=Unspecified):
     return UnresolvedPlaceholder
 
 
-def _resolve_from_search_list_2(search_list, name, default=Unspecified):
-  """Models the C function more precisely. However, due to common access
-  patterns, it's probably better to prefer dictionaries when resolving from
-  a search list. That's just a lot more likely scenario."""
-  try:
-    for scope in search_list:
-      if hasattr(scope, name):
-        return getattr(scope, name)
-      try:
-        return scope[name]
-      except (KeyError, TypeError):
-        pass
-  except TypeError:
-    # if this isn't iterable, let's just return UndefinedPlaceholder
-    pass
-  
-  if default != Unspecified:
-    return default
-  else:
-    return UnresolvedPlaceholder
-  
-
 def get_available_placeholders(scope):
   if isinstance(scope, dict):
     return scope.keys()
@@ -250,7 +213,7 @@ resolve_udn = _resolve_udn
 
 def set_accelerator(enabled=True, enable_test_mode=False):
   """Some key functions are much faster in C.
-  They can subtlely change how data is accessed with can cause false-positive
+  They can subtlely change how data is accessed which can cause false-positive
   errors in certain test cases, so we want to be able to toggle it on/off.
   """
   global _resolve_from_search_list
