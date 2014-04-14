@@ -34,6 +34,84 @@ class TestAnalyzeListLiteralNode(unittest.TestCase):
 
     self.assertEqual(len(optimization_analyzer.visit_ast.GetCalls()), 4)
 
+
+class TestAssignAfterFilterWarning(unittest.TestCase):
+
+  def setUp(self):
+    options = analyzer.default_options
+    options.update(cache_resolved_placeholders=True,
+                   enable_warnings=True, warnings_as_errors=True)
+    self.compiler = util.Compiler(
+        analyzer_options=options,
+        xspt_mode=False)
+
+  def assign_after_filter_fails(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #set $foo = 'foo'
+      $foo
+      #set $foo = 'bar'
+      $foo
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    first_assign = AssignNode(IdentifierNode('foo'), LiteralNode('foo'))
+    function_node.append(first_assign)
+    first_use = FilterNode(IdentifierNode('foo'))
+    function_node.append(first_use)
+    second_assign = AssignNode(IdentifierNode('foo'), LiteralNode('bar'))
+    function_node.append(second_assign)
+    second_use = FilterNode(IdentifierNode('foo'))
+    function_node.append(second_use)
+
+    optimization_analyzer = optimizer.OptimizationAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+
+    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+        optimization_analyzer.visit_ast)
+
+    self.assertRaises(util.Warning,
+                      optimization_analyzer.visit_ast,
+                      ast_root)
+
+  def double_assign_ok(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #set $foo = 'foo'
+      #set $foo = 'bar'
+      $foo
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    first_assign = AssignNode(IdentifierNode('foo'), LiteralNode('foo'))
+    function_node.append(first_assign)
+    second_assign = AssignNode(IdentifierNode('foo'), LiteralNode('bar'))
+    function_node.append(second_assign)
+    first_use = FilterNode(IdentifierNode('foo'))
+    function_node.append(first_use)
+
+    optimization_analyzer = optimizer.OptimizationAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+
+    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+        optimization_analyzer.visit_ast)
+
+    try:
+      optimization_analyzer.visit_ast(ast_root)
+    except util.Warning:
+      self.fail('visit_ast raised WarningError unexpectedly.')
+
+
 class TestPartialLocalIdentifiers(unittest.TestCase):
 
   def setUp(self):

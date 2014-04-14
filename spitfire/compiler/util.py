@@ -83,7 +83,7 @@ def read_function_registry(filename):
         method = None
       function_registry[alias.strip()] = fq_name, method
   return new_format, function_registry
-    
+
 # compile a text file into a template object
 # this won't recursively import templates, it's just a convenience in the case
 # where you need to create a fresh object directly from raw template file
@@ -130,6 +130,9 @@ def load_module_from_src(src_code, filename, module_name):
 class CompilerError(Exception):
   pass
 
+class Warning(Exception):
+  pass
+
 class Compiler(object):
   setting_names = [
     'base_extends_package',
@@ -151,6 +154,8 @@ class Compiler(object):
     'static_analysis',
     'strict_global_check',
     'tune_gc',
+    'enable_warnings',
+    'warnings_as_errors',
     'xspt_mode',
     ]
 
@@ -161,7 +166,7 @@ class Compiler(object):
       if hasattr(options, name):
         settings[name] = getattr(options, name)
     return settings
-  
+
   # settings - arbitrary dictionary of values, probably from the command line
   def __init__(self, **kargs):
     # record transient state of the compiler
@@ -181,6 +186,8 @@ class Compiler(object):
     self.default_to_strict_resolution = False
     self.static_analysis = False
     self.strict_global_check = False
+    self.enable_warnings = False
+    self.warnings_as_errors = False
 
     self.base_extends_package = None
     self.message_catalogue = None
@@ -259,7 +266,7 @@ class Compiler(object):
       self._optimized_tree = copy.deepcopy(self._analyzed_tree)
     else:
       self._optimized_tree = self._analyzed_tree
-      
+
     spitfire.compiler.optimizer.OptimizationAnalyzer(
       self._optimized_tree, self.analyzer_options, self).optimize_ast()
 
@@ -267,10 +274,10 @@ class Compiler(object):
       self._hoisted_tree = copy.deepcopy(self._optimized_tree)
     else:
       self._hoisted_tree = self._optimized_tree
-      
+
     spitfire.compiler.optimizer.FinalPassAnalyzer(
       self._hoisted_tree, self.analyzer_options, self).optimize_ast()
-    
+
     self._source_code = codegen.CodeGenerator(
       self._hoisted_tree, self.analyzer_options).get_code()
     return self._source_code
@@ -281,7 +288,18 @@ class Compiler(object):
     self._optimized_tree = None
     self._hoisted_tree = None
     self._source_code = None
-    
+
+  def warn(self, message):
+    if not self.enable_warnings:
+      return
+    # Print out WARNING in magenta.
+    full_message = '\033[1;35mWARNING:\033[1;m %s in file: %s' % (
+        message, self.src_filename)
+    if self.warnings_as_errors:
+      raise Warning(full_message)
+    else:
+      print full_message
+
   def compile_template(self, src_text, classname):
     if self.tune_gc:
       gc.disable()
@@ -309,7 +327,7 @@ class Compiler(object):
     relative_dir = os.path.dirname(self.src_filename)
     if self.output_directory and os.path.isabs(relative_dir):
       raise CompilerError("can't mix output_directory and absolute paths")
-    
+
     outfile_path = os.path.join(self.output_directory, relative_dir,
                                 outfile_name)
     outfile = open(outfile_path, 'w')
@@ -332,7 +350,7 @@ class Compiler(object):
 # convert and extends path to a file path
 def extends2path(class_extend):
   return class_extend.replace('.', '/') + ".spt"
-  
+
 
 def validate_path(option, opt_str, path, parser):
   path = os.path.abspath(os.path.expanduser(path))
@@ -405,3 +423,8 @@ def add_common_options(op):
   op.add_option('-X', dest='optimizer_flags', action='append', default=[],
                 help=analyzer.AnalyzerOptions.get_help())
   op.add_option('--tune-gc', action='store_true')
+  op.add_option('--Wall', action='store_true', default=False,
+                dest='enable_warnings', help='Show all warnings.')
+  op.add_option('--Werror', action='store_true', default=False,
+                dest='warnings_as_errors',
+                help='Treat all warnings as errors')

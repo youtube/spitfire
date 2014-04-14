@@ -17,7 +17,7 @@ class _BaseAnalyzer(object):
     self.options = options
     self.compiler = compiler
     self.unoptimized_node_types = set()
-    
+
   def optimize_ast(self):
     self.visit_ast(self.ast_root)
     if self.options.debug:
@@ -39,7 +39,7 @@ class _BaseAnalyzer(object):
   analyzeLiteralNode = skip_analyze_node
   analyzeIdentifierNode = skip_analyze_node
   analyzeTargetNode = skip_analyze_node
-  
+
   def default_optimize_node(self, node):
     # print "default_optimize_node", type(node)
     self.unoptimized_node_types.add(type(node))
@@ -47,7 +47,7 @@ class _BaseAnalyzer(object):
 
   def get_parent_loop(self, node):
     return self._get_parent_node_by_type(node, ForNode)
-  
+
   def get_parent_function(self, node):
     return self._get_parent_node_by_type(node, FunctionNode)
 
@@ -96,7 +96,7 @@ class _BaseAnalyzer(object):
       if isinstance(node, (FunctionNode, ForNode, IfNode, ElseNode)):
         if insert_marker in node.child_nodes:
           return node, insert_marker
-          
+
       insert_marker = node
       node = node.parent
     raise SemanticAnalyzerError("expected a parent block")
@@ -131,7 +131,7 @@ class _BaseAnalyzer(object):
               conditional_node, parent_block, insertion_point, alias_node,
               assign_alias_node)
 
-          
+
   def reanalyzeLoopNode(self, loop_node):
     if not self.options.hoist_loop_invariant_aliases:
       return
@@ -239,7 +239,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         [IdentifierNode(x) for x in fq_name_parts[:-1]],
         IdentifierNode(fq_name_parts[-1]),
         IdentifierNode(alias)))
-      
+
     for n in template.from_nodes:
       if n.alias:
         template.global_identifiers.add(n.alias)
@@ -253,10 +253,10 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       for n in template.extends_nodes:
         path = os.path.join(
             *[ident_node.name
-              for ident_node in n.source_module_name_list]) 
+              for ident_node in n.source_module_name_list])
         template_function_names = get_template_functions(self.compiler.include_path, path)
         template.template_methods.update(template_function_names)
-    
+
     self.visit_ast(template.main_function, template)
     for n in template.child_nodes:
       self.visit_ast(n, template)
@@ -277,6 +277,9 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeAssignNode(self, node):
     _identifier = IdentifierNode(node.left.name)
     scope = self.get_parent_scope(node)
+    alias_name = self.generate_filtered_placeholder(_identifier)
+    if alias_name in scope.alias_name_set:
+      self.compiler.warn('Multiple assignment of %s' % _identifier.name)
     scope.local_identifiers.add(_identifier)
     # note: this hack is here so you can partially analyze alias nodes
     # without double-processing
@@ -356,6 +359,9 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       if n:
         self.visit_ast(n, node)
 
+  def generate_filtered_placeholder(self, node):
+    """Given a node, generate a name for the cached filtered placeholder"""
+    return '_fph%08X' % unsigned_hash(node)
 
   def analyzeFilterNode(self, filter_node):
     self.visit_ast(filter_node.expression, filter_node)
@@ -373,7 +379,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       alias = scope.aliased_expression_map.get(filter_node)
 
       if not alias:
-        alias_name = '_fph%08X' % unsigned_hash(filter_node.expression)
+        alias_name = self.generate_filtered_placeholder(filter_node.expression)
         if alias_name in scope.alias_name_set:
           print "duplicate alias_name", alias_name
           print "scope", scope
@@ -472,7 +478,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 #       if alias_name in function.alias_name_set:
 #         print "duplicate alias_name", alias_name
 #         return
-      
+
 #       alias = IdentifierNode(alias_name)
 #       function.aliased_expression_map[expression] = alias
 #       assign_alias = AssignNode(alias, expression)
@@ -491,17 +497,17 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 #         insert_block.insert_before(insert_marker, assign_alias)
 
 #     node.parent.replace(node, alias)
-    
+
 
   def analyzeGetAttrNode(self, node):
     if not self.options.alias_invariants:
       return
-    
+
     # fixme: only handle the trivial case for now
     # simplifies the protocol for making up alias names
     if type(node.expression) != IdentifierNode:
       return
-    
+
     scope = self.get_parent_scope(node)
     alias = scope.aliased_expression_map.get(node)
 
@@ -517,12 +523,12 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         print "scope.alias_name_set", scope.alias_name_set
         print "scope.aliased_expression_map", scope.aliased_expression_map
         return
-      
+
       alias = IdentifierNode(alias_name)
       scope.alias_name_set.add(alias_name)
       scope.aliased_expression_map[node] = alias
       assign_alias = AssignNode(alias, node)
-      
+
       parent_loop = self.get_parent_loop(node)
       # fixme: check to see if this expression is loop-invariant
       # must add a test case for this
@@ -539,7 +545,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         insert_block.insert_before(insert_marker, assign_alias)
 
     node.parent.replace(node, alias)
-      
+
 
   def analyzeIfNode(self, if_node):
     self.visit_ast(if_node.test_expression, if_node)
@@ -607,7 +613,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       cache_udn_expressions = self.options.cache_resolved_udn_expressions
       self.options.cache_resolved_placeholders = False
       self.options.cache_resolved_udn_expressions = False
-      
+
     self.visit_ast(n.left, n)
     self.visit_ast(n.right, n)
 
@@ -623,7 +629,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def get_local_identifiers(self, node):
     local_identifiers = []
     partial_local_identifiers = []
-    
+
     # search the parent scopes
     # fixme: should this be recursive?
     node = node.parent
@@ -652,7 +658,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeGetUDNNode(self, node):
     if not self.options.prefer_whole_udn_expressions:
       self.visit_ast(node.expression, node)
-    
+
     if self.options.cache_resolved_udn_expressions:
       cached_udn = IdentifierNode('_rudn_%s' % unsigned_hash(node))
       (local_identifiers, _) = self.get_local_identifiers(node)
@@ -695,8 +701,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         node.parent.replace(node, cached_udn)
     elif self.options.prefer_whole_udn_expressions:
       self.visit_ast(node.expression, node)
-      
-      
+
+
 
   def analyzeSliceNode(self, pnode):
     self.visit_ast(pnode.expression, pnode)
