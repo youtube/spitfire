@@ -549,6 +549,9 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 
   def analyzeIfNode(self, if_node):
     self.visit_ast(if_node.test_expression, if_node)
+    if not if_node.child_nodes:
+      raise SemanticAnalyzerError('If blocks must be non-empty.')
+
     for n in if_node.child_nodes:
       self.visit_ast(n, if_node)
 

@@ -493,5 +493,134 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
                       ast_root)
 
 
+class TestEmptyIfBlockError(unittest.TestCase):
+
+  def setUp(self):
+    options = analyzer.default_options
+    options.update(cache_resolved_placeholders=True,
+                   enable_warnings=True, warnings_as_errors=True)
+    self.compiler = util.Compiler(
+        analyzer_options=options,
+        xspt_mode=False)
+
+  def test_empty_if_fails(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #if True
+      #end if
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    if_node = IfNode(LiteralNode(True))
+    function_node.append(if_node)
+
+    optimization_analyzer = optimizer.OptimizationAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+
+    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+        optimization_analyzer.visit_ast)
+
+    self.assertRaises(optimizer.SemanticAnalyzerError,
+                      optimization_analyzer.visit_ast,
+                      ast_root)
+
+    def test_empty_if_full_else_fails(self):
+      self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #if True
+      #else
+        #set $foo = true
+      #end if
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    if_node = IfNode(LiteralNode(True))
+    function_node.append(if_node)
+    assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(True))
+    if_node.else_.append(assign_node)
+
+    optimization_analyzer = optimizer.OptimizationAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+
+    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+        optimization_analyzer.visit_ast)
+
+    self.assertRaises(optimizer.SemanticAnalyzerError,
+                      optimization_analyzer.visit_ast,
+                      ast_root)
+
+  def test_empty_elif_fails(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #if True
+        #set $foo = True
+      #elif False
+      #end if
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    if_node = IfNode(LiteralNode(True))
+    assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(True))
+    if_node.append(assign_node)
+    elif_node = IfNode(LiteralNode(False))
+    if_node.else_.append(elif_node)
+    function_node.append(if_node)
+
+    optimization_analyzer = optimizer.OptimizationAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+
+    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+        optimization_analyzer.visit_ast)
+
+    self.assertRaises(optimizer.SemanticAnalyzerError,
+                      optimization_analyzer.visit_ast,
+                      ast_root)
+
+  def test_non_empty_if_ok(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #if True
+        #set $foo = True
+      #end if
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    if_node = IfNode(LiteralNode(True))
+    function_node.append(if_node)
+    assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(True))
+    if_node.append(assign_node)
+
+    optimization_analyzer = optimizer.OptimizationAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+
+    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+        optimization_analyzer.visit_ast)
+
+    try:
+      optimization_analyzer.visit_ast(ast_root)
+    except optimizer.SemanticAnalyzerError:
+      self.fail('visit_ast raised SemanticAnalyzerError unexpectedly.')
+
+
 if __name__ == '__main__':
   unittest.main()
