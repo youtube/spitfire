@@ -86,7 +86,8 @@ class _BaseAnalyzer(object):
           return node.scope
       node_stack.append(node)
       node = node.parent
-    raise SemanticAnalyzerError("expected a parent function")
+    self.compiler.error(SemanticAnalyzerError("expected a parent function"),
+                        pos=node.pos)
 
   def get_insert_block_and_point(self, node):
     original_node = node
@@ -99,7 +100,8 @@ class _BaseAnalyzer(object):
 
       insert_marker = node
       node = node.parent
-    raise SemanticAnalyzerError("expected a parent block")
+    self.compiler.error(SemanticAnalyzerError("expected a parent block"),
+                        pos=node.pos)
 
   def replace_in_parent_block(self, node, new_node):
     insert_block, insert_marker = self.get_insert_block_and_point(node)
@@ -456,10 +458,10 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       non_local_identifiers = (partial_local_identifiers -
                                local_identifiers - attrs)
       if (self.options.static_analysis and local_var in non_local_identifiers):
-        raise SemanticAnalyzerError(
+        self.compiler.error(SemanticAnalyzerError(
             ('Variable %s is not guaranteed to be in scope. '
             'Define the variable in all branches of the conditional '
-            'or before the conditional.') % local_var)
+             'or before the conditional.') % local_var), pos=placeholder.pos)
       # print "local_identifiers", local_identifiers
       self._placeholdernode_replacement(placeholder,
                                         local_var,
@@ -550,7 +552,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeIfNode(self, if_node):
     self.visit_ast(if_node.test_expression, if_node)
     if not if_node.child_nodes:
-      raise SemanticAnalyzerError('If blocks must be non-empty.')
+      self.compiler.error(SemanticAnalyzerError('If blocks must be non-empty.'),
+                          pos=if_node.pos)
 
     for n in if_node.child_nodes:
       self.visit_ast(n, if_node)

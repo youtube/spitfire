@@ -174,7 +174,7 @@ class SemanticAnalyzer(object):
   def get_ast(self):
     ast_node_list = self.build_ast(self.parse_root)
     if len(ast_node_list) != 1:
-      raise SemanticAnalyzerError('ast must have 1 root node')
+      self.compiler.error(SemanticAnalyzerError('ast must have 1 root node'))
     self.ast_root = ast_node_list[0]
     return self.ast_root
 
@@ -189,8 +189,8 @@ class SemanticAnalyzer(object):
       if len(ast_node_list) != 1:
         return ast_node_list
     except TypeError, e:
-      raise SemanticAnalyzerError('method: %s, result: %s' % (
-        method, ast_node_list))
+      self.compiler.error(SemanticAnalyzerError('method: %s, result: %s' % (
+          method, ast_node_list)))
 
     # print '<', ast_node_list[0].name, ast_node_list[0]
     return ast_node_list
@@ -214,7 +214,11 @@ class SemanticAnalyzer(object):
     for child_node in tree_walker(pnode):
       if isinstance(child_node, DefNode) and not isinstance(child_node, MacroNode):
         if child_node.name in self.template.template_methods:
-          raise SemanticAnalyzerError('Redefining #def/#block %s (duplicate def in file?)' % child_node.name)
+          self.compiler.error(
+              SemanticAnalyzerError(
+                  'Redefining #def/#block %s (duplicate def in file?)' % (
+                      child_node.name)),
+              pos=pnode.pos)
         self.template.template_methods.add(child_node.name)
 
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
@@ -226,7 +230,8 @@ class SemanticAnalyzer(object):
       self.template.main_function.child_nodes)
 
     if self.template.extends_nodes and self.template.library:
-      raise SemanticAnalyzerError("library template can't have extends.")
+      self.compiler.error(
+          SemanticAnalyzerError("library template can't have extends."))
 
     return [self.template]
 
@@ -240,7 +245,9 @@ class SemanticAnalyzer(object):
 
   def analyzeForNode(self, pnode):
     if not pnode.child_nodes:
-      raise SemanticAnalyzerError("can't define an empty #for loop")
+      self.compiler.error(
+          SemanticAnalyzerError("can't define an empty #for loop"),
+          pos=pnode.pos)
 
     for_node = ForNode()
 
@@ -267,7 +274,8 @@ class SemanticAnalyzer(object):
 
   def analyzeStripLinesNode(self, pnode):
     if self.strip_lines:
-      raise SemanticAnalyzerError("can't nest #strip_lines")
+      self.compiler.error(SemanticAnalyzerError("can't nest #strip_lines"),
+                          pos=pnode.pos)
     self.strip_lines = True
     optimized_nodes = self.optimize_parsed_nodes(pnode.child_nodes)
     new_nodes = [self.build_ast(pn) for pn in optimized_nodes]
@@ -294,7 +302,9 @@ class SemanticAnalyzer(object):
 
   def analyzeIfNode(self, pnode):
     if not pnode.child_nodes:
-      raise SemanticAnalyzerError("can't define an empty #if block")
+      self.compiler.error(
+          SemanticAnalyzerError("can't define an empty #if block"),
+          pos=pnode.pos)
 
     if_node = IfNode()
     if_node.test_expression = self.build_ast(pnode.test_expression)[0]
@@ -409,7 +419,8 @@ class SemanticAnalyzer(object):
 
   def analyzeTextNode(self, pnode):
     if pnode.child_nodes:
-      raise SemanticAnalyzerError("TextNode can't have children")
+      self.compiler.error(SemanticAnalyzerError("TextNode can't have children"),
+                          pos=pnode.pos)
     text = pnode.value
     if self.options.normalize_whitespace:
       text = normalize_whitespace(text)
@@ -426,7 +437,9 @@ class SemanticAnalyzer(object):
   def analyzeDefNode(self, pnode, allow_nesting=False):
     if (self.options.fail_nested_defs and not allow_nesting
         and not isinstance(pnode.parent, TemplateNode)):
-      raise SemanticAnalyzerError("nested #def directives are not allowed")
+      self.compiler.error(
+          SemanticAnalyzerError("nested #def directives are not allowed"),
+          pos=pnode.pos)
 
     function = FunctionNode(pnode.name)
     # Backup original scope identifiers for analysis.
@@ -467,8 +480,10 @@ class SemanticAnalyzer(object):
     elif isinstance(pnode, CallFunctionNode):
       kargs_map = pnode.arg_list.get_arg_map()
     else:
-      raise SemanticAnalyzerError("unexpected node type '%s' for macro" %
-                                  type(pnode))
+      self.compiler.error(
+          SemanticAnalyzerError("unexpected node type '%s' for macro" %
+                                type(pnode)),
+          pos=pnode.pos)
 
     macro_output = macro_function(pnode, kargs_map, self.compiler)
     # fixme: bad place to import, difficult to put at the top due to
@@ -482,7 +497,7 @@ class SemanticAnalyzer(object):
         fragment_ast = spitfire.compiler.util.parse(
           macro_output, 'rhs_expression')
     except Exception, e:
-      raise MacroParseError(e)
+      self.compiler.error(MacroParseError(e), pos=pnode.pos)
     return self.build_ast(fragment_ast)
 
   def analyzeMacroNode(self, pnode):
@@ -491,13 +506,16 @@ class SemanticAnalyzer(object):
     try:
       macro_function = self.compiler.macro_registry[macro_handler_name]
     except KeyError:
-      raise SemanticAnalyzerError("no handler registered for '%s'"
-                                  % macro_handler_name)
+      self.compiler.error(SemanticAnalyzerError("no handler registered for '%s'"
+                                                % macro_handler_name),
+                          pos=pnode.pos)
     return self.handleMacro(pnode, macro_function)
 
   def analyzeGlobalNode(self, pnode):
     if not isinstance(pnode.parent, TemplateNode):
-      raise SemanticAnalyzerError("#global must be a top-level directive.")
+      self.compiler.error(
+          SemanticAnalyzerError("#global must be a top-level directive."),
+          pos=pnode.pos)
     self.template.global_placeholders.add(pnode.name)
     return []
 
@@ -611,9 +629,11 @@ class SemanticAnalyzer(object):
               and pnode.name not in self.compiler.function_name_registry)):
         # Break compile if no #loose_resolution and variable is not available
         # in any reasonable scope.
-        raise SemanticAnalyzerError(
-            'identifier %s is unavailable and is not declared as a #global'
-            ' display variable' % pnode.name)
+        self.compiler.error(
+            SemanticAnalyzerError(
+                'identifier %s is unavailable and is not declared as a #global'
+                ' display variable' % pnode.name),
+            pos=pnode.pos)
       elif self.template.library:
         # Only do placeholder resolutions for placeholders declared with #global
         # in library templates.

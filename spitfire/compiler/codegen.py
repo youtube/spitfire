@@ -41,8 +41,10 @@ class CodeGenerator(object):
   indent_level = 0
 
   # options - an AnalyzerOptions object
-  def __init__(self, ast_root, options=None):
+  def __init__(self, ast_root, compiler, options=None):
     self.ast_root = ast_root
+    # Compiler - an instance of Compiler defined in util.
+    self.compiler = compiler
     # This stack of FunctionNodes represents the functions we are
     # currently inside. When we enter a function node, we push that
     # onto the stack and when we leave that function, we pop it from
@@ -61,8 +63,8 @@ class CodeGenerator(object):
     try:
       return code_node.src_line
     except AttributeError, e:
-      raise CodegenError(
-        "can't write code_node: %s\n\t%s" % (code_node, e))
+      self.compiler.error(CodegenError(
+          "can't write code_node: %s\n\t%s" % (code_node, e)))
 
   def write_python(self, code_node, indent_level):
     try:
@@ -72,7 +74,7 @@ class CodeGenerator(object):
           self.output.write(code_node.src_line)
         self.output.write('\n')
     except AttributeError:
-      raise CodegenError("can't write code_node: %s" % code_node)
+      self.compiler.error(CodegenError("can't write code_node: %s" % code_node))
 
     for cn in code_node.child_nodes:
       self.write_python(cn, indent_level + 1)
@@ -517,7 +519,8 @@ class CodeGenerator(object):
       return [CodeNode(line % vars(node))
               for line in v['AST%s_tmpl' % node.__class__.__name__]]
     except KeyError, e:
-      raise CodegenError("no codegen for %s %s" % (type(node), vars(node)))
+      self.compiler.error(
+          CodegenError("no codegen for %s %s" % (type(node), vars(node))))
   def codegen(self, node):
     return self.codegenDefault(node)[0]
 

@@ -137,6 +137,7 @@ class Compiler(object):
   setting_names = [
     'base_extends_package',
     'debug_flags',
+    'compiler_stack_traces',
     'default_to_strict_resolution',
     'enable_filters',
     'extract_message_catalogue',
@@ -171,6 +172,7 @@ class Compiler(object):
   def __init__(self, **kargs):
     # record transient state of the compiler
     self.src_filename = None
+    self.src_text = None
     self.output_directory = ''
     self.xspt_mode = False
     self.write_file = False
@@ -179,6 +181,7 @@ class Compiler(object):
     self.optimizer_level = 0
     self.optimizer_flags = []
     self.debug_flags = []
+    self.compiler_stack_traces = False
     self.ignore_optional_whitespace = False
     self.normalize_whitespace = False
     self.fail_library_searchlist_access = False
@@ -279,7 +282,7 @@ class Compiler(object):
       self._hoisted_tree, self.analyzer_options, self).optimize_ast()
 
     self._source_code = codegen.CodeGenerator(
-      self._hoisted_tree, self.analyzer_options).get_code()
+        self._hoisted_tree, self, self.analyzer_options).get_code()
     return self._source_code
 
   def _reset(self):
@@ -289,16 +292,44 @@ class Compiler(object):
     self._hoisted_tree = None
     self._source_code = None
 
-  def warn(self, message):
+  def calculate_line_and_column(self, pos):
+    lineno = 1 + self.src_text.count('\n', 0, pos)
+    colno = pos - (self.src_text.rfind('\n', 0, pos) + 2)
+    return (lineno, colno)
+
+  def print_stderr_message(self, message, pos=None, is_error=False,
+                           is_warning=False):
+    if is_warning:
+      # Print out WARNING in magenta.
+      sys.stderr.write('\033[1;35mWARNING:\033[1;m ')
+    elif is_error:
+      # Print out ERROR in red.
+      sys.stderr.write('\033[1;31mERROR:\033[1;m ')
+    else:
+      # Print out INFO in yellow.
+      sys.stderr.write('\033[1;32mINFO:\033[1;m ')
+    if pos is None:
+      sys.stderr.write('%s ' % self.src_filename)
+    else:
+      lineno, colno = self.calculate_line_and_column(pos)
+      sys.stderr.write('%s:%s:%s ' % (self.src_filename, lineno, colno))
+    sys.stderr.write(message)
+    sys.stderr.write('\n')
+
+  def warn(self, message, pos=None):
     if not self.enable_warnings:
       return
-    # Print out WARNING in magenta.
-    full_message = '\033[1;35mWARNING:\033[1;m %s in file: %s' % (
-        message, self.src_filename)
     if self.warnings_as_errors:
-      raise Warning(full_message)
+      self.error(Warning(message), pos=pos)
     else:
-      print full_message
+      self.print_stderr_message(message, pos=pos, is_warning=True)
+
+  def error(self, err, pos=None):
+    if self.compiler_stack_traces:
+      raise err
+    else:
+      self.print_stderr_message(str(err), pos=pos, is_error=True)
+      sys.exit(1)
 
   def compile_template(self, src_text, classname):
     if self.tune_gc:
@@ -316,8 +347,8 @@ class Compiler(object):
   def compile_file(self, filename):
     self.src_filename = filename
     self.classname = filename2classname(filename)
-    src_text = read_template_file(filename)
-    src_code = self.compile_template(src_text, self.classname)
+    self.src_text = read_template_file(filename)
+    src_code = self.compile_template(self.src_text, self.classname)
     if self.write_file:
       self.write_src_file(src_code)
     return src_code
@@ -428,3 +459,5 @@ def add_common_options(op):
   op.add_option('--Werror', action='store_true', default=False,
                 dest='warnings_as_errors',
                 help='Treat all warnings as errors')
+  op.add_option('--compiler-stack-traces', default=False,
+                help='Get stack traces on compiler errors')

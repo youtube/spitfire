@@ -43,7 +43,8 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
                    enable_warnings=True, warnings_as_errors=True)
     self.compiler = util.Compiler(
         analyzer_options=options,
-        xspt_mode=False)
+        xspt_mode=False,
+        compiler_stack_traces=True)
 
   def assign_after_filter_fails(self):
     self.ast_description = """
@@ -120,7 +121,8 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
                    directly_access_defined_variables=True)
     self.compiler = util.Compiler(
         analyzer_options=options,
-        xspt_mode=False)
+        xspt_mode=False,
+        compiler_stack_traces=True)
 
   def test_simple_if(self):
     self.ast_description = """
@@ -501,7 +503,8 @@ class TestEmptyIfBlockError(unittest.TestCase):
                    enable_warnings=True, warnings_as_errors=True)
     self.compiler = util.Compiler(
         analyzer_options=options,
-        xspt_mode=False)
+        xspt_mode=False,
+        compiler_stack_traces=True)
 
   def test_empty_if_fails(self):
     self.ast_description = """
