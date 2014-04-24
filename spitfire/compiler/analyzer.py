@@ -244,7 +244,13 @@ class SemanticAnalyzer(object):
         self._getIdentifiersFromListNode(identifier_set, pn)
 
   def analyzeForNode(self, pnode):
-    if not pnode.child_nodes:
+    # If all of the children are OptionalWhitespaceNodes or there are
+    # no children, throw an error. We don't ever convert
+    # OptionalWhitespaceNodes into actual WhitespaceNodes so this
+    # check is safe.
+    if all(map(
+        lambda x: isinstance(x, OptionalWhitespaceNode),
+        pnode.child_nodes)):
       self.compiler.error(
           SemanticAnalyzerError("can't define an empty #for loop"),
           pos=pnode.pos)
@@ -301,7 +307,13 @@ class SemanticAnalyzer(object):
     return [get_attr_node]
 
   def analyzeIfNode(self, pnode):
-    if not pnode.child_nodes:
+    # If all of the children are OptionalWhitespaceNodes or there are
+    # no children, throw an error. We don't ever convert
+    # OptionalWhitespaceNodes into actual WhitespaceNodes so this
+    # check is safe.
+    if all(map(
+        lambda x: isinstance(x, OptionalWhitespaceNode),
+        pnode.child_nodes)):
       self.compiler.error(
           SemanticAnalyzerError("can't define an empty #if block"),
           pos=pnode.pos)
@@ -421,6 +433,7 @@ class SemanticAnalyzer(object):
     if pnode.child_nodes:
       self.compiler.error(SemanticAnalyzerError("TextNode can't have children"),
                           pos=pnode.pos)
+
     text = pnode.value
     if self.options.normalize_whitespace:
       text = normalize_whitespace(text)

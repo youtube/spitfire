@@ -293,6 +293,8 @@ class Compiler(object):
     self._source_code = None
 
   def calculate_line_and_column(self, pos):
+    if not self.src_text:
+      return (0, 0)
     lineno = 1 + self.src_text.count('\n', 0, pos)
     colno = pos - (self.src_text.rfind('\n', 0, pos) + 2)
     return (lineno, colno)
