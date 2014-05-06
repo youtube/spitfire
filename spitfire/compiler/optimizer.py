@@ -125,7 +125,7 @@ class _BaseAnalyzer(object):
       for alias_node, alias in conditional_node.scope.aliased_expression_map.items():
         #print "  check alias:", alias
         #print "    alias_node:", alias_node
-        assign_alias_node = AssignNode(alias, alias_node)
+        assign_alias_node = AssignNode(alias, alias_node, pos=alias_node.pos)
         if alias_node in parent_block.scope.aliased_expression_map:
           if self.is_condition_invariant(alias_node, conditional_node):
             #print "  hoist:", assign_alias_node
@@ -141,7 +141,7 @@ class _BaseAnalyzer(object):
     parent_block, insertion_point = self.get_insert_block_and_point(loop_node)
     # NOTE: need to iterate over items, in case we modify something
     for alias_node, alias in loop_node.scope.aliased_expression_map.items():
-      assign_alias = AssignNode(alias, alias_node)
+      assign_alias = AssignNode(alias, alias_node, pos=alias_node.pos)
       if alias_node in parent_block.scope.aliased_expression_map:
         if self.is_loop_invariant(alias_node, loop_node):
           self.hoist(loop_node, parent_block, insertion_point, alias_node,
@@ -277,7 +277,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       self.visit_ast(n, for_node)
 
   def analyzeAssignNode(self, node):
-    _identifier = IdentifierNode(node.left.name)
+    _identifier = IdentifierNode(node.left.name, pos=node.pos)
     scope = self.get_parent_scope(node)
     alias_name = self.generate_filtered_placeholder(_identifier)
     if alias_name in scope.alias_name_set:
@@ -389,10 +389,10 @@ class OptimizationAnalyzer(_BaseAnalyzer):
           print "scope.aliased_expression_map", scope.aliased_expression_map
           return
 
-        alias = IdentifierNode(alias_name)
+        alias = IdentifierNode(alias_name, pos=filter_node.pos)
         scope.alias_name_set.add(alias_name)
         scope.aliased_expression_map[filter_node] = alias
-        assign_alias = AssignNode(alias, filter_node)
+        assign_alias = AssignNode(alias, filter_node, pos=filter_node.pos)
 
         insert_block, insert_marker = self.get_insert_block_and_point(
           filter_node)
@@ -434,7 +434,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       # analyze a certain set of nodes. you only really need to analyze
       # that the assignment took place, then you can safely alias the
       # actual function call. definitely sketchy, but it does seem to work
-      assign_rph = AssignNode(cached_placeholder, None)
+      assign_rph = AssignNode(cached_placeholder, None, pos=placeholder.pos)
       cached_placeholder.parent = assign_rph
       #print "optimize scope:", insert_block
       #print "optimize marker:", insert_marker
@@ -450,8 +450,9 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       # when the analyzer finds a PlaceholderNode and generates a function
       # call out of it, i annotate an IdentifierNode with the original
       # placeholder name
-      local_var = IdentifierNode(placeholder.name)
-      cached_placeholder = IdentifierNode('_rph_%s' % local_var.name)
+      local_var = IdentifierNode(placeholder.name, pos=placeholder.pos)
+      cached_placeholder = IdentifierNode('_rph_%s' % local_var.name,
+                                          pos=placeholder.pos)
       (local_identifiers, partial_local_identifiers) = (
           self.get_local_identifiers(placeholder))
       attrs = set([IdentifierNode(node.name) for node in self.ast_root.attr_nodes])
@@ -663,7 +664,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       self.visit_ast(node.expression, node)
 
     if self.options.cache_resolved_udn_expressions:
-      cached_udn = IdentifierNode('_rudn_%s' % unsigned_hash(node))
+      cached_udn = IdentifierNode('_rudn_%s' % unsigned_hash(node),
+                                  pos=node.pos)
       (local_identifiers, _) = self.get_local_identifiers(node)
       if cached_udn in local_identifiers:
         node.parent.replace(node, cached_udn)
@@ -695,7 +697,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         # analyze a certain set of nodes. you only really need to analyze
         # that the assignment took place, then you can safely alias the
         # actual function call. definitely sketchy, but it does seem to work
-        assign_rph = AssignNode(cached_udn, None)
+        assign_rph = AssignNode(cached_udn, None, pos=node.pos)
         cached_udn.parent = assign_rph
         insert_block.insert_before(
           insert_marker, assign_rph)

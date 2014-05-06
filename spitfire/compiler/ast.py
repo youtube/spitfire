@@ -7,7 +7,7 @@ class EatPrevious(object):
   pass
 
 class ASTNode(object):
-  def __init__(self, name=''):
+  def __init__(self, name='', pos=None):
     self.name = name
     self.value = None
     self.parent = None
@@ -20,7 +20,7 @@ class ASTNode(object):
     # this makes it easier to invent new ways to mangle optional whitespace
     self.statement = False
     # Position in the input string (measured in characters).
-    self.pos = None
+    self.pos = pos
     self.end_pos = None
 
   def __str__(self):
@@ -107,9 +107,9 @@ class ASTNode(object):
 
 
 class NodeList(list):
-  def __init__(self):
+  def __init__(self, pos=None):
     # Position in the input string (measured in characters).
-    self.pos = None
+    self.pos = pos
     self.end_pos = None
 
   # note: need to iterate over a copy due to the way i modify the tree in-place
@@ -132,8 +132,8 @@ class NodeList(list):
 
 
 class _ListNode(ASTNode):
-  def __init__(self, parg_list=None, karg_list=None):
-    ASTNode.__init__(self)
+  def __init__(self, parg_list=None, karg_list=None, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.parg_list = parg_list
     self.karg_list = karg_list
     if parg_list:
@@ -190,8 +190,8 @@ class ArgListNode(_ListNode):
 
 
 class BinOpNode(ASTNode):
-  def __init__(self, operator, left, right):
-    ASTNode.__init__(self)
+  def __init__(self, operator, left, right, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.operator = operator
     self.left = left
     self.right = right
@@ -224,16 +224,16 @@ class BinOpExpressionNode(BinOpNode):
   pass
 
 class AssignNode(BinOpNode):
-  def __init__(self, left, right):
-    BinOpNode.__init__(self, '=', left, right)
+  def __init__(self, left, right, pos=None):
+    BinOpNode.__init__(self, '=', left, right, pos=pos)
 
 class BreakNode(ASTNode):
   pass
 
 
 class CallFunctionNode(ASTNode):
-  def __init__(self, expression=None, arg_list=None):
-    ASTNode.__init__(self)
+  def __init__(self, expression=None, arg_list=None, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.expression = expression
     # Whether we're calling into a library template.
     self.library_function = False
@@ -275,8 +275,8 @@ class BufferWrite(CallFunctionNode):
     self.expression.value += node.expression.value
 
 class CacheNode(CallFunctionNode):
-  def __init__(self, expression=None):
-    ASTNode.__init__(self, '_cph%08X' % unsigned_hash(expression))
+  def __init__(self, expression=None, pos=None):
+    ASTNode.__init__(self, '_cph%08X' % unsigned_hash(expression), pos=pos)
     self.expression = expression
 
   def __eq__(self, node):
@@ -293,8 +293,8 @@ class CacheNode(CallFunctionNode):
 
 class EchoNode(ASTNode):
   def __init__(self, true_expression=None, test_expression=None,
-               false_expression=None):
-    ASTNode.__init__(self)
+               false_expression=None, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.true_expression = true_expression
     self.test_expression = test_expression
     self.false_expression = false_expression
@@ -323,8 +323,9 @@ DefaultFilterFunction = __DefaultFilterFunction()
 # again, in this case we want to preserve plenty of information and hierarchy
 # for ease of optimization later on in the process
 class FilterNode(ASTNode):
-  def __init__(self, expression=None, filter_function_node=DefaultFilterFunction):
-    ASTNode.__init__(self)
+  def __init__(self, expression=None,
+               filter_function_node=DefaultFilterFunction, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.expression = expression
     self.filter_function_node = filter_function_node
 
@@ -409,8 +410,8 @@ class ExpressionListNode(_ListNode):
 
 
 class ForNode(ASTNode):
-  def __init__(self, target_list=None, expression_list=None):
-    ASTNode.__init__(self)
+  def __init__(self, target_list=None, expression_list=None, pos=None):
+    ASTNode.__init__(self, pos=pos)
     if target_list:
       self.target_list = target_list
     else:
@@ -445,8 +446,8 @@ class FunctionNode(ASTNode):
 
 
 class GetAttrNode(ASTNode):
-  def __init__(self, expression, name):
-    ASTNode.__init__(self)
+  def __init__(self, expression, name, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.expression = expression
     self.name = name
 
@@ -492,8 +493,8 @@ class TemplateMethodIdentifierNode(IdentifierNode):
   pass
 
 class IfNode(ASTNode):
-  def __init__(self, test_expression=None):
-    ASTNode.__init__(self)
+  def __init__(self, test_expression=None, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.test_expression = test_expression
     self.else_ = ElseNode(self)
     self.scope = Scope('If')
@@ -521,8 +522,8 @@ class IfNode(ASTNode):
         hash(self.scope), hash(self.child_nodes)))
 
 class ElseNode(ASTNode):
-  def __init__(self, parent=None):
-    ASTNode.__init__(self)
+  def __init__(self, parent=None, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.parent = parent
     self.scope = Scope('Else')
 
@@ -539,8 +540,8 @@ class LooseResolutionNode(ASTNode):
   pass
 
 class ImportNode(ASTNode):
-  def __init__(self, module_name_list, library=False):
-    ASTNode.__init__(self)
+  def __init__(self, module_name_list, library=False, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.module_name_list = module_name_list
     self.library = library
     # in case you have a different target, save a copy of the
@@ -568,8 +569,9 @@ class AbsoluteExtendsNode(ExtendsNode):
   pass
 
 class FromNode(ImportNode):
-  def __init__(self, module_name_list, identifier, alias=None, library=False):
-    ImportNode.__init__(self, module_name_list, library=library)
+  def __init__(self, module_name_list, identifier, alias=None,
+               library=False, pos=None):
+    ImportNode.__init__(self, module_name_list, library=library, pos=pos)
     self.identifier = identifier
     self.alias = alias
 
@@ -593,8 +595,8 @@ class ListLiteralNode(ASTNode):
     return '%s nodes:%r' % (self.__class__.__name__, self.child_nodes)
 
 class LiteralNode(ASTNode):
-  def __init__(self, value):
-    ASTNode.__init__(self)
+  def __init__(self, value, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.value = value
 
   def __str__(self):
@@ -606,8 +608,8 @@ class GlobalNode(ASTNode):
 
 
 class ParameterNode(ASTNode):
-  def __init__(self, name, default=None):
-    ASTNode.__init__(self, name)
+  def __init__(self, name, default=None, pos=None):
+    ASTNode.__init__(self, name, pos=pos)
     self.default = default
 
   def replace(self, node, replacement_node):
@@ -648,8 +650,8 @@ class PlaceholderNode(ASTNode):
   pass
 
 class PlaceholderSubstitutionNode(ASTNode):
-  def __init__(self, expression, parameter_list=None):
-    ASTNode.__init__(self)
+  def __init__(self, expression, parameter_list=None, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.expression = expression
     if parameter_list is None:
       self.parameter_list = ParameterListNode()
@@ -661,16 +663,16 @@ class PlaceholderSubstitutionNode(ASTNode):
                            self.parameter_list)
 
 class ReturnNode(ASTNode):
-  def __init__(self, expression):
-    ASTNode.__init__(self)
+  def __init__(self, expression, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.expression = expression
 
   def __str__(self):
     return '%s expr:%r' % (self.__class__.__name__, self.expression)
 
 class SliceNode(ASTNode):
-  def __init__(self, expression, slice_expression):
-    ASTNode.__init__(self)
+  def __init__(self, expression, slice_expression, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.expression = expression
     self.slice_expression = slice_expression
 
@@ -704,8 +706,8 @@ class TargetListNode(_ListNode):
   pass
 
 class TextNode(ASTNode):
-  def __init__(self, value):
-    ASTNode.__init__(self)
+  def __init__(self, value, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.value = value
 
   def append_text_node(self, node):
@@ -736,8 +738,8 @@ class FragmentNode(ASTNode):
 class TemplateNode(ASTNode):
   __builtin_set = frozenset(dir(__builtin__))
 
-  def __init__(self, classname=None, **kargs):
-    ASTNode.__init__(self, **kargs)
+  def __init__(self, classname=None, pos=None, **kargs):
+    ASTNode.__init__(self, pos=pos, **kargs)
     self.source_path = None
     # fixme: need to get the classname from somewhere else
     self.classname = classname
@@ -781,8 +783,8 @@ class TupleLiteralNode(ASTNode):
   pass
 
 class UnaryOpNode(ASTNode):
-  def __init__(self, operator, expression):
-    ASTNode.__init__(self)
+  def __init__(self, operator, expression, pos=None):
+    ASTNode.__init__(self, pos=pos)
     self.operator = operator
     self.expression = expression
 

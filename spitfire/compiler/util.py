@@ -144,6 +144,7 @@ class Compiler(object):
     'fail_library_searchlist_access',
     'function_registry_file',
     'ignore_optional_whitespace',
+    'include_sourcemap',
     'include_path',
     'locale',
     'message_catalogue_file',
@@ -173,10 +174,12 @@ class Compiler(object):
     # record transient state of the compiler
     self.src_filename = None
     self.src_text = None
+    self.src_line_map = []
     self.output_directory = ''
     self.xspt_mode = False
     self.write_file = False
     self.analyzer_options = None
+    self.include_sourcemap = False
 
     self.optimizer_level = 0
     self.optimizer_flags = []
@@ -225,6 +228,7 @@ class Compiler(object):
       self.analyzer_options.static_analysis = self.static_analysis
       self.analyzer_options.strict_global_check = self.strict_global_check
       self.analyzer_options.default_to_strict_resolution = self.default_to_strict_resolution
+      self.analyzer_options.include_sourcemap = self.include_sourcemap
 
     # slightly crappy code to support turning flags on and off from the
     # command line - probably should go in analyzer options?
@@ -350,10 +354,19 @@ class Compiler(object):
     self.src_filename = filename
     self.classname = filename2classname(filename)
     self.src_text = read_template_file(filename)
+    self.generate_line_map()
     src_code = self.compile_template(self.src_text, self.classname)
     if self.write_file:
       self.write_src_file(src_code)
     return src_code
+
+  def generate_line_map(self):
+    self.src_line_map = []
+    current_line = 1
+    for c in self.src_text:
+      self.src_line_map.append(current_line)
+      if c == '\n':
+        current_line += 1
 
   def write_src_file(self, src_code):
     outfile_name = '%s.py' % self.classname
@@ -463,3 +476,5 @@ def add_common_options(op):
                 help='Treat all warnings as errors')
   op.add_option('--compiler-stack-traces', default=False,
                 help='Get stack traces on compiler errors')
+  op.add_option('--include-sourcemap', default=False,
+                help='Annotate output with sourcemap like comments.')

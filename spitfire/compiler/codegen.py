@@ -10,8 +10,9 @@ class CodegenError(Exception):
 
 
 class CodeNode(object):
-  def __init__(self, src_line=None):
+  def __init__(self, src_line=None, input_pos=None):
     self.src_line = src_line
+    self.input_pos = input_pos
     self.child_nodes = []
 
   def append_line(self, line):
@@ -72,6 +73,10 @@ class CodeGenerator(object):
         if code_node.src_line:
           self.output.write(self.indent_str * indent_level)
           self.output.write(code_node.src_line)
+          if (self.options.include_sourcemap and
+              code_node.input_pos and self.compiler.src_line_map):
+            self.output.write(' # L%s' %
+                              self.compiler.src_line_map[code_node.input_pos])
         self.output.write('\n')
     except AttributeError:
       self.compiler.error(CodegenError("can't write code_node: %s" % code_node))
@@ -197,7 +202,8 @@ class CodeGenerator(object):
   def codegenASTPlaceholderSubstitutionNode(self, node):
     placeholder = self.generate_python(
       self.build_code(node.expression)[0])
-    return [CodeNode(ASTPlaceholderSubstitutionNode_tmpl[0] % vars())]
+    return [CodeNode(ASTPlaceholderSubstitutionNode_tmpl[0] % vars(),
+                     input_pos=node.pos)]
 
   def codegenASTCallFunctionNode(self, node):
     expression = self.generate_python(
@@ -209,14 +215,14 @@ class CodeGenerator(object):
         self.build_code(node.arg_list)[0])
     else:
       arg_list = ''
-    return [CodeNode(ASTCallFunctionNode_tmpl[0] % vars())]
+    return [CodeNode(ASTCallFunctionNode_tmpl[0] % vars(), input_pos=node.pos)]
 
   def codegenASTForNode(self, node):
     target_list = self.generate_python(
       self.build_code(node.target_list)[0])
     expression_list = self.generate_python(
       self.build_code(node.expression_list)[0])
-    code_node = CodeNode(ASTForNode_tmpl[0] % vars())
+    code_node = CodeNode(ASTForNode_tmpl[0] % vars(), input_pos=node.pos)
     for n in node.child_nodes:
       code_node.extend(self.build_code(n))
     return [code_node]
@@ -224,7 +230,8 @@ class CodeGenerator(object):
   def codegenASTIfNode(self, node):
     test_expression = self.generate_python(
       self.build_code(node.test_expression)[0])
-    if_code_node = CodeNode("if %(test_expression)s:" % vars())
+    if_code_node = CodeNode("if %(test_expression)s:" % vars(),
+                            input_pos=node.pos)
     for n in node.child_nodes:
       if_code_node.extend(self.build_code(n))
     code_nodes = [if_code_node]
@@ -248,21 +255,22 @@ class CodeGenerator(object):
   def codegenASTLiteralNode(self, node):
     if (self.options and not self.options.generate_unicode and
         isinstance(node.value, basestring)):
-      return [CodeNode(repr(node.value.encode(self.ast_root.encoding)))]
+      return [CodeNode(repr(node.value.encode(self.ast_root.encoding)),
+                       input_pos=node.pos)]
     else:
       # generate unicode by default
-      return [CodeNode('%(value)r' % vars(node))]
+      return [CodeNode('%(value)r' % vars(node), input_pos=node.pos)]
 
 
   def codegenASTListLiteralNode(self, node):
     return [CodeNode('[%s]' % ', '.join([
       self.generate_python(self.build_code(n)[0])
-      for n in node.child_nodes]))]
+      for n in node.child_nodes]), input_pos=node.pos)]
 
   def codegenASTTupleLiteralNode(self, node):
     return [CodeNode('(%s)' % ', '.join([
       self.generate_python(self.build_code(n)[0])
-      for n in node.child_nodes]))]
+      for n in node.child_nodes]), input_pos=node.pos)]
 
   def codegenASTDictLiteralNode(self, node):
     return [
@@ -281,7 +289,7 @@ class CodeGenerator(object):
 
   def codegenASTAttributeNode(self, node):
     return [CodeNode('%s = %s' % (node.name, self.generate_python(
-      self.build_code(node.default)[0])))]
+        self.build_code(node.default)[0])), input_pos=node.pos)]
 
   def codegenASTFilterAttributeNode(self, node):
     return [CodeNode('%s = staticmethod(%s)' % (node.name, self.generate_python(
@@ -305,9 +313,11 @@ class CodeGenerator(object):
         self.template and not self.template.use_loose_resolution):
       return [CodeNode("%(expression)s.%(name)s" % vars())]
     if self.options and self.options.raise_udn_exceptions:
-      return [CodeNode("resolve_udn(%(expression)s, '%(name)s', raise_exception=True)" % vars())]
+      return [CodeNode("resolve_udn(%(expression)s, '%(name)s', raise_exception=True)" % vars(),
+                       input_pos=node.pos)]
     else:
-      return [CodeNode("resolve_udn(%(expression)s, '%(name)s')" % vars())]
+      return [CodeNode("resolve_udn(%(expression)s, '%(name)s')" % vars(),
+                       input_pos=node.pos)]
 
   def codegenASTPlaceholderNode(self, node):
     name = node.name
@@ -316,26 +326,27 @@ class CodeGenerator(object):
     elif self.options and self.options.cheetah_cheats:
       return [CodeNode(
         "resolve_placeholder(_self_search_list, '%(name)s')"
-        % vars())]
+        % vars(), input_pos=node.pos)]
     elif self.options and self.options.omit_local_scope_search:
       self.function_stack[-1].uses_globals = True
       return [CodeNode(
         "resolve_placeholder('%(name)s', self, None, _globals)"
-        % vars())]
+        % vars(), input_pos=node.pos)]
     else:
       self.function_stack[-1].uses_globals = True
       return [CodeNode(
         "resolve_placeholder('%(name)s', self, locals(), _globals)"
-        % vars())]
+        % vars(), input_pos=node.pos)]
 
   def codegenASTReturnNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
-    return [CodeNode("return %(expression)s" % vars())]
+    return [CodeNode("return %(expression)s" % vars(), input_pos=node.pos)]
 
   def codegenASTOptionalWhitespaceNode(self, node):
     #if self.ignore_optional_whitespace:
     #  return []
-    return [CodeNode(ASTOptionalWhitespaceNode_tmpl[0] % vars(node))]
+    return [CodeNode(ASTOptionalWhitespaceNode_tmpl[0] % vars(node),
+                     input_pos=node.pos)]
 
   def codegenASTSliceNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
@@ -347,25 +358,28 @@ class CodeGenerator(object):
     left = self.generate_python(self.build_code(node.left)[0])
     right = self.generate_python(self.build_code(node.right)[0])
     operator = node.operator
-    return [CodeNode('(%(left)s %(operator)s %(right)s)' % vars())]
+    return [CodeNode('(%(left)s %(operator)s %(right)s)' % vars(),
+                     input_pos=node.pos)]
 
   def codegenASTBinOpNode(self, node):
     left = self.generate_python(self.build_code(node.left)[0])
     right = self.generate_python(self.build_code(node.right)[0])
     operator = node.operator
-    return [CodeNode('%(left)s %(operator)s %(right)s' % vars())]
+    return [CodeNode('%(left)s %(operator)s %(right)s' % vars(),
+                     input_pos=node.pos)]
 
   codegenASTAssignNode = codegenASTBinOpNode
 
   def codegenASTUnaryOpNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
     operator = node.operator
-    return [CodeNode('(%(operator)s %(expression)s)' % vars())]
+    return [CodeNode('(%(operator)s %(expression)s)' % vars(),
+                     input_pos=node.pos)]
 
   def codegenASTGetAttrNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
     name = node.name
-    return [CodeNode("%(expression)s.%(name)s" % vars())]
+    return [CodeNode("%(expression)s.%(name)s" % vars(), input_pos=node.pos)]
 
   def codegenASTFunctionNode(self, node):
     name = node.name
@@ -384,11 +398,15 @@ class CodeGenerator(object):
     # some other baggage coming with it.
     if self.options and self.options.cheetah_compatibility:
       if parameter_list:
-        code_node = CodeNode('def %(name)s(%(parameter_list)s, **kargs):' % vars())
+        code_node = CodeNode(
+            'def %(name)s(%(parameter_list)s, **kargs):' % vars(),
+            input_pos=node.pos)
       else:
-        code_node = CodeNode('def %(name)s(**kargs):' % vars())
+        code_node = CodeNode('def %(name)s(**kargs):' % vars(),
+                             input_pos=node.pos)
     else:
-      code_node = CodeNode('def %(name)s(%(parameter_list)s):' % vars())
+      code_node = CodeNode('def %(name)s(%(parameter_list)s):' % vars(),
+                           input_pos=node.pos)
 
     if self.options and self.options.cheetah_compatibility:
       if_cheetah = CodeNode("if 'trans' in kargs:")
@@ -436,7 +454,8 @@ class CodeGenerator(object):
 
   def codegenASTBufferWrite(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
-    code_node = CodeNode('_buffer_write(%(expression)s)' % vars())
+    code_node = CodeNode('_buffer_write(%(expression)s)' % vars(),
+                         input_pos=node.pos)
     return [code_node]
 
   def codegenASTEchoNode(self, node):
@@ -469,8 +488,10 @@ class CodeGenerator(object):
     expression = self.generate_python(self.build_code(node.expression)[0])
     # use dictionary syntax to get around coalescing 'global' statements
     #globalize_var = CodeNode('global %(cached_name)s' % vars())
-    if_code = CodeNode("if %(cached_name)s is None:" % vars())
-    if_code.append(CodeNode("_globals['%(cached_name)s'] = %(expression)s" % vars()))
+    if_code = CodeNode("if %(cached_name)s is None:" % vars(),
+                       input_pos=node.pos)
+    if_code.append(CodeNode("_globals['%(cached_name)s'] = %(expression)s" % vars(),
+                            input_pos=node.pos))
     return [if_code]
 
   def codegenASTFilterNode(self, node):
@@ -494,22 +515,26 @@ class CodeGenerator(object):
       if node.filter_function_node == DefaultFilterFunction:
         code_node = CodeNode(
           '%(filter_expression)s(%(expression)s, %(placeholder_function_expression)s)'
-          % vars())
+          % vars(), input_pos=node.pos)
       elif node.filter_function_node:
         code_node = CodeNode(
           '%(filter_expression)s(self, %(expression)s, %(placeholder_function_expression)s)'
-          % vars())
+          % vars(), input_pos=node.pos)
       else:
-        code_node = CodeNode('%(expression)s' % vars())
+        code_node = CodeNode('%(expression)s' % vars(),
+                             input_pos=node.pos)
     else:
       if node.filter_function_node == DefaultFilterFunction:
         code_node = CodeNode(
-          '%(filter_expression)s(%(expression)s)' % vars())
+            '%(filter_expression)s(%(expression)s)' % vars(),
+            input_pos=node.pos)
       elif node.filter_function_node:
         code_node = CodeNode(
-          '%(filter_expression)s(%(expression)s)' % vars())
+            '%(filter_expression)s(%(expression)s)' % vars(),
+            input_pos=node.pos)
       else:
-        code_node = CodeNode('%(expression)s' % vars())
+        code_node = CodeNode('%(expression)s' % vars(),
+                             input_pos=node.pos)
     return [code_node]
 
 
