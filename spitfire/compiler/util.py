@@ -474,7 +474,7 @@ def add_common_options(op):
   op.add_option('--Werror', action='store_true', default=False,
                 dest='warnings_as_errors',
                 help='Treat all warnings as errors')
-  op.add_option('--compiler-stack-traces', default=False,
+  op.add_option('--compiler-stack-traces', default=False, action='store_true',
                 help='Get stack traces on compiler errors')
-  op.add_option('--include-sourcemap', default=False,
+  op.add_option('--include-sourcemap', default=False, action='store_true',
                 help='Annotate output with sourcemap like comments.')
