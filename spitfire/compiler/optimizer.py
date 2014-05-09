@@ -281,7 +281,12 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     scope = self.get_parent_scope(node)
     alias_name = self.generate_filtered_placeholder(_identifier)
     if alias_name in scope.alias_name_set:
-      self.compiler.warn('Multiple assignment of %s' % _identifier.name)
+      if self.options.double_assign_error:
+        self.compiler.error(
+            SemanticAnalyzerError('Multiple assignment of %s' %
+                                  _identifier.name))
+      else:
+        self.compiler.warn('Multiple assignment of %s' % _identifier.name)
     scope.local_identifiers.add(_identifier)
     # note: this hack is here so you can partially analyze alias nodes
     # without double-processing

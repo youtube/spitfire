@@ -139,6 +139,7 @@ class Compiler(object):
     'debug_flags',
     'compiler_stack_traces',
     'default_to_strict_resolution',
+    'double_assign_error',
     'enable_filters',
     'extract_message_catalogue',
     'fail_library_searchlist_access',
@@ -192,6 +193,7 @@ class Compiler(object):
     self.default_to_strict_resolution = False
     self.static_analysis = False
     self.strict_global_check = False
+    self.double_assign_error = False
     self.enable_warnings = False
     self.warnings_as_errors = False
 
@@ -227,6 +229,7 @@ class Compiler(object):
       self.analyzer_options.skip_import_udn_resolution = self.skip_import_udn_resolution
       self.analyzer_options.static_analysis = self.static_analysis
       self.analyzer_options.strict_global_check = self.strict_global_check
+      self.analyzer_options.double_assign_error = self.double_assign_error
       self.analyzer_options.default_to_strict_resolution = self.default_to_strict_resolution
       self.analyzer_options.include_sourcemap = self.include_sourcemap
 
@@ -478,3 +481,5 @@ def add_common_options(op):
                 help='Get stack traces on compiler errors')
   op.add_option('--include-sourcemap', default=False, action='store_true',
                 help='Annotate output with sourcemap like comments.')
+  op.add_option('--double-assign-error', default=False, action='store_true',
+                help='Throw an error if there is an unsafe double assignment.')
