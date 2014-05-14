@@ -11,12 +11,17 @@ from spitfire.compiler.walker import flatten_tree
 import __builtin__
 builtin_names = vars(__builtin__)
 
+_BINOP_INVALID_COUNT = 1000  # Any value > 0 will work.
+_BINOP_INITIAL_COUNT = 0
+_BINOP_FIRST_PASS = 1
+
 class _BaseAnalyzer(object):
   def __init__(self, ast_root, options, compiler):
     self.ast_root = ast_root
     self.options = options
     self.compiler = compiler
     self.unoptimized_node_types = set()
+    self.binop_count = _BINOP_INVALID_COUNT
 
   def optimize_ast(self):
     self.visit_ast(self.ast_root)
@@ -266,8 +271,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeFunctionNode(self, function):
     function.scope.local_identifiers.update([IdentifierNode(n.name)
                                           for n in function.parameter_list])
+    # Some binops optimzations can only be done in functions.
+    self.binop_count = _BINOP_INITIAL_COUNT
     for n in function.child_nodes:
       self.visit_ast(n, function)
+    self.binop_count = _BINOP_INVALID_COUNT
 
   def analyzeForNode(self, for_node):
     self.visit_ast(for_node.target_list, for_node)
@@ -618,16 +626,26 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     # if you are trying to use short-circuit behavior, these two optimizations
     # can sabotage correct execution since the rhs may be hoisted above the
     # IfNode and cause it to get executed prior to passing the lhs check.
-    if n.operator == 'and' or n.operator == 'or':
+    should_visit_left = True
+    and_or_operator = n.operator in ('and', 'or')
+    if and_or_operator:
+      self.binop_count += 1
       cache_placeholders = self.options.cache_resolved_placeholders
       cache_udn_expressions = self.options.cache_resolved_udn_expressions
+      # If this is the first binop, we can visit the LHS since that must
+      # always be executed.
+      if self.binop_count == _BINOP_FIRST_PASS:
+        self.visit_ast(n.left, n)
+        should_visit_left = False
       self.options.cache_resolved_placeholders = False
       self.options.cache_resolved_udn_expressions = False
 
-    self.visit_ast(n.left, n)
+    if should_visit_left:
+      self.visit_ast(n.left, n)
     self.visit_ast(n.right, n)
 
-    if n.operator == 'and' or n.operator == 'or':
+    if and_or_operator:
+      self.binop_count -= 1
       self.options.cache_resolved_placeholders = cache_placeholders
       self.options.cache_resolved_udn_expressions = cache_udn_expressions
 
@@ -712,8 +730,6 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         node.parent.replace(node, cached_udn)
     elif self.options.prefer_whole_udn_expressions:
       self.visit_ast(node.expression, node)
-
-
 
   def analyzeSliceNode(self, pnode):
     self.visit_ast(pnode.expression, pnode)

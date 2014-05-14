@@ -5,12 +5,28 @@ from spitfire.compiler import util
 from spitfire.compiler import optimizer
 
 
-class TestAnalyzeListLiteralNode(unittest.TestCase):
+class BaseTest(unittest.TestCase):
+
+  def __init__(self, *args):
+    unittest.TestCase.__init__(self, *args)
+    self.options = analyzer.default_options
 
   def setUp(self):
     self.compiler = util.Compiler(
-        analyzer_options=analyzer.default_options,
+        analyzer_options=self.options,
         xspt_mode=False)
+
+  def _get_analyzer(self, ast_root):
+    optimization_analyzer = optimizer.OptimizationAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+        optimization_analyzer.visit_ast)
+    return optimization_analyzer
+
+
+class TestAnalyzeListLiteralNode(BaseTest):
 
   def test_list_elements_are_optimized(self):
     self.ast_description = """
@@ -22,16 +38,8 @@ class TestAnalyzeListLiteralNode(unittest.TestCase):
     ast_root.child_nodes.append(LiteralNode(2))
     ast_root.child_nodes.append(LiteralNode(3))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
-
+    optimization_analyzer = self._get_analyzer(ast_root)
     optimization_analyzer.visit_ast(ast_root)
-
     self.assertEqual(len(optimization_analyzer.visit_ast.GetCalls()), 4)
 
 
@@ -113,9 +121,10 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
       self.fail('visit_ast raised WarningError unexpectedly.')
 
 
-class TestPartialLocalIdentifiers(unittest.TestCase):
+class TestPartialLocalIdentifiers(BaseTest):
 
   def setUp(self):
+    # TODO: Use BaseTest.setUp()?
     options = analyzer.default_options
     options.update(static_analysis=True,
                    directly_access_defined_variables=True)
@@ -143,14 +152,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     if_node.append(assign_node)
     function_node.append(PlaceholderNode('foo'))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
-
+    optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
                       optimization_analyzer.visit_ast,
                       ast_root)
@@ -176,14 +178,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     if_node.else_.append(AssignNode(IdentifierNode('bar'), LiteralNode(1)))
     function_node.append(PlaceholderNode('foo'))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
-
+    optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
                       optimization_analyzer.visit_ast,
                       ast_root)
@@ -209,14 +204,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     if_node.else_.append(AssignNode(IdentifierNode('bar'), LiteralNode(1)))
     function_node.append(PlaceholderNode('bar'))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
-
+    optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
                       optimization_analyzer.visit_ast,
                       ast_root)
@@ -248,13 +236,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
 
     function_node.append(PlaceholderNode('foo'))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
+    optimization_analyzer = self._get_analyzer(ast_root)
 
     try:
       optimization_analyzer.visit_ast(ast_root)
@@ -289,13 +271,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     if_node.else_.append(AssignNode(IdentifierNode('foo'), LiteralNode(3)))
     function_node.append(PlaceholderNode('foo'))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
+    optimization_analyzer = self._get_analyzer(ast_root)
 
     try:
       optimization_analyzer.visit_ast(ast_root)
@@ -330,14 +306,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     if_node.else_.append(AssignNode(IdentifierNode('foo'), LiteralNode(3)))
     function_node.append(PlaceholderNode('foo'))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
-
+    optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
                       optimization_analyzer.visit_ast,
                       ast_root)
@@ -370,14 +339,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     if_node.else_.append(if_node_2)
     function_node.append(PlaceholderNode('baz'))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
-
+    optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
                       optimization_analyzer.visit_ast,
                       ast_root)
@@ -407,14 +369,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     if_node.else_.append(if_node_2)
     function_node.append(PlaceholderNode('foo'))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
-
+    optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
                       optimization_analyzer.visit_ast,
                       ast_root)
@@ -447,13 +402,7 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     if_node.else_.append(if_node_2)
     function_node.append(PlaceholderNode('foo'))
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
+    optimization_analyzer = self._get_analyzer(ast_root)
 
     try:
       optimization_analyzer.visit_ast(ast_root)
@@ -482,17 +431,101 @@ class TestPartialLocalIdentifiers(unittest.TestCase):
     if_node_2.append(PlaceholderNode('foo'))
     function_node.append(if_node_2)
 
-    optimization_analyzer = optimizer.OptimizationAnalyzer(
-        ast_root,
-        self.compiler.analyzer_options,
-        self.compiler)
-
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
-        optimization_analyzer.visit_ast)
-
+    optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
                       optimization_analyzer.visit_ast,
                       ast_root)
+
+
+class TestHoistPlaceholders(BaseTest):
+
+  def setUp(self):
+      options = analyzer.default_options
+      options.update(cache_resolved_placeholders=True,
+                     enable_warnings=True, warnings_as_errors=True,
+                     directly_access_defined_variables=True,
+                     static_analysis=False)
+      self.compiler = util.Compiler(
+          analyzer_options=options,
+          xspt_mode=False,
+          compiler_stack_traces=True)
+
+  def fake_placeholdernode_replacement(self, placeholder, local_var,
+                                       cached_placeholder, local_identifiers):
+    return self.options.cache_resolved_placeholders
+
+  def _get_analyzer_and_visit(self, ast_root):
+    analyzer = self._get_analyzer(ast_root)
+    analyzer._placeholdernode_replacement = unittest.RecordedFunction(
+        self.fake_placeholdernode_replacement)
+    analyzer.visit_ast(ast_root)
+    return analyzer
+
+  def test_simple_hoist(self):
+    self.ast_description = """
+    file: TestTemplate
+
+    #def test_function
+      $foo
+      $foo
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    function_node.append(PlaceholderNode('foo'))
+    function_node.append(PlaceholderNode('foo'))
+
+    optimization_analyzer = self._get_analyzer_and_visit(ast_root)
+    self.assertEqual(
+        optimization_analyzer._placeholdernode_replacement.GetResults(),
+        [True, True])
+
+  def test_hoists_both_from_plus(self):
+    self.ast_description = """
+    file: TestTemplate
+
+    #global $foo
+
+    #def test_function
+      #set $bar = $foo + $foo
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    ast_root.global_placeholders.add('foo')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    function_node.append(
+        AssignNode(IdentifierNode('bar'),
+        BinOpNode('+', PlaceholderNode('foo'), PlaceholderNode('foo'))))
+
+    optimization_analyzer = self._get_analyzer_and_visit(ast_root)
+    self.assertEqual(
+        optimization_analyzer._placeholdernode_replacement.GetResults(),
+        [True, True])
+
+  def test_hoists_lhs_only_from_and(self):
+    self.ast_description = """
+    file: TestTemplate
+
+    #def test_function
+      #if $foo or $bar
+      #end if
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    if_node = IfNode(
+        BinOpNode('or',
+                  PlaceholderNode('foo'),
+                  PlaceholderNode('bar')))
+    function_node.append(if_node)
+
+    optimization_analyzer = self._get_analyzer_and_visit(ast_root)
+    self.assertEqual(
+        optimization_analyzer._placeholdernode_replacement.GetResults(),
+        [True, False])
 
 
 if __name__ == '__main__':
