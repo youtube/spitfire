@@ -800,14 +800,14 @@ class FinalPassAnalyzer(_BaseAnalyzer):
         parent_block.insert_before(insertion_point, assign_alias_node)
       parent_block.scope.hoisted_aliases.append(alias_node)
 
-      # NOTE: once we hoist an expression, we need to make sure that we no
-      # longer use this for dependencies in the current scope
-      del parent_node.scope.aliased_expression_map[alias_node]
-      parent_node.scope.alias_name_set.remove(assign_alias_node.left.name)
-      # FIXME: this is probably an indication of a bug or unnecessary
-      # difference between the caching of placeholders and filter expressions
-      if not isinstance(alias_node, FilterNode):
-        parent_node.scope.local_identifiers.remove(assign_alias_node.left)
+    # NOTE: once we hoist an expression, we need to make sure that we no
+    # longer use this for dependencies in the current scope
+    del parent_node.scope.aliased_expression_map[alias_node]
+    parent_node.scope.alias_name_set.remove(assign_alias_node.left.name)
+    # FIXME: this is probably an indication of a bug or unnecessary
+    # difference between the caching of placeholders and filter expressions
+    if not isinstance(alias_node, FilterNode):
+      parent_node.scope.local_identifiers.remove(assign_alias_node.left)
 
 
 template_function_re = re.compile('^[^#]*#(def|block)\s+(\w+)')

@@ -25,6 +25,34 @@ class BaseTest(unittest.TestCase):
         optimization_analyzer.visit_ast)
     return optimization_analyzer
 
+  def _build_function_template(self):
+    """ Build a simple template with a function.
+
+    file: TestTemplate
+    #def test_function
+    #end def
+    """
+    ast_root = TemplateNode('TestTemplate')
+    function_node = FunctionNode('test_function')
+    ast_root.append(function_node)
+    return (ast_root, function_node)
+
+  def _build_if_template(self, condition=None):
+    """ Build a simple template with a function and an if statement.
+
+    file: TestTemplate
+    #def test_function
+      #if True
+      #end if
+    #end def
+    """
+    ast_root, function_node = self._build_function_template()
+    condition_node = condition or LiteralNode(True)
+    if_node = IfNode(condition_node)
+    function_node.append(if_node)
+    return (ast_root, function_node, if_node)
+
+
 
 class TestAnalyzeListLiteralNode(BaseTest):
 
@@ -64,9 +92,7 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
+    ast_root, function_node = self._build_function_template()
     first_assign = AssignNode(IdentifierNode('foo'), LiteralNode('foo'))
     function_node.append(first_assign)
     first_use = FilterNode(IdentifierNode('foo'))
@@ -97,9 +123,7 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
+    ast_root, function_node = self._build_function_template()
     first_assign = AssignNode(IdentifierNode('foo'), LiteralNode('foo'))
     function_node.append(first_assign)
     second_assign = AssignNode(IdentifierNode('foo'), LiteralNode('bar'))
@@ -143,11 +167,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(1))
     if_node.append(assign_node)
     function_node.append(PlaceholderNode('foo'))
@@ -169,11 +189,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
     if_node.else_.append(AssignNode(IdentifierNode('bar'), LiteralNode(1)))
     function_node.append(PlaceholderNode('foo'))
@@ -195,11 +211,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       $bar
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
     if_node.else_.append(AssignNode(IdentifierNode('bar'), LiteralNode(1)))
     function_node.append(PlaceholderNode('bar'))
@@ -223,11 +235,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
     if_node_2 = IfNode(LiteralNode(True))
     if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(2)))
@@ -259,11 +267,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     if_node_2 = IfNode(LiteralNode(True))
     if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
     if_node_2.else_.append(AssignNode(IdentifierNode('foo'), LiteralNode(2)))
@@ -294,11 +298,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     if_node_2 = IfNode(LiteralNode(True))
     if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
     if_node_2.else_.append(AssignNode(IdentifierNode('bar'), LiteralNode(2)))
@@ -327,11 +327,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       $baz
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
     if_node_2 = IfNode(LiteralNode(True))
     if_node_2.append(AssignNode(IdentifierNode('bar'), LiteralNode(2)))
@@ -358,11 +354,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
     if_node_2 = IfNode(LiteralNode(True))
     if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(2)))
@@ -390,11 +382,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
     if_node_2 = IfNode(LiteralNode(True))
     if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(2)))
@@ -421,11 +409,7 @@ class TestPartialLocalIdentifiers(BaseTest):
       #end if
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(LiteralNode(True))
-    function_node.append(if_node)
+    ast_root, function_node, if_node = self._build_if_template()
     if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
     if_node_2 = IfNode(LiteralNode(True))
     if_node_2.append(PlaceholderNode('foo'))
@@ -435,6 +419,77 @@ class TestPartialLocalIdentifiers(BaseTest):
     self.assertRaises(analyzer.SemanticAnalyzerError,
                       optimization_analyzer.visit_ast,
                       ast_root)
+
+
+class TestFinalPassHoistConditional(BaseTest):
+
+  def setUp(self):
+    options = analyzer.default_options
+    options.update(static_analysis=True,
+                   directly_access_defined_variables=True,
+                   hoist_conditional_aliases=True,
+                   cache_filtered_placeholders=True)
+    self.compiler = util.Compiler(
+        analyzer_options=options,
+        xspt_mode=False,
+        compiler_stack_traces=True)
+
+  def test_hoist_both(self):
+    self.ast_description = """
+    file: TestTemplate
+    #global $foo
+    #def test_function
+      #if True
+        $foo
+      #else
+        $foo
+      #end if
+    #end def
+    """
+
+    def scope_setter(scope):
+      scope.local_identifiers.add(IdentifierNode('_rph_foo'))
+      scope.aliased_expression_map[PlaceholderNode('foo')] = (
+          IdentifierNode('_rph_foo'))
+      scope.aliased_expression_map[FilterNode(IdentifierNode('_rph_foo'))] = (
+          IdentifierNode('_fph123'))
+      scope.alias_name_set.add('_fph123')
+      scope.alias_name_set.add('_rph_foo')
+
+    def build_conditional_body(node):
+      node.append(
+          AssignNode(
+              IdentifierNode('_rph_foo'),
+              PlaceholderNode('foo')))
+      node.append(
+          AssignNode(
+              IdentifierNode('_fph123'),
+              FilterNode(IdentifierNode('_rph_foo'))))
+      node.append(
+          BufferWrite(IdentifierNode('_fph123')))
+
+    ast_root, function_node, if_node = self._build_if_template()
+    ast_root.global_placeholders.add('foo')
+    scope_setter(function_node.scope)
+    function_node.scope.local_identifiers.add(IdentifierNode('self'))
+    scope_setter(if_node.scope)
+    scope_setter(if_node.else_.scope)
+    build_conditional_body(if_node)
+    build_conditional_body(if_node.else_)
+
+    final_pass_analyzer = optimizer.FinalPassAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+
+    final_pass_analyzer.hoist = unittest.RecordedFunction(
+        final_pass_analyzer.hoist)
+
+    final_pass_analyzer.visit_ast(ast_root)
+
+    # The 4 calls are hoisting the rph alias and the fph alias out of
+    # both the if and else clauses.
+    self.assertEqual(len(final_pass_analyzer.hoist.GetCalls()), 4)
 
 
 class TestHoistPlaceholders(BaseTest):
@@ -470,9 +525,7 @@ class TestHoistPlaceholders(BaseTest):
       $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
+    ast_root, function_node = self._build_function_template()
     function_node.append(PlaceholderNode('foo'))
     function_node.append(PlaceholderNode('foo'))
 
@@ -491,10 +544,8 @@ class TestHoistPlaceholders(BaseTest):
       #set $bar = $foo + $foo
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
+    ast_root, function_node = self._build_function_template()
     ast_root.global_placeholders.add('foo')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
     function_node.append(
         AssignNode(IdentifierNode('bar'),
         BinOpNode('+', PlaceholderNode('foo'), PlaceholderNode('foo'))))
@@ -513,14 +564,10 @@ class TestHoistPlaceholders(BaseTest):
       #end if
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
-    ast_root.append(function_node)
-    if_node = IfNode(
-        BinOpNode('or',
-                  PlaceholderNode('foo'),
-                  PlaceholderNode('bar')))
-    function_node.append(if_node)
+    condition = BinOpNode('or',
+                          PlaceholderNode('foo'),
+                          PlaceholderNode('bar'))
+    ast_root, function_node, if_node = self._build_if_template(condition)
 
     optimization_analyzer = self._get_analyzer_and_visit(ast_root)
     self.assertEqual(
