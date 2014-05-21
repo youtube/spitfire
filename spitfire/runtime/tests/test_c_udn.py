@@ -20,5 +20,9 @@ class TestCUdn(unittest.TestCase):
                           udn.UndefinedAttribute)
 
   def testResolveMissWithException(self):
-    self.assertRaises(_udn._resolve_udn(Foo(), 'missing', raise_exception=True),
-                      udn.UDNResolveError)
+    self.assertRaises(udn.UDNResolveError, _udn._resolve_udn, Foo(), 'misssing',
+                      raise_exception=True)
+
+
+if __name__ == '__main__':
+  unittest.main()

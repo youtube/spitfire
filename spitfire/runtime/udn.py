@@ -9,7 +9,7 @@ import inspect
 import logging
 
 from spitfire.runtime import (
-  PlaceholderError, UDNResolveError, UnresolvedPlaceholder, 
+  PlaceholderError, UDNResolveError, UnresolvedPlaceholder,
   UndefinedPlaceholder, UndefinedAttribute)
 
 # create a sentinel value for missing attributes
@@ -28,7 +28,7 @@ class CallOnlyPlaceholder(object):
   def __init__(self, name, function):
     self.name = name
     self.function = function
-    
+
   def __call__(self, *pargs, **kargs):
     return self.function(*pargs, **kargs)
 
@@ -39,7 +39,7 @@ class CallOnlyPlaceholder(object):
   @property
   def skip_filter(self):
     return getattr(self.function, 'skip_filter')
-  
+
   def __cmp__(self, unused_other):
     raise PlaceholderError(self.name, 'function placeholder was not called')
 
@@ -104,19 +104,8 @@ def resolve_udn_prefer_attr3(_object, name, raise_exception=False):
 _resolve_udn = resolve_udn_prefer_attr3
 
 
-# FIXME: i'm sure this is a little pokey - might be able to speed this up
-# somehow. not sure if it's better to look before leaping or raise.
-# might also want to let users tune whether to prefer keys or attributes
-def _resolve_placeholder(name, template, local_vars, global_vars):
-  if local_vars is not None:
-    try:
-      return local_vars[name]
-    except KeyError:
-      pass
-    except TypeError:
-      raise PlaceholderError('unexpected type for local_vars: %s' %
-                             type(local_vars))
 
+def _resolve_placeholder(name, template, global_vars):
   try:
     # Note: getattr with 3 args is somewhat slower if the attribute
     # is found, but much faster if the attribute is not found.
@@ -150,7 +139,27 @@ def _resolve_placeholder(name, template, local_vars, global_vars):
                                 [get_available_placeholders(scope)
                                  for scope in template.search_list])
 
+
 resolve_placeholder = _resolve_placeholder
+
+
+# FIXME: i'm sure this is a little pokey - might be able to speed this up
+# somehow. not sure if it's better to look before leaping or raise.
+# might also want to let users tune whether to prefer keys or attributes
+def _resolve_placeholder_with_locals(name, template, local_vars, global_vars):
+  if local_vars is not None:
+    try:
+      return local_vars[name]
+    except KeyError:
+      pass
+    except TypeError:
+      raise PlaceholderError('unexpected type for local_vars: %s' %
+                             type(local_vars))
+
+  return _resolve_placeholder(name, template, global_vars)
+
+
+resolve_placeholder_with_locals = _resolve_placeholder_with_locals
 
 
 def _debug_resolve_placeholder(name, *pargs, **kargs):
@@ -183,7 +192,7 @@ def _resolve_from_search_list(search_list, name, default=Unspecified):
   except TypeError:
     # if this isn't iterable, let's just return UndefinedPlaceholder
     pass
-  
+
   if default != Unspecified:
     return default
   else:

@@ -124,6 +124,7 @@ class CodeGenerator(object):
       module_code.append_line('from Cheetah.NameMapper import valueForKey as resolve_udn')
     else:
       module_code.append_line('from spitfire.runtime.udn import resolve_placeholder')
+      module_code.append_line('from spitfire.runtime.udn import resolve_placeholder_with_locals')
       module_code.append_line('from spitfire.runtime.udn import resolve_udn')
 
     module_code.append_line('from spitfire.runtime.template import template_method')
@@ -330,12 +331,12 @@ class CodeGenerator(object):
     elif self.options and self.options.omit_local_scope_search:
       self.function_stack[-1].uses_globals = True
       return [CodeNode(
-        "resolve_placeholder('%(name)s', self, None, _globals)"
+        "resolve_placeholder('%(name)s', self, _globals)"
         % vars(), input_pos=node.pos)]
     else:
       self.function_stack[-1].uses_globals = True
       return [CodeNode(
-        "resolve_placeholder('%(name)s', self, locals(), _globals)"
+        "resolve_placeholder_with_locals('%(name)s', self, locals(), _globals)"
         % vars(), input_pos=node.pos)]
 
   def codegenASTReturnNode(self, node):
