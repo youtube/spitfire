@@ -386,6 +386,7 @@ class CodeGenerator(object):
     name = node.name
     node.uses_globals = False
     node.uses_filter_function = False
+    node.uses_private_filter_function = False
     self.function_stack.append(node)
     if node.parameter_list:
       parameter_list = self.generate_python(
@@ -438,6 +439,9 @@ class CodeGenerator(object):
       insertion_point += 1
     if node.uses_filter_function:
       code_node.insert(insertion_point, CodeNode('_self_filter_function = self.filter_function'))
+      insertion_point += 1
+    if node.uses_private_filter_function:
+      code_node.insert(insertion_point, CodeNode('_self_private_filter_function = self._filter_function'))
     if self.options.cheetah_compatibility:
       if_cheetah = CodeNode("if 'trans' not in kargs:")
       if_cheetah.append(CodeNode('return _buffer.getvalue()'))
@@ -498,8 +502,15 @@ class CodeGenerator(object):
   def codegenASTFilterNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
     if node.filter_function_node == DefaultFilterFunction:
-      self.function_stack[-1].uses_filter_function = True
-      filter_expression = '_self_filter_function'
+      if isinstance(node.expression, CallFunctionNode):
+        self.function_stack[-1].uses_filter_function = True
+        filter_expression = '_self_filter_function'
+      else:
+        # Since there is no second argument to filter_function, there
+        # will be a call to _filter_function. This optimization skips
+        # the check and calls directly to _filter_function.
+        self.function_stack[-1].uses_private_filter_function = True
+        filter_expression = '_self_private_filter_function'
     elif node.filter_function_node:
       filter_expression = self.generate_python(
         self.build_code(node.filter_function_node)[0])

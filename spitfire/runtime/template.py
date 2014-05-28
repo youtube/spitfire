@@ -51,10 +51,9 @@ class SpitfireTemplate(object):
   # times (avoids double escaping)
   # fixme: this could be a hotspot, having to call getattr all the time seems
   # like it might be a bit pokey
-  def filter_function(self, value, placeholder_function=None):
+  def filter_function(self, value, placeholder_function):
     #print "filter_function", placeholder_function, self._filter_function, "value: '%s'" % value
-    if (placeholder_function is not None and
-        getattr(placeholder_function, 'skip_filter', False)):
+    if getattr(placeholder_function, 'skip_filter', False):
       return value
     else:
       value = self._filter_function(value)
