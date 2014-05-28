@@ -115,9 +115,19 @@ def _resolve_placeholder(name, template, global_vars):
 
   search_list = template.search_list
   if search_list:
+    placeholder_cache = template.placeholder_cache
+    if placeholder_cache and name in placeholder_cache:
+      return placeholder_cache[name]
+
     ph = _resolve_from_search_list(search_list, name)
     if ph is not UnresolvedPlaceholder:
+      if placeholder_cache is not None:
+        placeholder_cache[name] = ph
       return ph
+
+  # TODO: Cache negative results in placedholder_cache?
+  # This probably isn't worthwhile as it likely won't happen often enough
+  # to make the extra code/cpu/memory worthwhile.
 
   if global_vars is not None:
     try:
@@ -130,14 +140,11 @@ def _resolve_placeholder(name, template, global_vars):
 
   # fixme: finally try to resolve builtins - this should be configurable
   # if you compile optimized modes, this isn't necessary
-  default = getattr(__builtin__, name, Unspecified)
-
-  if default is not Unspecified:
-    return default
-  else:
-    return UndefinedPlaceholder(name,
-                                [get_available_placeholders(scope)
-                                 for scope in template.search_list])
+  try:
+    return getattr(__builtin__, name)
+  except AttributeError:
+    return UndefinedPlaceholder(
+        name, [get_available_placeholders(scope) for scope in search_list])
 
 
 resolve_placeholder = _resolve_placeholder

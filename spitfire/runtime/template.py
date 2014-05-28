@@ -30,9 +30,15 @@ class SpitfireTemplate(object):
   # indicate that these functions aren't really related to the template.
   _filter_function = staticmethod(spitfire.runtime.filters.simple_str_filter)
   repeat = None
-  
-  def __init__(self, search_list=None, default_filter=None):
+  placeholder_cache = None
+
+  def __init__(self, search_list=None, default_filter=None,
+               use_placeholder_cache=False):
+    # use_placeholder_cache - cache the values returned from the search_list?
+    #   The cached values will live for the lifetime of this object.
     self.search_list = search_list
+    if use_placeholder_cache:
+      self.placeholder_cache = {}
     if default_filter is not None:
       self._filter_function = default_filter
 

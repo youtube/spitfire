@@ -10,6 +10,7 @@ class Foo(object):
     {'win': 'boo'},
     Scope(),
   ]
+  placeholder_cache = None
 
 
 class TestResolvePlaceholder(unittest.TestCase):
@@ -32,6 +33,23 @@ class TestResolvePlaceholder(unittest.TestCase):
   def test_undefined(self):
     self.assertEqual(type(udn.resolve_placeholder('wowza', Foo, None)),
                      udn.UndefinedPlaceholder)
+
+
+class TestResolvePlaceholderWithCache(unittest.TestCase):
+
+  def test_in_search_list_dict(self):
+    template = Foo()
+    template.placeholder_cache = {}
+    self.assertEqual(udn.resolve_placeholder('win', template, None), 'boo')
+    self.assertIn('win', template.placeholder_cache)
+    self.assertEqual(udn.resolve_placeholder('win', template, None), 'boo')
+
+  def test_in_search_list_object(self):
+    template = Foo()
+    template.placeholder_cache = {}
+    self.assertEqual(udn.resolve_placeholder('boom', template, None), 'bam')
+    self.assertIn('boom', template.placeholder_cache)
+    self.assertEqual(udn.resolve_placeholder('boom', template, None), 'bam')
 
 
 class TestResolvePlaceholderWithLocals(unittest.TestCase):
