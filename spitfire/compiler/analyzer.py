@@ -4,20 +4,25 @@ import os.path
 from spitfire.compiler.ast import *
 from spitfire.util import normalize_whitespace
 
+
 def tree_walker(node):
   yield node
   for n in node.child_nodes:
     for ng in tree_walker(n):
       yield ng
 
+
 class SemanticAnalyzerError(Exception):
   pass
+
 
 class MacroError(SemanticAnalyzerError):
   pass
 
+
 class MacroParseError(MacroError):
   pass
+
 
 class AnalyzerOptions(object):
 
@@ -115,8 +120,8 @@ class AnalyzerOptions(object):
   @classmethod
   def get_help(cls):
     return ', '.join(['[no-]' + name.replace('_', '-')
-                    for name, value in vars(cls()).iteritems()
-                    if not name.startswith('__') and type(value) == bool])
+                      for name, value in vars(cls()).iteritems()
+                      if not name.startswith('__') and type(value) == bool])
 
 default_options = AnalyzerOptions()
 o1_options = copy.copy(default_options)
@@ -141,15 +146,29 @@ o4_options = copy.copy(o3_options)
 o4_options.enable_psyco = True
 
 optimizer_map = {
-  0: default_options,
-  1: o1_options,
-  2: o2_options,
-  3: o3_options,
-  4: o4_options,
-  }
+    0: default_options,
+    1: o1_options,
+    2: o2_options,
+    3: o3_options,
+    4: o4_options,
+}
 
 
 i18n_function_name = 'i18n'
+
+# This is a whitelist of nodes that are allowed at the top level in
+# template libraries.
+# TODO: Remove TextNode once b/15314057 is fixed.
+_ALLOWED_LIBRARY_NODES = (TextNode,
+                         ImplementsNode,
+                         ImportNode,
+                         WhitespaceNode,
+                         LooseResolutionNode,
+                         AllowUndeclaredGlobalsNode,
+                         CommentNode,
+                         DefNode,
+                         GlobalNode)
+
 
 # convert the parse tree into something a bit more 'fat' and useful
 # is this an AST? i'm not sure. it will be a tree of some sort
@@ -161,7 +180,10 @@ i18n_function_name = 'i18n'
 # additionally, there are some optimizations that are really more oriented at
 # the parse tree, so i do them inline here. it's a bit split-brain, but it's
 # seems easier.
+
+
 class SemanticAnalyzer(object):
+
   def __init__(self, classname, parse_root, options, compiler):
     self.classname = classname
     self.parse_root = parse_root
@@ -170,6 +192,15 @@ class SemanticAnalyzer(object):
     self.ast_root = None
     self.template = None
     self.strip_lines = False
+    self.base_extends_identifiers = []
+    if self.compiler.base_extends_package:
+      # this means that extends are supposed to all happen relative to some
+      # other package - this is handy for assuring all templates reference
+      # within a tree, say for localization, where each locale might have its
+      # own package
+      packages = self.compiler.base_extends_package.split('.')
+      self.base_extends_identifiers = [
+          IdentifierNode(module_name) for module_name in packages]
 
   def get_ast(self):
     ast_node_list = self.build_ast(self.parse_root)
@@ -212,7 +243,8 @@ class SemanticAnalyzer(object):
     # Need to build a full list of template_methods before analyzing so we can
     # modify CallFunctionNodes as we walk the tree below.
     for child_node in tree_walker(pnode):
-      if isinstance(child_node, DefNode) and not isinstance(child_node, MacroNode):
+      if (isinstance(child_node, DefNode) and
+          not isinstance(child_node, MacroNode)):
         if child_node.name in self.template.template_methods:
           self.compiler.error(
               SemanticAnalyzerError(
@@ -222,12 +254,17 @@ class SemanticAnalyzer(object):
         self.template.template_methods.add(child_node.name)
 
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
+      if self.template.library and not isinstance(pn, _ALLOWED_LIBRARY_NODES):
+        self.compiler.error(
+            SemanticAnalyzerError(
+                'All library code must be in a function.'),
+            pos=pn.pos)
       built_nodes = self.build_ast(pn)
-      if built_nodes:
+      if built_nodes and not self.template.library:
         self.template.main_function.extend(built_nodes)
 
     self.template.main_function.child_nodes = self.optimize_buffer_writes(
-      self.template.main_function.child_nodes)
+        self.template.main_function.child_nodes)
 
     if self.template.extends_nodes and self.template.library:
       self.compiler.error(
@@ -325,7 +362,7 @@ class SemanticAnalyzer(object):
     for pn in self.optimize_parsed_nodes(pnode.else_.child_nodes):
       if_node.else_.extend(self.build_ast(pn))
       if_node.else_.child_nodes = self.optimize_buffer_writes(
-        if_node.else_.child_nodes)
+          if_node.else_.child_nodes)
     return [if_node]
 
   def analyzeFragmentNode(self, node):
@@ -385,15 +422,15 @@ class SemanticAnalyzer(object):
     node = ImportNode([self.build_ast(n)[0] for n in pnode.module_name_list],
                       library=pnode.library, pos=pnode.pos)
     if node.library:
-      self.template.library_identifiers.add('.'.join(node.name for node in node.module_name_list))
-      base_extends_identifiers = self.get_base_extends_identifiers()
-      if base_extends_identifiers:
-        node.module_name_list[0:0] = base_extends_identifiers
+      self.template.library_identifiers.add(
+          '.'.join(node.name for node in node.module_name_list))
+      node.module_name_list[0:0] = self.base_extends_identifiers
 
     if node not in self.template.import_nodes:
       self.template.import_nodes.append(node)
       # Modules imported via "from" are trusted to not need UDN resolution.
-      self.template.trusted_module_identifiers.add('.'.join(node.name for node in node.module_name_list))
+      self.template.trusted_module_identifiers.add(
+          '.'.join(node.name for node in node.module_name_list))
     return []
 
   def analyzeExtendsNode(self, pnode):
@@ -402,10 +439,9 @@ class SemanticAnalyzer(object):
     # anything else
     import_node = ImportNode(pnode.module_name_list[:])
     extends_node = ExtendsNode(pnode.module_name_list[:])
-    base_extends_identifiers = self.get_base_extends_identifiers()
-    if (type(pnode) != AbsoluteExtendsNode and base_extends_identifiers):
-      import_node.module_name_list[0:0] = base_extends_identifiers
-      extends_node.module_name_list[0:0] = base_extends_identifiers
+    if type(pnode) != AbsoluteExtendsNode:
+      import_node.module_name_list[0:0] = self.base_extends_identifiers
+      extends_node.module_name_list[0:0] = self.base_extends_identifiers
 
     self.analyzeImportNode(import_node)
 
@@ -420,9 +456,7 @@ class SemanticAnalyzer(object):
   def analyzeFromNode(self, pnode):
     if pnode.library:
       self.template.library_identifiers.add(pnode.identifier.name)
-      base_extends_identifiers = self.get_base_extends_identifiers()
-      if base_extends_identifiers:
-        pnode.module_name_list[0:0] = base_extends_identifiers
+      pnode.module_name_list[0:0] = self.base_extends_identifiers
     if pnode not in self.template.from_nodes:
       self.template.from_nodes.append(pnode)
       # Modules imported via "from" are trusted to not need UDN resolution.
@@ -453,7 +487,7 @@ class SemanticAnalyzer(object):
     if (self.options.fail_nested_defs and not allow_nesting
         and not isinstance(pnode.parent, TemplateNode)):
       self.compiler.error(
-          SemanticAnalyzerError("nested #def directives are not allowed"),
+          SemanticAnalyzerError('nested #def directives are not allowed'),
           pos=pnode.pos)
 
     function = FunctionNode(pnode.name, pos=pnode.pos)
@@ -507,10 +541,10 @@ class SemanticAnalyzer(object):
     try:
       if isinstance(pnode, MacroNode):
         fragment_ast = spitfire.compiler.util.parse(
-          macro_output, 'fragment_goal')
+            macro_output, 'fragment_goal')
       elif isinstance(pnode, CallFunctionNode):
         fragment_ast = spitfire.compiler.util.parse(
-          macro_output, 'rhs_expression')
+            macro_output, 'rhs_expression')
     except Exception, e:
       self.compiler.error(MacroParseError(e), pos=pnode.pos)
     return self.build_ast(fragment_ast)
@@ -529,7 +563,7 @@ class SemanticAnalyzer(object):
   def analyzeGlobalNode(self, pnode):
     if not isinstance(pnode.parent, TemplateNode):
       self.compiler.error(
-          SemanticAnalyzerError("#global must be a top-level directive."),
+          SemanticAnalyzerError('#global must be a top-level directive.'),
           pos=pnode.pos)
     self.template.global_placeholders.add(pnode.name)
     return []
@@ -562,7 +596,7 @@ class SemanticAnalyzer(object):
   # it might be reasonable to put in another node type that indicates a block
   # of data needs to be filtered.
   def analyzePlaceholderSubstitutionNode(self, pnode):
-    #print "analyzePlaceholderSubstitutionNode", pnode, pnode.parameter_list.get_arg_map()
+    # print 'analyzePlaceholderSubstitutionNode', pnode, pnode.parameter_list.get_arg_map()
     node_list = []
     ph_expression = self.build_ast(pnode.expression)[0]
 
@@ -580,9 +614,9 @@ class SemanticAnalyzer(object):
       registered_function = (fname in self.compiler.function_name_registry)
       if registered_function:
         function_has_only_literal_args = (
-          ph_expression.arg_list and
-          not [_arg for _arg in ph_expression.arg_list
-               if not isinstance(_arg, LiteralNode)])
+            ph_expression.arg_list and
+            not [_arg for _arg in ph_expression.arg_list
+                 if not isinstance(_arg, LiteralNode)])
         if self.compiler.new_registry_format:
           decorators = self.compiler.function_name_registry[fname][-1]
           skip_filter = 'skip_filter' in decorators
@@ -614,7 +648,6 @@ class SemanticAnalyzer(object):
               ph_expression, arg_node_map.get('filter', DefaultFilterFunction),
               pos=pnode.pos)
 
-
         # if this is a literal node, we still might want to filter it
         # but the output should always be the same - so do it once and cache
         # FIXME: could fold this and apply the function at compile-time
@@ -640,7 +673,6 @@ class SemanticAnalyzer(object):
           pos=pnode.pos)
       node_list.append(buffer_write)
     return node_list
-
 
   def analyzePlaceholderNode(self, pnode):
     if (self.options.fail_library_searchlist_access
@@ -729,17 +761,6 @@ class SemanticAnalyzer(object):
     fn.expression = self.build_ast(fn.expression)[0]
     return [fn]
 
-  def get_base_extends_identifiers(self):
-    if not self.compiler.base_extends_package:
-      return None
-
-    # this means that extends are supposed to all happen relative to some
-    # other package - this is handy for assuring all templates reference
-    # within a tree, say for localization, where each locale might have its
-    # own package
-    return [IdentifierNode(module_name) for module_name in
-                      self.compiler.base_extends_package.split('.')]
-
   # go over the parsed nodes and weed out the parts we don't need
   # it's easier to do this before we morph the AST to look more like python
   def optimize_parsed_nodes(self, node_list):
@@ -761,7 +782,7 @@ class SemanticAnalyzer(object):
         optimized_nodes[-1] = temp_text
       else:
         optimized_nodes.append(n)
-    #print "optimized_nodes", node_list, optimized_nodes
+    # print "optimized_nodes", node_list, optimized_nodes
     return optimized_nodes
 
   # go over the parsed nodes and weed out the parts we don't need
