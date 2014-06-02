@@ -169,6 +169,10 @@ _ALLOWED_LIBRARY_NODES = (TextNode,
                          DefNode,
                          GlobalNode)
 
+# This is a list of nodes that cannot exclusively make up the body of
+# an if or for block.
+_BLANK_NODES = (WhitespaceNode, CommentNode)
+
 
 # convert the parse tree into something a bit more 'fat' and useful
 # is this an AST? i'm not sure. it will be a tree of some sort
@@ -281,13 +285,9 @@ class SemanticAnalyzer(object):
         self._getIdentifiersFromListNode(identifier_set, pn)
 
   def analyzeForNode(self, pnode):
-    # If all of the children are OptionalWhitespaceNodes or there are
-    # no children, throw an error. We don't ever convert
-    # OptionalWhitespaceNodes into actual WhitespaceNodes so this
-    # check is safe.
-    if all(map(
-        lambda x: isinstance(x, OptionalWhitespaceNode),
-        pnode.child_nodes)):
+    # If all of the children are nodes that get ignored or there are
+    # no nodes, throw an error.
+    if all([isinstance(pn, _BLANK_NODES) for pn in pnode.child_nodes]):
       self.compiler.error(
           SemanticAnalyzerError("can't define an empty #for loop"),
           pos=pnode.pos)
@@ -342,13 +342,9 @@ class SemanticAnalyzer(object):
     return [GetAttrNode(expression, pnode.name, pos=pnode.pos)]
 
   def analyzeIfNode(self, pnode):
-    # If all of the children are OptionalWhitespaceNodes or there are
-    # no children, throw an error. We don't ever convert
-    # OptionalWhitespaceNodes into actual WhitespaceNodes so this
-    # check is safe.
-    if all(map(
-        lambda x: isinstance(x, OptionalWhitespaceNode),
-        pnode.child_nodes)):
+    # If all of the children are nodes that get ignored or there are
+    # no nodes, throw an error.
+    if all([isinstance(pn, _BLANK_NODES) for pn in pnode.child_nodes]):
       self.compiler.error(
           SemanticAnalyzerError("can't define an empty #if block"),
           pos=pnode.pos)

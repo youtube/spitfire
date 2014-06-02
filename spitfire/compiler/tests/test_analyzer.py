@@ -90,6 +90,23 @@ class TestEmptyIfBlockError(BaseTest):
     self.assertRaises(analyzer.SemanticAnalyzerError,
                       semantic_analyzer.get_ast)
 
+  def test_comment_if_fails(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #if True
+        ## This is a comment.
+      #end if
+    #end def
+    """
+    ast_root, def_node, if_node = self._build_if_template()
+    if_node.append(CommentNode(' This is a comment.'))
+
+    semantic_analyzer = self._get_analyzer(ast_root)
+
+    self.assertRaises(analyzer.SemanticAnalyzerError,
+                      semantic_analyzer.get_ast)
+
   def test_empty_if_full_else_fails(self):
     self.ast_description = """
     file: TestTemplate
@@ -196,6 +213,23 @@ class TestEmptyForBlockError(BaseTest):
     """
     ast_root, def_node, for_node = self._build_for_template()
     for_node.append(OptionalWhitespaceNode(' '))
+
+    semantic_analyzer = self._get_analyzer(ast_root)
+
+    self.assertRaises(analyzer.SemanticAnalyzerError,
+                      semantic_analyzer.get_ast)
+
+  def test_comment_for_fails(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #for $i in []
+        ## This is a comment.
+      #end for
+    #end def
+    """
+    ast_root, def_node, for_node = self._build_for_template()
+    for_node.append(CommentNode(' This is a comment.'))
 
     semantic_analyzer = self._get_analyzer(ast_root)
 
