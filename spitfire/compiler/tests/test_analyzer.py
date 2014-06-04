@@ -1,19 +1,20 @@
 import unittest
 from spitfire.compiler.ast import *
 from spitfire.compiler import analyzer
-from spitfire.compiler import util
+from spitfire.compiler import options as sptoptions
+from spitfire.compiler import compiler as sptcompiler
 
 
 class BaseTest(unittest.TestCase):
 
   def __init__(self, *args):
     unittest.TestCase.__init__(self, *args)
-    self.options = analyzer.default_options
+    self.options = sptoptions.default_options
     self.options.update(cache_resolved_placeholders=True,
                         enable_warnings=True, warnings_as_errors=True)
 
   def setUp(self):
-    self.compiler = util.Compiler(
+    self.compiler = sptcompiler.Compiler(
         analyzer_options=self.options,
         xspt_mode=False,
         compiler_stack_traces=True)

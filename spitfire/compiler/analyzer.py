@@ -2,6 +2,7 @@ import copy
 import os.path
 
 from spitfire.compiler.ast import *
+from spitfire.compiler import util
 from spitfire.util import normalize_whitespace
 
 
@@ -22,136 +23,6 @@ class MacroError(SemanticAnalyzerError):
 
 class MacroParseError(MacroError):
   pass
-
-
-class AnalyzerOptions(object):
-
-  def __init__(self, **kargs):
-    self.debug = False
-
-    self.ignore_optional_whitespace = False
-
-    # adjacent text nodes become one single node
-    self.collapse_adjacent_text = False
-
-    # generate templates with unicode() instead of str()
-    self.generate_unicode = True
-
-    # runs of whitespace characters are replace with one space
-    self.normalize_whitespace = False
-
-    # expensive dotted notations are aliased to a local variable for faster
-    # lookups: write = self.buffer.write
-    self.alias_invariants = False
-
-    # when a variable defined in a block later is accessed, just use the raw
-    # identifier, don't incure the cost of a resolve_placeholder call since you
-    # know that this local variable will always resolve first
-    self.directly_access_defined_variables = False
-
-    # examine the 'extends' directive to see what other methods will be
-    # defined on this template - that allows use to make fast calls to template
-    # methods outside of the immediate file.
-    self.use_dependency_analysis = False
-
-    # if directly_access_defined_variables is working 100% correctly, you can
-    # compleletely ignore the local scope, as those placeholders will have been
-    # resolved at compile time. there are some complex cases where there are
-    # some problems, so it is disabled for now
-    self.omit_local_scope_search = False
-
-    # once a placeholder is resolved in a given scope, cache it in a local
-    # reference for faster subsequent retrieval
-    self.cache_resolved_placeholders = False
-    self.cache_resolved_udn_expressions = False
-    # when this is enabled, $a.b.c will cache only the result of the entire
-    # expression. otherwise, each subexpression will be cached separately
-    self.prefer_whole_udn_expressions = False
-
-    # Throw an exception when a udn resolution fails rather than providing a
-    # default value
-    self.raise_udn_exceptions = False
-
-    # when adding an alias, detect if the alias is loop invariant and hoist
-    # right there on the spot.  this has probably been superceded by
-    # hoist_loop_invariant_aliases, but does have the advantage of not needing
-    # another pass over the tree
-    self.inline_hoist_loop_invariant_aliases = False
-
-    # if an alias has been generated in a conditional scope and it is also
-    # defined in the parent scope, hoist it above the conditional. this
-    # requires a two-pass optimization on functions, which adds time and
-    # complexity
-    self.hoist_conditional_aliases = False
-    self.hoist_loop_invariant_aliases = False
-
-    # filtering is expensive, especially given the number of function calls
-    self.cache_filtered_placeholders = False
-
-    # generate functions compatible with Cheetah calling conventions
-    self.cheetah_compatibility = False
-    # use Cheetah NameMapper to resolve placeholders and UDN
-    self.cheetah_cheats = False
-
-    # the nested def doesn't make sense - unlike block, so raise an error.
-    # default off for now to let people ease into it.
-    self.fail_nested_defs = False
-
-    # whether to explode on library search list accesses that are not declared
-    # with #global $foo beforehand
-    self.fail_library_searchlist_access = False
-
-    # If we can skip udn resolution and instead directly access modules
-    # imported via #import and #from directives.
-    self.skip_import_udn_resolution = False
-
-    # By default Spitfire will jump through hoops to resolve dot notation.
-    # This flag disables this resolution and instead uses direct python access.
-    # If this flag can be overriden on a per-file basis by using the
-    # "#loose_resolution" directive.
-    self.default_to_strict_resolution = False
-
-    self.enable_psyco = False
-    self.__dict__.update(kargs)
-
-  def update(self, **kargs):
-    self.__dict__.update(kargs)
-
-  @classmethod
-  def get_help(cls):
-    return ', '.join(['[no-]' + name.replace('_', '-')
-                      for name, value in vars(cls()).iteritems()
-                      if not name.startswith('__') and type(value) == bool])
-
-default_options = AnalyzerOptions()
-o1_options = copy.copy(default_options)
-o1_options.collapse_adjacent_text = True
-
-o2_options = copy.copy(o1_options)
-o2_options.alias_invariants = True
-o2_options.directly_access_defined_variables = True
-o2_options.cache_resolved_placeholders = True
-o2_options.cache_resolved_udn_expressions = True
-o2_options.inline_hoist_loop_invariant_aliases = True
-o2_options.use_dependency_analysis = True
-
-o3_options = copy.copy(o2_options)
-o3_options.inline_hoist_loop_invariant_aliases = False
-o3_options.hoist_conditional_aliases = True
-o3_options.hoist_loop_invariant_aliases = True
-o3_options.cache_filtered_placeholders = True
-o3_options.omit_local_scope_search = True
-
-o4_options = copy.copy(o3_options)
-o4_options.enable_psyco = True
-
-optimizer_map = {
-    0: default_options,
-    1: o1_options,
-    2: o2_options,
-    3: o3_options,
-    4: o4_options,
-}
 
 
 i18n_function_name = 'i18n'
@@ -533,14 +404,11 @@ class SemanticAnalyzer(object):
     macro_output = macro_function(pnode, kargs_map, self.compiler)
     # fixme: bad place to import, difficult to put at the top due to
     # cyclic dependency
-    import spitfire.compiler.util
     try:
       if isinstance(pnode, MacroNode):
-        fragment_ast = spitfire.compiler.util.parse(
-            macro_output, 'fragment_goal')
+        fragment_ast = util.parse(macro_output, 'fragment_goal')
       elif isinstance(pnode, CallFunctionNode):
-        fragment_ast = spitfire.compiler.util.parse(
-            macro_output, 'rhs_expression')
+        fragment_ast = util.parse(macro_output, 'rhs_expression')
     except Exception, e:
       self.compiler.error(MacroParseError(e), pos=pnode.pos)
     return self.build_ast(fragment_ast)

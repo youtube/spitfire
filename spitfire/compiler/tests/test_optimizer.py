@@ -1,18 +1,19 @@
 import unittest
 from spitfire.compiler.ast import *
 from spitfire.compiler import analyzer
-from spitfire.compiler import util
+from spitfire.compiler import compiler as sptcompiler
 from spitfire.compiler import optimizer
+from spitfire.compiler import options as sptoptions
 
 
 class BaseTest(unittest.TestCase):
 
   def __init__(self, *args):
     unittest.TestCase.__init__(self, *args)
-    self.options = analyzer.default_options
+    self.options = sptoptions.default_options
 
   def setUp(self):
-    self.compiler = util.Compiler(
+    self.compiler = sptcompiler.Compiler(
         analyzer_options=self.options,
         xspt_mode=False)
 
@@ -74,10 +75,10 @@ class TestAnalyzeListLiteralNode(BaseTest):
 class TestAssignAfterFilterWarning(unittest.TestCase):
 
   def setUp(self):
-    options = analyzer.default_options
+    options = sptoptions.default_options
     options.update(cache_resolved_placeholders=True,
                    enable_warnings=True, warnings_as_errors=True)
-    self.compiler = util.Compiler(
+    self.compiler = sptcompiler.Compiler(
         analyzer_options=options,
         xspt_mode=False,
         compiler_stack_traces=True)
@@ -110,7 +111,7 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
     optimization_analyzer.visit_ast = unittest.RecordedFunction(
         optimization_analyzer.visit_ast)
 
-    self.assertRaises(util.Warning,
+    self.assertRaises(sptcompiler.Warning,
                       optimization_analyzer.visit_ast,
                       ast_root)
 
@@ -141,7 +142,7 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
 
     try:
       optimization_analyzer.visit_ast(ast_root)
-    except util.Warning:
+    except sptcompiler.Warning:
       self.fail('visit_ast raised WarningError unexpectedly.')
 
 
@@ -149,10 +150,10 @@ class TestPartialLocalIdentifiers(BaseTest):
 
   def setUp(self):
     # TODO: Use BaseTest.setUp()?
-    options = analyzer.default_options
+    options = sptoptions.default_options
     options.update(static_analysis=True,
                    directly_access_defined_variables=True)
-    self.compiler = util.Compiler(
+    self.compiler = sptcompiler.Compiler(
         analyzer_options=options,
         xspt_mode=False,
         compiler_stack_traces=True)
@@ -424,12 +425,12 @@ class TestPartialLocalIdentifiers(BaseTest):
 class TestFinalPassHoistConditional(BaseTest):
 
   def setUp(self):
-    options = analyzer.default_options
+    options = sptoptions.default_options
     options.update(static_analysis=True,
                    directly_access_defined_variables=True,
                    hoist_conditional_aliases=True,
                    cache_filtered_placeholders=True)
-    self.compiler = util.Compiler(
+    self.compiler = sptcompiler.Compiler(
         analyzer_options=options,
         xspt_mode=False,
         compiler_stack_traces=True)
@@ -495,12 +496,12 @@ class TestFinalPassHoistConditional(BaseTest):
 class TestHoistPlaceholders(BaseTest):
 
   def setUp(self):
-      options = analyzer.default_options
+      options = sptoptions.default_options
       options.update(cache_resolved_placeholders=True,
                      enable_warnings=True, warnings_as_errors=True,
                      directly_access_defined_variables=True,
                      static_analysis=False)
-      self.compiler = util.Compiler(
+      self.compiler = sptcompiler.Compiler(
           analyzer_options=options,
           xspt_mode=False,
           compiler_stack_traces=True)
