@@ -285,18 +285,26 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       self.visit_ast(n, for_node)
 
   def analyzeAssignNode(self, node):
-    _identifier = IdentifierNode(node.left.name, pos=node.pos)
     scope = self.get_parent_scope(node)
-    alias_name = self.generate_filtered_placeholder(_identifier)
-    if alias_name in scope.alias_name_set:
-      if self.options.double_assign_error:
+    if isinstance(node.left, SliceNode):
+      _identifier = IdentifierNode(node.left.expression.name, pos=node.pos)
+      if _identifier not in scope.local_identifiers:
         self.compiler.error(
-            SemanticAnalyzerError('Multiple assignment of %s' %
-                                  _identifier.name), pos=node.pos)
-      else:
-        self.compiler.warn('Multiple assignment of %s' % _identifier.name,
-                           pos=node.pos)
-    scope.local_identifiers.add(_identifier)
+            SemanticAnalyzerError(
+                'Expression %s being indexed must be defined before use' %
+                _identifier.name), pos=node.pos)
+    else:
+      _identifier = IdentifierNode(node.left.name, pos=node.pos)
+      alias_name = self.generate_filtered_placeholder(_identifier)
+      if alias_name in scope.alias_name_set:
+        if self.options.double_assign_error:
+          self.compiler.error(
+              SemanticAnalyzerError('Multiple assignment of %s' %
+                                    _identifier.name), pos=node.pos)
+        else:
+          self.compiler.warn('Multiple assignment of %s' % _identifier.name,
+                             pos=node.pos)
+      scope.local_identifiers.add(_identifier)
     # note: this hack is here so you can partially analyze alias nodes
     # without double-processing
     if node.right:

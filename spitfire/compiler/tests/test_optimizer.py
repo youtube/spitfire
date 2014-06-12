@@ -15,7 +15,8 @@ class BaseTest(unittest.TestCase):
   def setUp(self):
     self.compiler = sptcompiler.Compiler(
         analyzer_options=self.options,
-        xspt_mode=False)
+        xspt_mode=False,
+        compiler_stack_traces=True)
 
   def _get_analyzer(self, ast_root):
     optimization_analyzer = optimizer.OptimizationAnalyzer(
@@ -52,7 +53,6 @@ class BaseTest(unittest.TestCase):
     if_node = IfNode(condition_node)
     function_node.append(if_node)
     return (ast_root, function_node, if_node)
-
 
 
 class TestAnalyzeListLiteralNode(BaseTest):
@@ -496,15 +496,15 @@ class TestFinalPassHoistConditional(BaseTest):
 class TestHoistPlaceholders(BaseTest):
 
   def setUp(self):
-      options = sptoptions.default_options
-      options.update(cache_resolved_placeholders=True,
-                     enable_warnings=True, warnings_as_errors=True,
-                     directly_access_defined_variables=True,
-                     static_analysis=False)
-      self.compiler = sptcompiler.Compiler(
-          analyzer_options=options,
-          xspt_mode=False,
-          compiler_stack_traces=True)
+    options = sptoptions.default_options
+    options.update(cache_resolved_placeholders=True,
+                   enable_warnings=True, warnings_as_errors=True,
+                   directly_access_defined_variables=True,
+                   static_analysis=False)
+    self.compiler = sptcompiler.Compiler(
+        analyzer_options=options,
+        xspt_mode=False,
+        compiler_stack_traces=True)
 
   def fake_placeholdernode_replacement(self, placeholder, local_var,
                                        cached_placeholder, local_identifiers):
@@ -548,8 +548,11 @@ class TestHoistPlaceholders(BaseTest):
     ast_root, function_node = self._build_function_template()
     ast_root.global_placeholders.add('foo')
     function_node.append(
-        AssignNode(IdentifierNode('bar'),
-        BinOpNode('+', PlaceholderNode('foo'), PlaceholderNode('foo'))))
+        AssignNode(
+            IdentifierNode('bar'),
+            BinOpNode(
+                '+', PlaceholderNode('foo'),
+                PlaceholderNode('foo'))))
 
     optimization_analyzer = self._get_analyzer_and_visit(ast_root)
     self.assertEqual(
@@ -574,6 +577,49 @@ class TestHoistPlaceholders(BaseTest):
     self.assertEqual(
         optimization_analyzer._placeholdernode_replacement.GetResults(),
         [True, False])
+
+
+class TestAssignSlice(BaseTest):
+
+  def test_index_before_assign_error(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #set $foo[1] = 1
+    #end def
+    """
+    ast_root, function_node = self._build_function_template()
+    assign_node = AssignNode(SliceNode(IdentifierNode('foo'),
+                                       LiteralNode(1)),
+                             LiteralNode(1))
+    function_node.append(assign_node)
+
+    optimization_analyzer = self._get_analyzer(ast_root)
+    self.assertRaises(analyzer.SemanticAnalyzerError,
+                      optimization_analyzer.visit_ast, ast_root)
+
+  def test_index_after_assign_ok(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #set $foo = {}
+      #set $foo[1] = 1
+    #end def
+    """
+    ast_root, function_node = self._build_function_template()
+    assign_node1 = AssignNode(IdentifierNode('foo'), DictLiteralNode())
+    function_node.append(assign_node1)
+    assign_node2 = AssignNode(SliceNode(IdentifierNode('foo'),
+                                        LiteralNode(1)),
+                              LiteralNode(1))
+    function_node.append(assign_node2)
+
+    optimization_analyzer = self._get_analyzer(ast_root)
+
+    try:
+      optimization_analyzer.visit_ast(ast_root)
+    except analyzer.SemanticAnalyzerError:
+      self.fail('visit_ast raised SemanticAnalyzerError unexpectedly.')
 
 
 if __name__ == '__main__':

@@ -228,6 +228,9 @@ class _SpitfireParser(Parser):
             SPACE = self._scan('SPACE')
             placeholder = self.placeholder()
             _lhs = IdentifierNode(placeholder.name)
+            # The following if statement differs from parser.g
+            if self._peek('OPEN_BRACKET', 'SPACE', 'ASSIGN_OPERATOR') == 'OPEN_BRACKET':
+              _lhs = self.slice_node(_lhs)
             if self._peek('SPACE', 'ASSIGN_OPERATOR') == 'SPACE':
                 SPACE = self._scan('SPACE')
             ASSIGN_OPERATOR = self._scan('ASSIGN_OPERATOR')
@@ -553,10 +556,7 @@ class _SpitfireParser(Parser):
             CLOSE_PAREN = self._scan('CLOSE_PAREN')
             _primary = CallFunctionNode(_previous_primary, _arg_list)
         else:# == 'OPEN_BRACKET'
-            OPEN_BRACKET = self._scan('OPEN_BRACKET')
-            expression = self.expression()
-            _primary = SliceNode(_previous_primary, expression)
-            CLOSE_BRACKET = self._scan('CLOSE_BRACKET')
+            _primary = self.slice_node(_previous_primary)
         return _primary
 
     def placeholder(self):
@@ -666,6 +666,13 @@ class _SpitfireParser(Parser):
             placeholder_parameter = self.placeholder_parameter()
             _parameter_list.append(placeholder_parameter)
         return _parameter_list
+
+    def slice_node(self, expression):
+      OPEN_BRACKET = self._scan('OPEN_BRACKET')
+      slice_expression = self.expression()
+      _node = SliceNode(expression, slice_expression)
+      CLOSE_BRACKET = self._scan('CLOSE_BRACKET')
+      return _node
 
     def stringliteral(self):
         _token_ = self._peek('\'"\'', '"\'"')

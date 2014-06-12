@@ -572,7 +572,17 @@ class SemanticAnalyzer(object):
   def analyzeAssignNode(self, pnode):
     # Add to template's scope, which will be removed after stepping out of
     # a DefNode or ForNode.
-    self.template.local_scope_identifiers.add(pnode.left.name)
+    # If the left side is a SliceNode, make sure the expression is an
+    # IdentifierNode and add the expression's name.
+    if isinstance(pnode.left, SliceNode):
+      exp = pnode.left.expression
+      if not isinstance(exp, IdentifierNode):
+        self.compiler.error(
+            SemanticAnalyzerError(
+                'Slice expression %s in an assign must be an identifier' %
+                exp), pos=pnode.pos)
+    else:
+      self.template.local_scope_identifiers.add(pnode.left.name)
     return self.analyzeBinOpNode(pnode)
 
   def analyzeUnaryOpNode(self, pnode):

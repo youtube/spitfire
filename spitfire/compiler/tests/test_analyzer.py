@@ -345,5 +345,43 @@ class TestGlobalScopeLibraryError(BaseTest):
       self.fail('get_ast raised SemanticAnalyzerError unexpectedly.')
 
 
+class TestAssignSlice(BaseTest):
+
+  def test_slice_non_identifier_error(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #set 1[1] = 1
+    #end def
+    """
+    ast_root, def_node = self._build_function_template()
+    assign_node = AssignNode(SliceNode(LiteralNode(1), LiteralNode(1)),
+                             LiteralNode(1))
+    def_node.append(assign_node)
+
+    semantic_analyzer = self._get_analyzer(ast_root)
+
+    self.assertRaises(analyzer.SemanticAnalyzerError,
+                      semantic_analyzer.get_ast)
+
+  def test_slice_identifier_ok(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #set $foo[1] = 1
+    #end def
+    """
+    ast_root, def_node = self._build_function_template()
+    assign_node = AssignNode(SliceNode(IdentifierNode('foo'), LiteralNode(1)),
+                             LiteralNode(1))
+    def_node.append(assign_node)
+
+    semantic_analyzer = self._get_analyzer(ast_root)
+
+    try:
+      semantic_analyzer.get_ast()
+    except analyzer.SemanticAnalyzerError:
+      self.fail('get_ast raised SemanticAnalyzerError unexpectedly.')
+
 if __name__ == '__main__':
   unittest.main()
