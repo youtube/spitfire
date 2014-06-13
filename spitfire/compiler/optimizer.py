@@ -288,7 +288,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     scope = self.get_parent_scope(node)
     if isinstance(node.left, SliceNode):
       _identifier = IdentifierNode(node.left.expression.name, pos=node.pos)
-      if _identifier not in scope.local_identifiers:
+      local_identifiers, _ = self.get_local_identifiers(node)
+      if _identifier not in local_identifiers:
         self.compiler.error(
             SemanticAnalyzerError(
                 'Expression %s being indexed must be defined before use' %

@@ -621,6 +621,33 @@ class TestAssignSlice(BaseTest):
     except analyzer.SemanticAnalyzerError:
       self.fail('visit_ast raised SemanticAnalyzerError unexpectedly.')
 
+  def test_index_scope_ok(self):
+    self.ast_description = """
+    file: TestTemplate
+    #def test_function
+      #set $foo = {}
+      #if True
+        #set $foo[1] = 1
+      #end if
+    #end def
+    """
+    ast_root, function_node = self._build_function_template()
+    assign_node1 = AssignNode(IdentifierNode('foo'), DictLiteralNode())
+    function_node.append(assign_node1)
+    if_node = IfNode(LiteralNode(True))
+    assign_node2 = AssignNode(SliceNode(IdentifierNode('foo'),
+                                        LiteralNode(1)),
+                              LiteralNode(1))
+    if_node.append(assign_node2)
+    function_node.append(if_node)
+
+    optimization_analyzer = self._get_analyzer(ast_root)
+
+    try:
+      optimization_analyzer.visit_ast(ast_root)
+    except analyzer.SemanticAnalyzerError:
+      self.fail('visit_ast raised SemanticAnalyzerError unexpectedly.')
+
 
 if __name__ == '__main__':
   unittest.main()
