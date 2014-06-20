@@ -106,12 +106,12 @@ _resolve_udn = resolve_udn_prefer_attr3
 
 
 def _resolve_placeholder(name, template, global_vars):
-  try:
-    # Note: getattr with 3 args is somewhat slower if the attribute
-    # is found, but much faster if the attribute is not found.
-    return getattr(template, name)
-  except AttributeError:
-    pass
+  # Note: getattr with 3 args is somewhat slower if the attribute
+  # is found, but much faster if the attribute is not found.
+  udn_ph = UndefinedPlaceholder
+  result = getattr(template, name, udn_ph)
+  if result is not udn_ph:
+    return result
 
   search_list = template.search_list
   if search_list:
