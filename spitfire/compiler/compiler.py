@@ -21,6 +21,7 @@ class Warning(Exception):
 class Compiler(object):
   setting_names = [
       'base_extends_package',
+      'base_template_full_import_path',
       'debug_flags',
       'compiler_stack_traces',
       'default_to_strict_resolution',
@@ -83,6 +84,7 @@ class Compiler(object):
     self.warnings_as_errors = False
 
     self.base_extends_package = None
+    self.base_template_full_import_path = None
     self.message_catalogue = None
     self.message_catalogue_file = None
     self.extract_message_catalogue = False
@@ -108,6 +110,9 @@ class Compiler(object):
 
     if self.analyzer_options is None:
       self.analyzer_options = options.optimizer_map[self.optimizer_level]
+      if self.base_template_full_import_path:
+        self.analyzer_options.base_template_full_import_path = (
+            self.base_template_full_import_path)
       self.analyzer_options.ignore_optional_whitespace = (
           self.ignore_optional_whitespace)
       self.analyzer_options.normalize_whitespace = self.normalize_whitespace

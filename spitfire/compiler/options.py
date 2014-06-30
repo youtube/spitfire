@@ -4,6 +4,9 @@ import os
 
 class AnalyzerOptions(object):
 
+  DEFAULT_BASE_TEMPLATE_FULL_IMPORT_PATH = (
+      'spitfire.runtime.template.SpitfireTemplate')
+
   def __init__(self, **kargs):
     self.debug = False
 
@@ -88,6 +91,10 @@ class AnalyzerOptions(object):
     # If this flag can be overriden on a per-file basis by using the
     # "#loose_resolution" directive.
     self.default_to_strict_resolution = False
+
+    # Fully qualified import path of the base Spitfire template class.
+    self.base_template_full_import_path = (
+        self.DEFAULT_BASE_TEMPLATE_FULL_IMPORT_PATH)
 
     self.enable_psyco = False
     self.__dict__.update(kargs)
@@ -212,6 +219,10 @@ def add_common_options(op):
                 help='Annotate output with sourcemap like comments.')
   op.add_option('--double-assign-error', default=False, action='store_true',
                 help='Throw an error if there is an unsafe double assignment.')
+  op.add_option('--base-template-full-import-path',
+                action='store',
+                type='string',
+                help='Sets the import path of the base abstract template.')
 
 
 def validate_path(option, opt_str, path, parser):
