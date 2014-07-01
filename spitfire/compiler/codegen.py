@@ -107,25 +107,6 @@ class CodeGenerator(object):
         module_code.extend(self.build_code(n))
       module_code.append_line('')
 
-    extends = []
-    for n in node.extends_nodes:
-      extends.append(self.generate_python(self.build_code(n)[0]))
-    if not extends:
-      extends = [self.options.base_template_full_import_path]
-      if (self.options.base_template_full_import_path != (
-              self.options.DEFAULT_BASE_TEMPLATE_FULL_IMPORT_PATH)):
-        # If we are not using the default base template class, we need to
-        # import the module for the custom template class.
-        # The module for the default base template class is already imported
-        # below and is required regardless of which base template is being used.
-        base_template_module_bits = (
-            self.options.base_template_full_import_path.split('.')[:-1])
-        # If the full import path is a.b.ClassName, we want to import
-        # the module a.b.
-        base_template_module = '.'.join(base_template_module_bits)
-        module_code.append_line('import %s' % base_template_module)
-
-    extends_clause = ', '.join(extends)
     classname = node.classname
 
     module_code.append_line('import spitfire.runtime')
@@ -149,6 +130,26 @@ class CodeGenerator(object):
       module_code.append_line('')
 
     if not node.library:
+      extends = []
+      for n in node.extends_nodes:
+        extends.append(self.generate_python(self.build_code(n)[0]))
+      if not extends:
+        extends = [self.options.base_template_full_import_path]
+        if (self.options.base_template_full_import_path != (
+                self.options.DEFAULT_BASE_TEMPLATE_FULL_IMPORT_PATH)):
+          # If we are not using the default base template class, we need to
+          # import the module for the custom template class.
+          # The module for the default base template class is already imported
+          # below and is required regardless of which base template is being
+          # used.
+          base_template_module_bits = (
+              self.options.base_template_full_import_path.split('.')[:-1])
+          # If the full import path is a.b.ClassName, we want to import
+          # the module a.b.
+          base_template_module = '.'.join(base_template_module_bits)
+          module_code.append_line('import %s' % base_template_module)
+
+      extends_clause = ', '.join(extends)
       class_code = CodeNode(
         'class %(classname)s(%(extends_clause)s):' % vars())
       module_code.append(class_code)
