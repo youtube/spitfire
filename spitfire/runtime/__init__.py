@@ -15,21 +15,30 @@ class UDNResolveError(Exception):
 # it could also be that you might try to call the result - in that case, blow
 # and exception as well.
 class UndefinedPlaceholder(object):
-  def __init__(self, name, available_placeholders):
+  def __init__(self, name, search_list):
     self.__name = name
-    self.__available_placeholders = available_placeholders
+    self.__search_list = search_list
 
   def __nonzero__(self):
     return False
 
   def __str__(self):
-    raise PlaceholderError(self.__name, self.__available_placeholders)
+    phs = [_get_available_placeholders(scope) for scope in self.__search_list]
+    raise PlaceholderError(self.__name, phs)
 
   def __call__(self, *pargs, **kargs):
-    raise PlaceholderError(self.__name, self.__available_placeholders)
+    phs = [_get_available_placeholders(scope) for scope in self.__search_list]
+    raise PlaceholderError(self.__name, phs)
 
 class UndefinedAttribute(UndefinedPlaceholder):
   pass
+
+def _get_available_placeholders(scope):
+  if isinstance(scope, dict):
+    return scope.keys()
+  else:
+    return [a for a in dir(scope)
+            if not (a.startswith('__') and a.endswith('__'))]
 
 def import_module_symbol(name):
   name_parts = name.split('.')

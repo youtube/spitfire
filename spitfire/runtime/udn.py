@@ -143,8 +143,7 @@ def _resolve_placeholder(name, template, global_vars):
   try:
     return getattr(__builtin__, name)
   except AttributeError:
-    return UndefinedPlaceholder(
-        name, [get_available_placeholders(scope) for scope in search_list])
+    return UndefinedPlaceholder(name, search_list)
 
 
 resolve_placeholder = _resolve_placeholder
@@ -204,14 +203,6 @@ def _resolve_from_search_list(search_list, name, default=Unspecified):
     return default
   else:
     return UnresolvedPlaceholder
-
-
-def get_available_placeholders(scope):
-  if isinstance(scope, dict):
-    return scope.keys()
-  else:
-    return [a for a in dir(scope)
-            if not (a.startswith('__') and a.endswith('__'))]
 
 
 # apply some acceleration if this c module is available
