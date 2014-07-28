@@ -106,19 +106,21 @@ _resolve_udn = resolve_udn_prefer_attr3
 
 
 def _resolve_placeholder(name, template, global_vars):
+  placeholder_cache = template.placeholder_cache
+  if placeholder_cache and name in placeholder_cache:
+    return placeholder_cache[name]
+
   # Note: getattr with 3 args is somewhat slower if the attribute
   # is found, but much faster if the attribute is not found.
   udn_ph = UndefinedPlaceholder
   result = getattr(template, name, udn_ph)
   if result is not udn_ph:
+    if placeholder_cache is not None:
+      placeholder_cache[name] = result
     return result
 
   search_list = template.search_list
   if search_list:
-    placeholder_cache = template.placeholder_cache
-    if placeholder_cache and name in placeholder_cache:
-      return placeholder_cache[name]
-
     ph = _resolve_from_search_list(search_list, name)
     if ph is not UnresolvedPlaceholder:
       if placeholder_cache is not None:
