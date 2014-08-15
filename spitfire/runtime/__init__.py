@@ -16,6 +16,9 @@ class UDNResolveError(Exception):
 # and exception as well.
 class UndefinedPlaceholder(object):
   def __init__(self, name, search_list):
+    # Uses mangled names for internal state in case these attributes
+    # happen to match the object it's replacing.  eg, if the user_object
+    # was an UndefinedPlaceholder in this statement:  $user_object.name
     self.__name = name
     self.__search_list = search_list
 
@@ -23,12 +26,13 @@ class UndefinedPlaceholder(object):
     return False
 
   def __str__(self):
-    phs = [_get_available_placeholders(scope) for scope in self.__search_list]
-    raise PlaceholderError(self.__name, phs)
+    raise PlaceholderError(self.__name, self.get_placeholder_names())
 
   def __call__(self, *pargs, **kargs):
-    phs = [_get_available_placeholders(scope) for scope in self.__search_list]
-    raise PlaceholderError(self.__name, phs)
+    raise PlaceholderError(self.__name, self.get_placeholder_names())
+
+  def get_placeholder_names(self):
+    return [_get_available_placeholders(scope) for scope in self.__search_list]
 
 class UndefinedAttribute(UndefinedPlaceholder):
   pass
