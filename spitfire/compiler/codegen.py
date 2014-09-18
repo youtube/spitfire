@@ -423,6 +423,9 @@ class CodeGenerator(object):
       code_node = CodeNode('def %(name)s(%(parameter_list)s):' % vars(),
                            input_pos=node.pos)
 
+    needs_globals_added = True
+    child_nodes = node.child_nodes
+
     if self.options and self.options.cheetah_compatibility:
       if_cheetah = CodeNode("if 'trans' in kargs:")
       code_node.append(if_cheetah)
@@ -431,6 +434,26 @@ class CodeGenerator(object):
       else_spitfire.append(CodeNode('_buffer = self.new_buffer()'))
       code_node.append(else_spitfire)
     else:
+      # If the first node is an if statement with no else AND there's no other
+      # statements, generate the if code first.  That way, we can avoid
+      # doing extra work when the condition is false.  ie, avoid the overhead
+      # of creating a new list setting up useless local variables and
+      # joining all to get an empty string.
+      if child_nodes and len(child_nodes) == 1:
+        if_node = child_nodes[0]
+        if isinstance(if_node, IfNode) and not if_node.else_.child_nodes:
+          child_nodes = if_node.child_nodes
+          # Insert code that does:
+          #   if not ($test_expression):
+          #     return ''
+          new_if_condition = IfNode(UnaryOpNode('not', if_node.test_expression))
+          new_if_condition.append(ReturnNode(LiteralNode('')))
+          new_code = self.build_code(new_if_condition)
+          if node.uses_globals:
+            needs_globals_added = False
+            code_node.append(CodeNode('_globals = globals()'))
+          code_node.extend(new_code)
+
       code_node.append(CodeNode('_buffer = self.new_buffer()'))
     code_node.append(CodeNode('_buffer_write = _buffer.write'))
 
@@ -443,11 +466,11 @@ class CodeGenerator(object):
       node.uses_globals = True
       code_node.append(CodeNode('_self_search_list = self.search_list + [_globals]'))
 
-    for n in node.child_nodes:
+    for n in child_nodes:
       code_child_nodes = self.build_code(n)
       code_node.extend(code_child_nodes)
 
-    if node.uses_globals:
+    if node.uses_globals and needs_globals_added:
       code_node.insert(insertion_point, CodeNode('_globals = globals()'))
       insertion_point += 1
     if node.uses_filter_function:
