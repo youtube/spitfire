@@ -649,5 +649,162 @@ class TestAssignSlice(BaseTest):
       self.fail('visit_ast raised SemanticAnalyzerError unexpectedly.')
 
 
+class TestCollectWrites(BaseTest):
+
+  def setUp(self):
+    options = sptoptions.default_options
+    options.update(cache_resolved_placeholders=True,
+                   enable_warnings=True, warnings_as_errors=True,
+                   directly_access_defined_variables=True,
+                   static_analysis=False, batch_buffer_writes=True)
+    self.compiler = sptcompiler.Compiler(
+        analyzer_options=options,
+        xspt_mode=False,
+        compiler_stack_traces=True)
+
+  def _get_analyzer(self, ast_root):
+    optimization_analyzer = optimizer.FinalPassAnalyzer(
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+        optimization_analyzer.visit_ast)
+    return optimization_analyzer
+
+  def test_collect_writes_no_change(self):
+    self.ast_description = """
+    file: TestTemplate
+
+    #def test_function
+      foo
+    #end def
+    """
+    ast_root, function_node = self._build_function_template()
+    function_node.append(BufferWrite(LiteralNode('foo')))
+    expected_hash = hash(ast_root)
+
+    optimization_analyzer = self._get_analyzer(ast_root)
+    got_hash = hash(optimization_analyzer.optimize_ast())
+    self.assertEqual(expected_hash, got_hash)
+
+  def test_collect_writes_join_simple(self):
+    self.ast_description = """
+    file: TestTemplate
+
+    #def test_function
+      foo
+      bar
+    #end def
+    """
+    ast_root, function_node = self._build_function_template()
+    function_node.append(BufferWrite(LiteralNode('foo')))
+    function_node.append(BufferWrite(LiteralNode('bar')))
+    optimization_analyzer = self._get_analyzer(ast_root)
+
+    ast_root, function_node = self._build_function_template()
+    tuple_node = TupleLiteralNode()
+    tuple_node.append(LiteralNode('foo'))
+    tuple_node.append(LiteralNode('bar'))
+    function_node.append(BufferExtend(tuple_node))
+    expected_hash = hash(ast_root)
+
+    got_hash = hash(optimization_analyzer.optimize_ast())
+    self.assertEqual(expected_hash, got_hash)
+
+  def test_collect_writes_join_if(self):
+    self.ast_description = """
+    file: TestTemplate
+
+    #def test_function
+      foo
+      bar
+      #if True
+        #set $foo = 1
+      #end if
+      baz
+      boo
+    #end def
+    """
+    ast_root, function_node = self._build_function_template()
+    function_node.append(BufferWrite(LiteralNode('foo')))
+    function_node.append(BufferWrite(LiteralNode('bar')))
+    if_node = IfNode()
+    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    function_node.append(if_node)
+    function_node.append(BufferWrite(LiteralNode('baz')))
+    function_node.append(BufferWrite(LiteralNode('boo')))
+    optimization_analyzer = self._get_analyzer(ast_root)
+
+    ast_root, function_node = self._build_function_template()
+    tuple_node = TupleLiteralNode()
+    tuple_node.append(LiteralNode('foo'))
+    tuple_node.append(LiteralNode('bar'))
+    function_node.append(BufferExtend(tuple_node))
+    if_node = IfNode()
+    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    function_node.append(if_node)
+    tuple_node = TupleLiteralNode()
+    tuple_node.append(LiteralNode('baz'))
+    tuple_node.append(LiteralNode('boo'))
+    function_node.append(BufferExtend(tuple_node))
+
+    expected_hash = hash(ast_root)
+
+    got_hash = hash(optimization_analyzer.optimize_ast())
+    self.assertEqual(expected_hash, got_hash)
+
+  def test_duplicate_node_collect(self):
+    self.ast_description = """
+    file: TestTemplate
+
+    #def test_function
+      foo
+      bar
+      #if True
+        #set $foo = 1
+      #end if
+      baz
+      boo
+      #if True
+        #set $foo = 1
+      #end if
+    #end def
+
+    NOTE: This test will break if collect_writes is written
+    using ASTNode.insert_before.
+    """
+    ast_root, function_node = self._build_function_template()
+    function_node.append(BufferWrite(LiteralNode('foo')))
+    function_node.append(BufferWrite(LiteralNode('bar')))
+    if_node = IfNode()
+    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    function_node.append(if_node)
+    function_node.append(BufferWrite(LiteralNode('baz')))
+    function_node.append(BufferWrite(LiteralNode('boo')))
+    if_node = IfNode()
+    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    optimization_analyzer = self._get_analyzer(ast_root)
+
+    ast_root, function_node = self._build_function_template()
+    tuple_node = TupleLiteralNode()
+    tuple_node.append(LiteralNode('foo'))
+    tuple_node.append(LiteralNode('bar'))
+    function_node.append(BufferExtend(tuple_node))
+    if_node = IfNode()
+    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    function_node.append(if_node)
+    tuple_node = TupleLiteralNode()
+    tuple_node.append(LiteralNode('baz'))
+    tuple_node.append(LiteralNode('boo'))
+    function_node.append(BufferExtend(tuple_node))
+    if_node = IfNode()
+    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+
+    expected_hash = hash(ast_root)
+
+    got_hash = hash(optimization_analyzer.optimize_ast())
+    self.assertEqual(expected_hash, got_hash)
+
+
 if __name__ == '__main__':
   unittest.main()

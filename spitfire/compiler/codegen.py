@@ -400,6 +400,8 @@ class CodeGenerator(object):
     node.uses_globals = False
     node.uses_filter_function = False
     node.uses_private_filter_function = False
+    node.uses_buffer_write = False
+    node.uses_buffer_extend = False
     self.function_stack.append(node)
     if node.parameter_list:
       parameter_list = self.generate_python(
@@ -455,7 +457,6 @@ class CodeGenerator(object):
           code_node.extend(new_code)
 
       code_node.append(CodeNode('_buffer = self.new_buffer()'))
-    code_node.append(CodeNode('_buffer_write = _buffer.write'))
 
     # Save the point where _globals and self_filter_funtion will go if
     # used. We don't append these here because we have to determine if
@@ -478,6 +479,12 @@ class CodeGenerator(object):
       insertion_point += 1
     if node.uses_private_filter_function:
       code_node.insert(insertion_point, CodeNode('_self_private_filter_function = self._filter_function'))
+      insertion_point += 1
+    if node.uses_buffer_write:
+      code_node.insert(insertion_point, CodeNode('_buffer_write = _buffer.write'))
+      insertion_point += 1
+    if node.uses_buffer_extend:
+      code_node.insert(insertion_point, CodeNode('_buffer_extend = _buffer.extend'))
     if self.options.cheetah_compatibility:
       if_cheetah = CodeNode("if 'trans' not in kargs:")
       if_cheetah.append(CodeNode('return _buffer.getvalue()'))
@@ -494,8 +501,16 @@ class CodeGenerator(object):
   #  code_node = self.codegenDefault(node)
 
   def codegenASTBufferWrite(self, node):
+    self.function_stack[-1].uses_buffer_write = True
     expression = self.generate_python(self.build_code(node.expression)[0])
     code_node = CodeNode('_buffer_write(%(expression)s)' % vars(),
+                         input_pos=node.pos)
+    return [code_node]
+
+  def codegenASTBufferExtend(self, node):
+    self.function_stack[-1].uses_buffer_extend = True
+    expression = self.generate_python(self.build_code(node.expression)[0])
+    code_node = CodeNode('_buffer_extend(%(expression)s)' % vars(),
                          input_pos=node.pos)
     return [code_node]
 

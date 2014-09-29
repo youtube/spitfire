@@ -72,6 +72,9 @@ class ASTNode(object):
       self.append(n)
 
   def insert_before(self, marker_node, insert_node):
+    """WARNING: If the same marker node appears more than once in the
+    child_nodes list, the insert_node will be inserted before the first
+    occurance."""
     try:
       idx = self.child_nodes.index(marker_node)
     except ValueError:
@@ -273,6 +276,10 @@ class BufferWrite(CallFunctionNode):
             isinstance(node.expression, LiteralNode)):
       raise Exception('node type mismatch')
     self.expression.value += node.expression.value
+
+class BufferExtend(CallFunctionNode):
+  """Class to batch writes to the buffer."""
+  pass
 
 class CacheNode(CallFunctionNode):
   def __init__(self, expression=None, pos=None):

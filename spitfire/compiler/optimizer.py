@@ -757,12 +757,16 @@ class FinalPassAnalyzer(_BaseAnalyzer):
   def analyzeFunctionNode(self, function):
     for n in function.child_nodes:
       self.visit_ast(n, function)
+    if self.options.batch_buffer_writes:
+      self.collect_writes(function)
 
   def analyzeForNode(self, for_node):
     for n in for_node.child_nodes:
       self.visit_ast(n, for_node)
 
     self.reanalyzeLoopNode(for_node)
+    if self.options.batch_buffer_writes:
+      self.collect_writes(for_node)
 
   def analyzeIfNode(self, if_node):
     # depth-first
@@ -774,6 +778,9 @@ class FinalPassAnalyzer(_BaseAnalyzer):
 
     self.reanalyzeConditionalNode(if_node)
     self.reanalyzeConditionalNode(if_node.else_)
+    if self.options.batch_buffer_writes:
+      self.collect_writes(if_node)
+      self.collect_writes(if_node.else_)
 
   def hoist(self, parent_node, parent_block, insertion_point, alias_node,
             assign_alias_node):
@@ -817,6 +824,55 @@ class FinalPassAnalyzer(_BaseAnalyzer):
     # difference between the caching of placeholders and filter expressions
     if not isinstance(alias_node, FilterNode):
       parent_node.scope.local_identifiers.remove(assign_alias_node.left)
+
+  def make_write_node(self, write_list):
+    """Convert a list of expressions to be written into a single ASTNode.
+    This will return either be a BufferWrite node, a BufferExtend node or
+    None if write_list is empty."""
+    if not write_list:
+      return None
+    # If there is only a single node, avoid the overhead of
+    # constructing a tuple.
+    if len(write_list) == 1:
+      return BufferWrite(write_list[0])
+    tuple_node = TupleLiteralNode()
+    for exp in write_list:
+      tuple_node.append(exp)
+    return BufferExtend(tuple_node)
+
+  def collect_writes(self, node):
+    """Look at all the writes that are children of the node and move them to
+    the latest place they can be safely placed. This means that it either goes
+    before an (if/function/loop) or at the end of the list of nodes. Once they
+    are all together, they can be batched into a buffer.extend operation. This
+    avoids list resize operations."""
+
+    passable_nodes = (AssignNode, CacheNode)
+
+    # ASTNode.insert_before is broken in a way that if there are
+    # duplicate nodes, inserts always occur before the first one. To
+    # deal with this, we construct a new NodeList rather than
+    # modifying the original one.
+    old_node_list = node.child_nodes
+    node.child_nodes = NodeList()
+
+    write_list = []
+    for n in old_node_list:
+      if isinstance(n, BufferWrite):
+        write_list.append(n.expression)
+      elif isinstance(n, BufferExtend):
+        write_list.extend(n.expression.child_nodes)
+      elif not isinstance(n, passable_nodes):
+        write_node = self.make_write_node(write_list)
+        if write_node:
+          node.append(write_node)
+        write_list = []
+        node.append(n)
+      else:
+        node.append(n)
+    write_node = self.make_write_node(write_list)
+    if write_node:
+      node.append(write_node)
 
 
 template_function_re = re.compile('^[^#]*#(def|block)\s+(\w+)')

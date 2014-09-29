@@ -11,7 +11,7 @@ from spitfire.runtime.udn import (
 
 # NOTE: in some instances, this is faster than using cStringIO
 # this is slightly counter intuitive and probably means there is more here than
-# meets the eye. 
+# meets the eye.
 class BufferIO(list):
   write = list.append
 
@@ -45,12 +45,12 @@ class SpitfireTemplate(object):
     # FIXME: repeater support is not needed most of the time, just
     # disable it for the time being
     # self.repeat = spitfire.runtime.repeater.RepeatTracker()
-    
+
   def get_var(self, name, default=None):
     return _resolve_from_search_list(self.search_list, name, default)
 
   def has_var(self, name):
-    var = self.get_var(name, default=UnresolvedPlaceholder) 
+    var = self.get_var(name, default=UnresolvedPlaceholder)
     return var is not UnresolvedPlaceholder
 
   # wrap the underlying filter call so that items don't get filtered multiple
@@ -64,7 +64,7 @@ class SpitfireTemplate(object):
     else:
       value = self._filter_function(value)
       return value
-    
+
   @staticmethod
   def new_buffer():
     return BufferIO()

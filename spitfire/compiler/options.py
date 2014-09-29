@@ -96,6 +96,10 @@ class AnalyzerOptions(object):
     self.base_template_full_import_path = (
         self.DEFAULT_BASE_TEMPLATE_FULL_IMPORT_PATH)
 
+    # Batch buffer writes as buffer.extend operations. This moves the
+    # buffer operations to the end of a scope.
+    self.batch_buffer_writes = False
+
     self.enable_psyco = False
     self.__dict__.update(kargs)
 
@@ -126,6 +130,7 @@ o3_options.hoist_conditional_aliases = True
 o3_options.hoist_loop_invariant_aliases = True
 o3_options.cache_filtered_placeholders = True
 o3_options.omit_local_scope_search = True
+o3_options.batch_buffer_writes = True
 
 o4_options = copy.copy(o3_options)
 o4_options.enable_psyco = True
