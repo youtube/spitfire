@@ -80,7 +80,7 @@ parser _SpitfireParser:
   rule goal:
     {{ template = TemplateNode() }}
     ( block<<start=True>> {{ template.append(block) }} ) *
-    END {{ return template }}    
+    END {{ return template }}
 
   rule fragment_goal:
     {{ fragment = FragmentNode() }}
@@ -115,6 +115,10 @@ parser _SpitfireParser:
         |
         'absolute_extends' SPACE modulename CLOSE_DIRECTIVE {{ return AbsoluteExtendsNode(modulename) }}
         |
+        'loose_resolution' CLOSE_DIRECTIVE {{ return LooseResolutionNode() }}
+        |
+        'allow_undeclared_globals' CLOSE_DIRECTIVE {{ return AllowUndeclaredGlobalsNode() }}
+        |
         'from' SPACE modulename SPACE 'import' SPACE library_keyword identifier CLOSE_DIRECTIVE {{ return FromNode(modulename, identifier, library=library_keyword) }}
         |
         'import' SPACE library_keyword modulename CLOSE_DIRECTIVE {{ return ImportNode(modulename, library=library_keyword) }}
@@ -133,7 +137,12 @@ parser _SpitfireParser:
         'filter' SPACE identifier CLOSE_DIRECTIVE
         {{ return FilterAttributeNode('_filter_function', identifier) }}
         |
-        'set' SPACE placeholder {{ _lhs = IdentifierNode(placeholder.name) }}
+        'set' SPACE
+        placeholder {{ _lhs = IdentifierNode(placeholder.name) }}
+        (
+          slice_node<<_lhs>> {{ _lhs = slice_node}}
+          |
+        )
         [ SPACE ] ASSIGN_OPERATOR [ SPACE ] expression {{ _rhs = expression }}
         CLOSE_DIRECTIVE {{ return AssignNode(_lhs, _rhs) }}
         |
@@ -285,7 +294,7 @@ parser _SpitfireParser:
     ]
     {{ if type(_primary) != TextNode: return PlaceholderSubstitutionNode(_primary, _parameter_list) }}
     {{ return _primary }}
-    
+
   rule text_or_placeholders<<start=False>>:
     LITERAL_DOLLAR_SIGN {{ return TextNode('$') }}
     |
@@ -345,12 +354,7 @@ parser _SpitfireParser:
       # gobble trailing white space
       CLOSE_PAREN {{ _primary = CallFunctionNode(_previous_primary, _arg_list) }}
       |
-      OPEN_BRACKET
-      (
-        expression 
-        {{ _primary = SliceNode(_previous_primary, expression) }}
-      )
-      CLOSE_BRACKET
+      slice_node<<_previous_primary>> {{ _primary = slice_node }}
     )
     {{ return _primary }}
 
@@ -400,7 +404,7 @@ parser _SpitfireParser:
      parameter {{ _parameter_list.append(parameter) }}
      (COMMA_DELIMITER parameter {{ _parameter_list.append(parameter) }} ) *
      {{ return _parameter_list }}
-     
+
    ## restricted data types for macros
    rule macro_parameter:
      placeholder {{ _node = ParameterNode(placeholder.name) }}
@@ -412,7 +416,7 @@ parser _SpitfireParser:
      macro_parameter {{ _parameter_list.append(macro_parameter) }}
      (COMMA_DELIMITER macro_parameter {{ _parameter_list.append(macro_parameter) }} ) *
      {{ return _parameter_list }}
-   
+
 
    rule literal_or_identifier:
      literal {{ return literal }}
@@ -449,7 +453,7 @@ parser _SpitfireParser:
     NUM {{ int_part = NUM }}
     [ "\." NUM {{ return LiteralNode(float('%s.%s' % (int_part, NUM))) }} ]
     {{ return LiteralNode(int(int_part)) }}
-   
+
   rule identifier:
     ID {{ return IdentifierNode(ID) }}
 
@@ -543,12 +547,12 @@ parser _SpitfireParser:
     not_test {{ _test = not_test }}
     ( '[ \t]*and[ \t]*' not_test {{ _test = BinOpExpressionNode('and', _test, not_test) }} ) *
     {{ return _test }}
-    
+
   rule not_test:
     comparison {{ return comparison }}
     |
     "[ \t]*not[ \t]*" not_test {{ return UnaryOpNode('not', not_test) }}
-    
+
   rule u_expr:
     primary {{ return primary }}
     |
@@ -571,6 +575,15 @@ parser _SpitfireParser:
     a_expr {{ _left_side = a_expr }}
     ( COMP_OPERATOR a_expr {{ _left_side = BinOpExpressionNode(COMP_OPERATOR.strip(), _left_side, a_expr) }} ) *
     {{ return _left_side }}
+
+  rule slice_node<<_expression>>:
+    OPEN_BRACKET
+    (
+      expression
+      {{ _node = SliceNode(_expression, expression) }}
+    )
+    CLOSE_BRACKET
+    {{ return _node }}
 
 %%
 
