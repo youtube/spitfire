@@ -67,6 +67,12 @@ class Compiler(object):
     self.write_file = False
     self.analyzer_options = None
     self.include_sourcemap = False
+    # This context can be used by macros to handle state when
+    # compiling a file. Each macro should use its own namespace to
+    # avoid conflicts. This is not enforced in any way. The context is
+    # reset after compiling a single file. A simple example is
+    # counting the number of times a macro has run.
+    self.macro_context = {}
 
     self.optimizer_level = 0
     self.optimizer_flags = []
@@ -191,6 +197,7 @@ class Compiler(object):
     self._optimized_tree = None
     self._hoisted_tree = None
     self._source_code = None
+    self.macro_context = {}
 
   def calculate_line_and_column(self, pos):
     if not self.src_text:
