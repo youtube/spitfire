@@ -829,6 +829,9 @@ class Scope(object):
     # in the current scope. For example a variable defined in only the
     # if or the else clause of an if statement.
     self.partial_local_identifiers = set()
+    # This set holds the local identifiers that are marked as dirty
+    # (i.e. they have been used).
+    self.dirty_local_identifiers = set()
 
   def __str__(self):
     return "<Scope %(name)s> %(alias_name_set)s" % vars(self)

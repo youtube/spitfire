@@ -286,9 +286,9 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 
   def analyzeAssignNode(self, node):
     scope = self.get_parent_scope(node)
+    local_identifiers, _, dirty_identifiers = self.get_local_identifiers(node)
     if isinstance(node.left, SliceNode):
       _identifier = IdentifierNode(node.left.expression.name, pos=node.pos)
-      local_identifiers, _ = self.get_local_identifiers(node)
       if _identifier not in local_identifiers:
         self.compiler.error(
             SemanticAnalyzerError(
@@ -297,7 +297,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     else:
       _identifier = IdentifierNode(node.left.name, pos=node.pos)
       alias_name = self.generate_filtered_placeholder(_identifier)
-      if alias_name in scope.alias_name_set:
+      if alias_name in scope.alias_name_set or _identifier in dirty_identifiers:
         if self.options.double_assign_error:
           self.compiler.error(
               SemanticAnalyzerError('Multiple assignment of %s' %
@@ -332,7 +332,13 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 #     target_list_node.flat_list = flat_list
 
   def analyzeArgListNode(self, arg_list_node):
+    scope = self.get_parent_scope(arg_list_node)
     for n in arg_list_node:
+      # If an identifier is passed into a function, mark it as dirty.
+      if isinstance(n, PlaceholderNode):
+        scope.dirty_local_identifiers.add(IdentifierNode(n.name))
+      if isinstance(n, ParameterNode) and isinstance(n.default, PlaceholderNode):
+        scope.dirty_local_identifiers.add(IdentifierNode(n.default.name))
       self.visit_ast(n, arg_list_node)
 
   def analyzeTupleLiteralNode(self, tuple_literal_node):
@@ -476,7 +482,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       local_var = IdentifierNode(placeholder.name, pos=placeholder.pos)
       cached_placeholder = IdentifierNode('_rph_%s' % local_var.name,
                                           pos=placeholder.pos)
-      (local_identifiers, partial_local_identifiers) = (
+      (local_identifiers, partial_local_identifiers, _) = (
           self.get_local_identifiers(placeholder))
       attrs = set([IdentifierNode(node.name) for node in self.ast_root.attr_nodes])
       non_local_identifiers = (partial_local_identifiers -
@@ -666,6 +672,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def get_local_identifiers(self, node):
     local_identifiers = []
     partial_local_identifiers = []
+    dirty_local_identifiers = []
 
     # search the parent scopes
     # fixme: should this be recursive?
@@ -675,22 +682,26 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         local_identifiers.extend(node.loop_variant_set)
         local_identifiers.extend(node.scope.local_identifiers)
         partial_local_identifiers.extend(node.scope.partial_local_identifiers)
+        dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
       elif isinstance(node, IfNode):
         local_identifiers.extend(node.scope.local_identifiers)
         partial_local_identifiers.extend(node.scope.partial_local_identifiers)
+        dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
       elif isinstance(node, ElseNode):
         # in this case, we don't want to go to the parent node, which is the
         # IfNode - we want to go to the parent 'scope'
         local_identifiers.extend(node.scope.local_identifiers)
         partial_local_identifiers.extend(node.scope.partial_local_identifiers)
+        dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
         node = node.parent.parent
         continue
       elif isinstance(node, FunctionNode):
         local_identifiers.extend(node.scope.local_identifiers)
         partial_local_identifiers.extend(node.scope.partial_local_identifiers)
+        dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
         break
       node = node.parent
-    return (frozenset(local_identifiers), frozenset(partial_local_identifiers))
+    return (frozenset(local_identifiers), frozenset(partial_local_identifiers), frozenset(dirty_local_identifiers))
 
   def analyzeGetUDNNode(self, node):
     if not self.options.prefer_whole_udn_expressions:
@@ -699,7 +710,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     if self.options.cache_resolved_udn_expressions:
       cached_udn = IdentifierNode('_rudn_%s' % unsigned_hash(node),
                                   pos=node.pos)
-      (local_identifiers, _) = self.get_local_identifiers(node)
+      (local_identifiers, _, _) = self.get_local_identifiers(node)
       if cached_udn in local_identifiers:
         node.parent.replace(node, cached_udn)
       else:
