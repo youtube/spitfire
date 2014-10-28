@@ -130,7 +130,7 @@ o3_options.hoist_conditional_aliases = True
 o3_options.hoist_loop_invariant_aliases = True
 o3_options.cache_filtered_placeholders = True
 o3_options.omit_local_scope_search = True
-o3_options.batch_buffer_writes = False
+o3_options.batch_buffer_writes = True
 
 o4_options = copy.copy(o3_options)
 o4_options.enable_psyco = True
