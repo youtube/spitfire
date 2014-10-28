@@ -968,3 +968,33 @@ def track_line_numbers(exempt_methods=()):
         setattr(cls, method_name, make_execute_rule(rule))
     return cls
   return decorator
+
+
+# This is a list of all of the nodes that are considered statements.
+# They can not appear on the right hand of an assignment. This list is
+# used to determine if a node should be moved out of the expression
+# field of another node.
+statement_nodes = (AbsoluteExtendsNode,
+                   AllowUndeclaredGlobalsNode,
+                   AssignNode,
+                   BlockNode,
+                   BufferExtend,
+                   BufferWrite,
+                   CommentNode,
+                   ContinueNode,
+                   DefNode,
+                   EchoNode,
+                   ElseNode,
+                   ExtendsNode,
+                   ForNode,
+                   FromNode,
+                   FunctionNode,
+                   GlobalNode,
+                   IfNode,
+                   ImplementsNode,
+                   ImportNode,
+                   LooseResolutionNode,
+                   MacroNode,
+                   ReturnNode,
+                   StripLinesNode,
+                   TextNode)

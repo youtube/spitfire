@@ -390,7 +390,7 @@ class SemanticAnalyzer(object):
     call_block = self.build_ast(p)
     return call_block
 
-  def handleMacro(self, pnode, macro_function):
+  def handleMacro(self, pnode, macro_function, parse_rule):
     if isinstance(pnode, MacroNode):
       kargs_map = pnode.parameter_list.get_arg_map()
     elif isinstance(pnode, CallFunctionNode):
@@ -405,7 +405,9 @@ class SemanticAnalyzer(object):
     # fixme: bad place to import, difficult to put at the top due to
     # cyclic dependency
     try:
-      if isinstance(pnode, MacroNode):
+      if parse_rule:
+        fragment_ast = util.parse(macro_output, parse_rule)
+      elif isinstance(pnode, MacroNode):
         fragment_ast = util.parse(macro_output, 'fragment_goal')
       elif isinstance(pnode, CallFunctionNode):
         fragment_ast = util.parse(macro_output, 'rhs_expression')
@@ -417,12 +419,13 @@ class SemanticAnalyzer(object):
     # fixme: better error handler
     macro_handler_name = 'macro_%s' % pnode.name
     try:
-      macro_function = self.compiler.macro_registry[macro_handler_name]
+      macro_function, macro_parse_rule = self.compiler.macro_registry[
+          macro_handler_name]
     except KeyError:
       self.compiler.error(SemanticAnalyzerError("no handler registered for '%s'"
                                                 % macro_handler_name),
                           pos=pnode.pos)
-    return self.handleMacro(pnode, macro_function)
+    return self.handleMacro(pnode, macro_function, macro_parse_rule)
 
   def analyzeGlobalNode(self, pnode):
     if not isinstance(pnode.parent, TemplateNode):
@@ -463,6 +466,16 @@ class SemanticAnalyzer(object):
     # print 'analyzePlaceholderSubstitutionNode', pnode, pnode.parameter_list.get_arg_map()
     node_list = []
     ph_expression = self.build_ast(pnode.expression)[0]
+    # If the expression contained a macro that was parsed as a
+    # fragment, the expression is now a statement and can be moved
+    # outside of the PlaceholderSubstitutionNode.
+    #
+    # This is a hack to get around design decisions that were made
+    # early on. It is up to the macro authors to correctly decide how
+    # the macro should be parsed and the compiler should throw errors
+    # if there is an odd state where nodes are somewhere unexpected.
+    if isinstance(ph_expression, statement_nodes):
+      return [ph_expression]
 
     arg_map = pnode.parameter_list.get_arg_map()
     default_format_string = '%s'
@@ -602,9 +615,10 @@ class SemanticAnalyzer(object):
 
     if isinstance(fn.expression, PlaceholderNode):
       macro_handler_name = 'macro_function_%s' % fn.expression.name
-      macro_function = self.compiler.macro_registry.get(macro_handler_name)
-      if macro_function:
-        return self.handleMacro(fn, macro_function)
+      macro_data = self.compiler.macro_registry.get(macro_handler_name)
+      if macro_data:
+        macro_function, macro_parse_rule = macro_data
+        return self.handleMacro(fn, macro_function, macro_parse_rule)
       elif self.template.library and fn.expression.name in self.template.template_methods:
         # Calling another library function from this library function.
         library_function = fn.expression.name

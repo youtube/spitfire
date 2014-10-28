@@ -291,5 +291,8 @@ class Compiler(object):
   # def macro_handler(macro_node, arg_map)
   # arg_map is a dictionary of names to values specified as parameters to the
   # macro by the template source. they are limited to literal values right now.
-  def register_macro(self, name, function):
-    self.macro_registry[name] = function
+  #
+  # The parse_rule argument should be string that is the name of the
+  # rule you wish to parse. These rules are defined in parser.g.
+  def register_macro(self, name, function, parse_rule=None):
+    self.macro_registry[name] = (function, parse_rule)
