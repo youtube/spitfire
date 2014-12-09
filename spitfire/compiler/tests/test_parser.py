@@ -1,6 +1,7 @@
 import unittest
 from spitfire.compiler.ast import *
 from spitfire.compiler import util
+import yappsrt
 
 
 class BaseTest(unittest.TestCase):
@@ -28,6 +29,11 @@ class BaseTest(unittest.TestCase):
 
 class TestEscapeHash(BaseTest):
 
+  @staticmethod
+  def _def_foo_pred(node):
+      return bool(type(node) == DefNode and
+                  node.name == 'foo')
+
   def test_escape_simple(self):
     code = """
 #def foo
@@ -35,11 +41,8 @@ class TestEscapeHash(BaseTest):
 #end def
     """
     template = self._compile(code)
-    def pred(node):
-      return bool(type(node) == DefNode and
-                  node.name == 'foo')
 
-    def_node = self._find_node(template, pred)
+    def_node = self._find_node(template, TestEscapeHash._def_foo_pred)
     text = ''.join([node.value for node in def_node.child_nodes if type(node) == TextNode])
     self.assertEqual(text, '#test')
 
@@ -55,7 +58,7 @@ class TestEscapeHash(BaseTest):
       return bool(type(node) == DefNode and
                   node.name == 'foo')
 
-    def_node = self._find_node(template, pred)
+    def_node = self._find_node(template, TestEscapeHash._def_foo_pred)
     text = ''.join([node.value for node in def_node.child_nodes if type(node) == TextNode])
     self.assertEqual(text, '\\#test')
 
@@ -70,9 +73,48 @@ class TestEscapeHash(BaseTest):
       return bool(type(node) == DefNode and
                   node.name == 'foo')
 
-    def_node = self._find_node(template, pred)
+    def_node = self._find_node(template, TestEscapeHash._def_foo_pred)
     text = ''.join([node.value for node in def_node.child_nodes if type(node) == TextNode])
     self.assertEqual(text, '#if')
+
+
+class TestDo(BaseTest):
+
+  @staticmethod
+  def _do_pred(node):
+    return bool(type(node) == DoNode)
+
+  def test_do_syntax(self):
+    code = """
+#def foo
+#do $bar()
+#end def
+    """
+    template = self._compile(code)
+
+    do_node = self._find_node(template, TestDo._do_pred)
+    if not do_node:
+      self.fail('Do node should be present in AST')
+
+  def test_bad_do_syntax(self):
+    code = """
+#def foo
+#do #do $bar()
+#end def
+    """
+    self.assertRaises(yappsrt.FatalParseError, self._compile, code)
+
+  def test_do_expression(self):
+    code = """
+#def foo
+#do 1 + 2
+#end def
+    """
+    template = self._compile(code)
+
+    do_node = self._find_node(template, TestDo._do_pred)
+    if not do_node:
+      self.fail('Do node should be present in AST')
 
 
 if __name__ == '__main__':

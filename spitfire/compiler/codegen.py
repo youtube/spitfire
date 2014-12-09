@@ -219,6 +219,10 @@ class CodeGenerator(object):
     return [CodeNode(ASTPlaceholderSubstitutionNode_tmpl[0] % vars(),
                      input_pos=node.pos)]
 
+  def codegenASTDoNode(self, node):
+    return [CodeNode(self.generate_python(self.build_code(node.expression)[0]),
+                     input_pos=node.pos)]
+
   def codegenASTCallFunctionNode(self, node):
     expression = self.generate_python(
       self.build_code(node.expression)[0])

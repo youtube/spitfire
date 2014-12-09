@@ -233,6 +233,26 @@ class AssignNode(BinOpNode):
 class BreakNode(ASTNode):
   pass
 
+class DoNode(ASTNode):
+  """This node allows for an expression to be treated like a statement.
+
+  The result of the expression is ignored and not written to the buffer."""
+  def __init__(self, expression=None, pos=None):
+    ASTNode.__init__(self, pos=pos)
+    self.expression = expression
+
+  def __eq__(self, node):
+    return bool(type(self) == type(node) and
+                self.expression == node.expression and
+                self.child_nodes == node.child_nodes)
+
+  def __hash__(self):
+    return hash('%s%s%s' %
+                (type(self),hash(self.expression),
+                 hash(tuple(self.child_nodes))))
+
+  def __str__(self):
+    return '%s expr:%s' % (self.__class__.__name__, self.expression)
 
 class CallFunctionNode(ASTNode):
   def __init__(self, expression=None, arg_list=None, pos=None):
@@ -983,6 +1003,7 @@ statement_nodes = (AbsoluteExtendsNode,
                    CommentNode,
                    ContinueNode,
                    DefNode,
+                   DoNode,
                    EchoNode,
                    ElseNode,
                    ExtendsNode,

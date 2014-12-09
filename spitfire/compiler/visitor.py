@@ -11,13 +11,13 @@ class VisitNode(object):
       self.child_nodes = []
     else:
       self.child_nodes = child_nodes
-    
+
   def append_line(self, line):
     self.append(VisitNode(line))
-    
+
   def append(self, visit_node):
     self.child_nodes.append(visit_node)
-    
+
   def extend(self, visit_nodes):
     try:
       self.child_nodes.extend(visit_nodes)
@@ -32,18 +32,18 @@ def flatten_tree(root):
 
 def print_tree(root):
   print flatten_tree(root)
-    
+
 # perform an in-order traversal of the AST and call the generate methods
 # in this case, we are generating python source code that should be somewhat
 # human-readable
 class TreeVisitor(object):
   indent_str = '  '
   indent_level = 0
-  
+
   def __init__(self, ast_root):
     self.ast_root = ast_root
     self.output = StringIO.StringIO()
-    
+
   def get_text(self):
     root = self.build_text(self.ast_root)[0]
     self.write_visit(root)
@@ -53,14 +53,14 @@ class TreeVisitor(object):
     except AttributeError, e:
       pass
     return text
-    
+
   def generate_text(self, visit_node):
     try:
       return visit_node.node_repr
     except AttributeError, e:
       raise TreeWalkError(
         "can't write visit_node: %s\n\t%s" % (visit_node, e))
-    
+
   def write_visit(self, visit_node, indent_level=0):
     try:
       if visit_node.node_repr is not None:
@@ -92,14 +92,14 @@ class TreeVisitor(object):
 
     for n in node.attr_nodes:
       module_code.extend(self.build_text(n))
-    
+
     for n in node.child_nodes:
       module_code.extend(self.build_text(n))
 
     # if we aren't extending a template, build out the main function
     if not node.extends_nodes and not node.library:
       module_code.extend(self.build_text(node.main_function))
-      
+
     return [module_code]
 
   def visitASTExtendsNode(self, node):
@@ -111,7 +111,7 @@ class TreeVisitor(object):
   visitASTImportNode = visitASTExtendsNode
   visitASTFromNode = visitASTExtendsNode
   visitASTAbsoluteExtendsNode = visitASTExtendsNode
-  
+
   def visitASTCallFunctionNode(self, node):
     v = self.visitDefault(node)[0]
     v.append(VisitNode('expression', self.build_text(node.expression)))
@@ -162,7 +162,7 @@ class TreeVisitor(object):
       v.append(VisitNode(str(n)))
     return [v]
 
-    
+
   def visitASTParameterListNode(self, node):
     v = self.visitDefault(node)[0]
     for n in node.child_nodes:
@@ -190,7 +190,7 @@ class TreeVisitor(object):
         self.build_text(node.default)])))]
     else:
       return [VisitNode('%s' % node.name)]
-    
+
   def visitASTGetUDNNode(self, node):
     v = self.visitDefault(node)[0]
     v.extend(self.build_text(node.expression))
@@ -205,7 +205,7 @@ class TreeVisitor(object):
     v = VisitNode('%s %s %s' % (node.__class__.__name__, node.name, hash(node)))
     v.extend(self.build_text(node.expression))
     return [v]
-  
+
   def visitASTSliceNode(self, node):
     v = self.visitDefault(node)[0]
     v.append(VisitNode('expression', self.build_text(node.expression)))
@@ -222,7 +222,7 @@ class TreeVisitor(object):
   visitASTBinOpNode = visitASTBinOpExpressionNode
 
   visitASTAssignNode = visitASTBinOpNode
-  
+
   def visitASTUnaryOpNode(self, node):
     v = self.visitDefault(node)[0]
     v.append(VisitNode(node.operator))
@@ -238,7 +238,7 @@ class TreeVisitor(object):
 
     for n in node.child_nodes:
       v.extend(self.build_text(n))
-      
+
     return [v]
 
   def visitASTDefNode(self, node):
@@ -248,7 +248,7 @@ class TreeVisitor(object):
 
     for n in node.child_nodes:
       v.extend(self.build_text(n))
-      
+
     return [v]
   visitASTBlockNode = visitASTDefNode
 
@@ -256,16 +256,21 @@ class TreeVisitor(object):
     v = self.visitDefault(node)[0]
     for n in node.child_nodes:
       v.extend(self.build_text(n))
-      
+
     return [v]
 
   visitASTStripLinesNode = visitASTFragmentNode
 
+  def visitASTDoNode(self, node):
+    v = self.visitDefault(node)[0]
+    v.extend(self.build_text(node.expression))
+    return [v]
+
   def visitASTLiteralNode(self, node):
     return [VisitNode("%s '%r'" % (node.__class__.__name__, node.value))]
-  visitASTTextNode = visitASTLiteralNode  
-  visitASTWhitespaceNode = visitASTLiteralNode  
-  visitASTOptionalWhitespaceNode = visitASTLiteralNode  
+  visitASTTextNode = visitASTLiteralNode
+  visitASTWhitespaceNode = visitASTLiteralNode
+  visitASTOptionalWhitespaceNode = visitASTLiteralNode
 
   def visitDefault(self, node):
     return [VisitNode('%s %s' % (node.__class__.__name__, node.name))]

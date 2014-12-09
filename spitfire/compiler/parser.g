@@ -1,4 +1,4 @@
-# This parser can parse a simple subset of Cheetah's syntax.
+# This parser can parse a progressively larger set of Cheetah+homemade syntax.
 
 from spitfire.compiler.ast import *
 
@@ -138,6 +138,8 @@ parser _SpitfireParser:
         'filter' SPACE identifier CLOSE_DIRECTIVE
         {{ return FilterAttributeNode('_filter_function', identifier) }}
         |
+        'do' SPACE expression CLOSE_DIRECTIVE {{ return DoNode(expression) }}
+        |
         'set' SPACE
         placeholder {{ _lhs = IdentifierNode(placeholder.name) }}
         (
@@ -154,6 +156,7 @@ parser _SpitfireParser:
           ]
         ]
         CLOSE_DIRECTIVE {{ return EchoNode(_true_exp, _test_exp, _false_exp) }}
+
 
   rule library_keyword:
     {{ _library = False }}

@@ -606,6 +606,11 @@ class SemanticAnalyzer(object):
   def analyzeCommentNode(self, pnode):
     return []
 
+  def analyzeDoNode(self, pnode):
+    n = pnode
+    n.expression = self.build_ast(n.expression)[0]
+    return [n]
+
   def analyzeCallFunctionNode(self, pnode):
     fn = pnode
 

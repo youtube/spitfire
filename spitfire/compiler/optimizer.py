@@ -92,7 +92,7 @@ class _BaseAnalyzer(object):
       node_stack.append(node)
       node = node.parent
     self.compiler.error(SemanticAnalyzerError("expected a parent function"),
-                        pos=node.pos)
+                        pos=node_stack[-1].pos)
 
   def get_insert_block_and_point(self, node):
     original_node = node
@@ -353,6 +353,9 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeListLiteralNode(self, list_literal_node):
     for n in list_literal_node.child_nodes:
       self.visit_ast(n, list_literal_node)
+
+  def analyzeDoNode(self, do_node):
+    self.visit_ast(do_node.expression, do_node)
 
   def analyzeCallFunctionNode(self, function_call):
     self.visit_ast(function_call.expression, function_call)
