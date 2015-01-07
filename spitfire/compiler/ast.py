@@ -87,6 +87,12 @@ class ASTNode(object):
     self.replace(node, [])
 
   def replace(self, marker_node, insert_node_list):
+    """Replace a node with another node or NodeList.
+
+    If a NodeList is used, replace that child node with all of the
+    nodes in the list. If it is just a basic node, replace the child
+    node with that single node.
+    """
     try:
       idx = self.child_nodes.index(marker_node)
     except ValueError:
@@ -240,6 +246,12 @@ class DoNode(ASTNode):
   def __init__(self, expression=None, pos=None):
     ASTNode.__init__(self, pos=pos)
     self.expression = expression
+
+  def replace(self, node, replacement_node):
+    if self.expression is node:
+      self.expression = replacement_node
+    else:
+      raise Exception("expression doesn't match replacement")
 
   def __eq__(self, node):
     return bool(type(self) == type(node) and

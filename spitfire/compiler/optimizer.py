@@ -494,7 +494,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         self.compiler.error(SemanticAnalyzerError(
             ('Variable %s is not guaranteed to be in scope. '
             'Define the variable in all branches of the conditional '
-             'or before the conditional.') % local_var), pos=placeholder.pos)
+            'or before the conditional.') % local_var), pos=placeholder.pos)
       # print "local_identifiers", local_identifiers
       self._placeholdernode_replacement(placeholder,
                                         local_var,

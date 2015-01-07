@@ -4,6 +4,7 @@ from spitfire.compiler import analyzer
 from spitfire.compiler import compiler as sptcompiler
 from spitfire.compiler import optimizer
 from spitfire.compiler import options as sptoptions
+from spitfire.compiler import util
 
 
 class BaseTest(unittest.TestCase):
@@ -804,6 +805,33 @@ class TestCollectWrites(BaseTest):
 
     got_hash = hash(optimization_analyzer.optimize_ast())
     self.assertEqual(expected_hash, got_hash)
+
+
+class TestDoNode(BaseTest):
+
+  def _compile(self, template_content):
+    template_node = util.parse_template(template_content)
+    template_node.source_path = 'test_template.spt'
+    return template_node
+
+  def test_do_placeholder_replace(self):
+    code = """
+#global $bar
+
+#def foo
+  #do $bar
+#end def
+    """
+    ast_root = self._compile(code)
+    semantic_analyzer = analyzer.SemanticAnalyzer(
+        'TestTemplate',
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+    analyzed_tree = semantic_analyzer.get_ast()
+
+    optimization_analyzer = self._get_analyzer(analyzed_tree)
+    optimization_analyzer.optimize_ast()
 
 
 if __name__ == '__main__':
