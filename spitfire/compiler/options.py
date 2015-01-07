@@ -100,6 +100,9 @@ class AnalyzerOptions(object):
     # buffer operations to the end of a scope.
     self.batch_buffer_writes = False
 
+    # Spitfire templates do not allow for the use of |raw.
+    self.baked_mode = False
+
     self.enable_psyco = False
     self.__dict__.update(kargs)
 
@@ -224,6 +227,8 @@ def add_common_options(op):
                 help='Annotate output with sourcemap like comments.')
   op.add_option('--double-assign-error', default=False, action='store_true',
                 help='Throw an error if there is an unsafe double assignment.')
+  op.add_option('--baked-mode', default=False, action='store_true',
+                help='A stricter version of spitfire where |raw is prohibited.')
   op.add_option('--base-template-full-import-path',
                 action='store',
                 type='string',

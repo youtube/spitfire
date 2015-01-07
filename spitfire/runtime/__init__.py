@@ -8,6 +8,11 @@ class PlaceholderError(KeyError):
 class UDNResolveError(Exception):
   pass
 
+class SanitizedPlaceholder(str):
+  """A sanitized placeholder wraps another value to let
+  the runtime know that this does not need to filtered again."""
+  pass
+
 # the idea is to have something that is always like None, but explodes when
 # you try to use it as a string. this means that you can resolve placeholders
 # and evaluate them in complex conditional expressions, allowing them to be
@@ -62,7 +67,7 @@ def register_functions(module, template_function_map):
   for t_name, f_name in template_function_map.iteritems():
     f_func = import_module_symbol(f_name)
     setattr(module, t_name, f_func)
-    
+
 # decorate a function object so the value will be retrieved once and then
 # cached in the template forever.
 def cache_forever(function):

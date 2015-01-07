@@ -20,6 +20,7 @@ class Warning(Exception):
 
 class Compiler(object):
   setting_names = [
+      'baked_mode',
       'base_extends_package',
       'base_template_full_import_path',
       'debug_flags',
@@ -88,6 +89,7 @@ class Compiler(object):
     self.double_assign_error = False
     self.enable_warnings = False
     self.warnings_as_errors = False
+    self.baked_mode = False
 
     self.base_extends_package = None
     self.base_template_full_import_path = None
@@ -132,6 +134,7 @@ class Compiler(object):
       self.analyzer_options.default_to_strict_resolution = (
           self.default_to_strict_resolution)
       self.analyzer_options.include_sourcemap = self.include_sourcemap
+      self.analyzer_options.baked_mode = self.baked_mode
 
     # slightly crappy code to support turning flags on and off from the
     # command line - probably should go in analyzer options?
@@ -282,6 +285,25 @@ class Compiler(object):
     outfile = open(outfile_path, 'w')
     outfile.write(src_code)
     outfile.close()
+
+  def registry_contains(self, fname):
+    """Returns True if the registry contains a function."""
+    return fname in self.function_name_registry
+
+  def get_registry_value(self, fname, key):
+    """Get the value associated with a key in the function registry
+    for a function. The function returns None, if the function is not
+    found in the registry.
+
+    This function assumes that all registry entries are booleans.
+    """
+    if self.registry_contains(fname):
+      decorators = self.function_name_registry[fname][-1]
+      if self.new_registry_format:
+        return key in decorators
+      else:
+        return getattr(decorators, key, False)
+    return None
 
   # macros could be handy - and they are complex enough that they should be
   # put somewhere else. this registry allows them to be implemented just about

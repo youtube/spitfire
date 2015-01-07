@@ -114,6 +114,18 @@ class SemanticAnalyzer(object):
   def analyzeTemplateNode(self, pnode):
     self.template = pnode.copy(copy_children=False)
     self.template.classname = self.classname
+    # Baked mode and generate_unicode are incomaptible. This is a
+    # result of SanitizedPlaceholder extending str and not unicode. A
+    # possible solution is to have two classes:
+    # SanitizedPlaceholderUnicode and SanitizedPlaceholderStr, each
+    # that extends unicode or str. Depending on the mode, it would
+    # assign SanitizedPlaceholder to be the correct class.
+    if self.options.generate_unicode and self.options.baked_mode:
+      self.compiler.error(
+        SemanticAnalyzerError(
+          'Generate unicode is incompatible with baked mode.'),
+          pos=pnode.pos)
+    self.template.baked = self.options.baked_mode
 
     # Need to build a full list of template_methods before analyzing so we can
     # modify CallFunctionNodes as we walk the tree below.
@@ -488,22 +500,14 @@ class SemanticAnalyzer(object):
     never_cache = False
     if isinstance(ph_expression, CallFunctionNode):
       fname = ph_expression.expression.name
-      registered_function = (fname in self.compiler.function_name_registry)
-      if registered_function:
+      if self.compiler.registry_contains(fname):
         function_has_only_literal_args = (
             ph_expression.arg_list and
             not [_arg for _arg in ph_expression.arg_list
                  if not isinstance(_arg, LiteralNode)])
-        if self.compiler.new_registry_format:
-          decorators = self.compiler.function_name_registry[fname][-1]
-          skip_filter = 'skip_filter' in decorators
-          cache_forever = 'cache_forever' in decorators
-          never_cache = 'never_cache' in decorators
-        else:
-          ph_function = self.compiler.function_name_registry[fname][-1]
-          skip_filter = getattr(ph_function, 'skip_filter', False)
-          cache_forever = getattr(ph_function, 'cache_forever', False)
-          never_cache = getattr(ph_function, 'never_cache', False)
+        skip_filter = self.compiler.get_registry_value(fname, 'skip_filter')
+        cache_forever = self.compiler.get_registry_value(fname, 'cache_forever')
+        never_cache = self.compiler.get_registry_value(fname, 'never_cache')
 
       elif ph_expression.library_function:
         # Don't escape function calls into library templates.
@@ -617,17 +621,27 @@ class SemanticAnalyzer(object):
     # The fully qualified library function name iff we figure out
     # that this is calling into a library.
     library_function = None
-
+    skip_filter = self.compiler.get_registry_value(fn.expression.name,
+                                                   'skip_filter')
     if isinstance(fn.expression, PlaceholderNode):
       macro_handler_name = 'macro_function_%s' % fn.expression.name
       macro_data = self.compiler.macro_registry.get(macro_handler_name)
       if macro_data:
         macro_function, macro_parse_rule = macro_data
         return self.handleMacro(fn, macro_function, macro_parse_rule)
-      elif self.template.library and fn.expression.name in self.template.template_methods:
-        # Calling another library function from this library function.
-        library_function = fn.expression.name
-
+      elif fn.expression.name in self.template.template_methods:
+        fn.needs_sanitization_wrapper = SanitizedState.YES
+        if self.template.library:
+          # Calling another library function from this library function.
+          library_function = fn.expression.name
+      elif skip_filter:
+        # If the function is marked as skip_filter in the registry, we
+        # know it is sanitized.
+        fn.needs_sanitization_wrapper = SanitizedState.YES
+      elif skip_filter is False:
+        # If the function is marked as skip_filter=False in the registry, we
+        # know it is not sanitized.
+        fn.needs_sanitization_wrapper = SanitizedState.NO
     elif isinstance(fn.expression, GetUDNNode):
       identifier = [node.name for node in fn.expression.getChildNodes()]
       identifier = '.'.join(identifier)
@@ -641,6 +655,8 @@ class SemanticAnalyzer(object):
       fn.expression = IdentifierNode(library_function, pos=pnode.pos)
       # Pass the current template instance into the library function.
       fn.arg_list.child_nodes.insert(0, IdentifierNode('self'))
+      # Library functions are spitfire functions so their output is sanitized.
+      fn.needs_sanitization_wrapper = SanitizedState.YES
       fn.library_function = True
 
     fn.expression = self.build_ast(fn.expression)[0]

@@ -54,6 +54,7 @@ class CodeGenerator(object):
     self.options = options
     self.output = StringIO.StringIO()
     self.template = None
+    self.baked_mode = False
 
   def get_code(self):
     code_root = self.build_code(self.ast_root)[0]
@@ -95,6 +96,9 @@ class CodeGenerator(object):
     module_code = CodeNode()
     module_code.append_line('#!/usr/bin/env python')
     module_code.append_line('# -*- coding: %s -*-' % node.encoding)
+    if node.baked:
+      module_code.append_line('# Baked Mode')
+      self.baked_mode = True
     module_code.append_line('')
     if node.import_nodes:
       module_code.append_line('# template imports')
@@ -233,7 +237,20 @@ class CodeGenerator(object):
         self.build_code(node.arg_list)[0])
     else:
       arg_list = ''
-    return [CodeNode(ASTCallFunctionNode_tmpl[0] % vars(), input_pos=node.pos)]
+    call = ASTCallFunctionNode_tmpl[0] % vars()
+    if self.baked_mode:
+      needs_sanitization_wrapper = node.needs_sanitization_wrapper
+      if needs_sanitization_wrapper == SanitizedState.YES:
+        self.function_stack[-1].uses_sanitize = True
+        return [CodeNode('_self_mark_as_sanitized(%s)' % call, input_pos=node.pos)]
+      elif needs_sanitization_wrapper == SanitizedState.NO:
+        return [CodeNode(call, input_pos=node.pos)]
+      elif needs_sanitization_wrapper == SanitizedState.MAYBE:
+        self.function_stack[-1].uses_runtime_sanitize = True
+        return [CodeNode(
+            '_self_runtime_mark_as_sanitized(%(call)s, %(expression)s)' % vars(),
+            input_pos=node.pos)]
+    return [CodeNode(call, input_pos=node.pos)]
 
   def codegenASTForNode(self, node):
     target_list = self.generate_python(
@@ -406,6 +423,8 @@ class CodeGenerator(object):
     node.uses_private_filter_function = False
     node.uses_buffer_write = False
     node.uses_buffer_extend = False
+    node.uses_sanitize = False
+    node.uses_runtime_sanitize = False
     self.function_stack.append(node)
     if node.parameter_list:
       parameter_list = self.generate_python(
@@ -444,8 +463,11 @@ class CodeGenerator(object):
       # statements, generate the if code first.  That way, we can avoid
       # doing extra work when the condition is false.  ie, avoid the overhead
       # of creating a new list setting up useless local variables and
-      # joining all to get an empty string.
-      if child_nodes and len(child_nodes) == 1:
+      # joining all to get an empty string. Disable this in baked mode
+      # until I figure out how to handle this.
+      # TODO: Do not perform sanitization inside of a
+      # test_expression. Then we can remove this baked_mode check.
+      if child_nodes and len(child_nodes) == 1 and not self.baked_mode:
         if_node = child_nodes[0]
         if isinstance(if_node, IfNode) and not if_node.else_.child_nodes:
           child_nodes = if_node.child_nodes
@@ -483,6 +505,12 @@ class CodeGenerator(object):
       insertion_point += 1
     if node.uses_private_filter_function:
       code_node.insert(insertion_point, CodeNode('_self_private_filter_function = self._filter_function'))
+      insertion_point += 1
+    if node.uses_sanitize:
+      code_node.insert(insertion_point, CodeNode('_self_mark_as_sanitized = self.mark_as_sanitized'))
+      insertion_point += 1
+    if node.uses_runtime_sanitize:
+      code_node.insert(insertion_point, CodeNode('_self_runtime_mark_as_sanitized = self.runtime_mark_as_sanitized'))
       insertion_point += 1
     if node.uses_buffer_write:
       code_node.insert(insertion_point, CodeNode('_buffer_write = _buffer.write'))
@@ -557,7 +585,10 @@ class CodeGenerator(object):
   def codegenASTFilterNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
     if node.filter_function_node == DefaultFilterFunction:
-      if isinstance(node.expression, CallFunctionNode):
+      # In baked mode, we must always call into _self_filter_function.
+      # This is because this is the function that will contain the
+      # logic for deciding whether or not to filter a SanitizedPlaceholder.
+      if isinstance(node.expression, CallFunctionNode) or self.baked_mode:
         self.function_stack[-1].uses_filter_function = True
         filter_expression = '_self_filter_function'
       else:

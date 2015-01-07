@@ -266,12 +266,31 @@ class DoNode(ASTNode):
   def __str__(self):
     return '%s expr:%s' % (self.__class__.__name__, self.expression)
 
+class SanitizedState(object):
+  """An enum of the sanitization states of the return value for a function call.
+
+  YES: We know for sure that the return value is already filtered.
+  Therefore, we wrap the call in a SanitizedPlaceholder.
+
+  MAYBE: We aren't sure if the return type is filtered. Therefore, we
+  check for a skip_filter annotation on the function at runtime.
+
+  NO: We are sure that the function does not return a filtered value
+  so we should not do anything with the return value.
+  """
+  YES = 1
+  MAYBE = 2
+  NO = 3
+
 class CallFunctionNode(ASTNode):
   def __init__(self, expression=None, arg_list=None, pos=None):
     ASTNode.__init__(self, pos=pos)
     self.expression = expression
     # Whether we're calling into a library template.
     self.library_function = False
+    # What the current sanitized state is of the function call.
+    # See SanitizedState.
+    self.needs_sanitization_wrapper = SanitizedState.MAYBE
     if arg_list:
       self.arg_list = arg_list
     else:
@@ -288,6 +307,8 @@ class CallFunctionNode(ASTNode):
                 self.library_function == node.library_function and
                 self.expression == node.expression and
                 self.arg_list == node.arg_list and
+                (self.needs_sanitization_wrapper ==
+                 node.needs_sanitization_wrapper) and
                 self.child_nodes == node.child_nodes)
 
   def __hash__(self):
@@ -299,6 +320,7 @@ class CallFunctionNode(ASTNode):
   def __str__(self):
     return '%s expr:%s arg_list:%s' % (
       self.__class__.__name__, self.expression, self.arg_list)
+
 
 # encapsulate the idea that you want to write this to an output stream
 # this is sort of an implicit function call, so the hierarchy makes some sense
@@ -794,6 +816,7 @@ class TemplateNode(ASTNode):
     self.implements = False
     self.allow_undeclared_globals = False
     self.use_loose_resolution = False
+    self.baked = False
     self.global_placeholders = set()
     self.global_identifiers = set()
     self.cached_identifiers = set()

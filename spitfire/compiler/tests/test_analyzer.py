@@ -3,6 +3,7 @@ from spitfire.compiler.ast import *
 from spitfire.compiler import analyzer
 from spitfire.compiler import options as sptoptions
 from spitfire.compiler import compiler as sptcompiler
+from spitfire.compiler import util
 
 
 class BaseTest(unittest.TestCase):
@@ -55,6 +56,26 @@ class BaseTest(unittest.TestCase):
     if_node = IfNode(condition_node)
     def_node.append(if_node)
     return (ast_root, def_node, if_node)
+
+  def _compile(self, template_content):
+    template_node = util.parse_template(template_content)
+    template_node.source_path = 'test_template.spt'
+    return template_node
+
+  def _find_node(self, ast, pred):
+    """Look for a given node based on a predicate function.
+    Return the first one found"""
+    if pred(ast):
+      return ast
+    for child_node in ast.child_nodes:
+      found = self._find_node(child_node, pred)
+      if found:
+        return found
+    if isinstance(ast, (CallFunctionNode, FilterNode)):
+      found = self._find_node(ast.expression, pred)
+      if found:
+        return found
+    return None
 
 
 class TestEmptyIfBlockError(BaseTest):
@@ -382,6 +403,84 @@ class TestAssignSlice(BaseTest):
       semantic_analyzer.get_ast()
     except analyzer.SemanticAnalyzerError:
       self.fail('get_ast raised SemanticAnalyzerError unexpectedly.')
+
+
+class TestSanitizedFunction(BaseTest):
+
+  def __init__(self, *args):
+    unittest.TestCase.__init__(self, *args)
+    self.options = sptoptions.default_options
+    self.options.update(cache_resolved_placeholders=True,
+                        enable_warnings=True, warnings_as_errors=True,
+                        baked_mode=True, generate_unicode=False)
+
+  def test_template_method_true(self):
+    code = """
+    #def foo
+      Hello
+    #end def
+
+    #def bar
+      $foo()
+    #end def
+    """
+    template = self._compile(code)
+    semantic_analyzer = self._get_analyzer(template)
+    analyzed_ast = semantic_analyzer.get_ast()
+    def pred(node):
+      return bool(type(node) == CallFunctionNode and
+                  type(node.expression) == PlaceholderNode and
+                  node.expression.name == 'foo')
+
+    foo_call = self._find_node(analyzed_ast, pred)
+    if not foo_call:
+      self.fail('Expected foo() in ast')
+    self.assertEqual(foo_call.needs_sanitization_wrapper, SanitizedState.YES)
+
+  def test_library_function_true(self):
+    code = """
+    #from module import library my_lib
+
+    #def bar
+      $my_lib.foo()
+    #end def
+    """
+    template = self._compile(code)
+    semantic_analyzer = self._get_analyzer(template)
+    analyzed_ast = semantic_analyzer.get_ast()
+    def pred(node):
+      return bool(type(node) == CallFunctionNode and
+                  type(node.expression) == IdentifierNode and
+                  node.expression.name == 'my_lib.foo')
+
+    foo_call = self._find_node(analyzed_ast, pred)
+    if not foo_call:
+      self.fail('Expected my_lib.foo() in ast')
+    self.assertEqual(foo_call.needs_sanitization_wrapper, SanitizedState.YES)
+
+  def test_external_function_false(self):
+    code = """
+    #from module import my_lib
+
+    #def bar
+      $my_lib.foo()
+    #end def
+    """
+    template = self._compile(code)
+    semantic_analyzer = self._get_analyzer(template)
+    analyzed_ast = semantic_analyzer.get_ast()
+    def pred(node):
+      return bool(type(node) == CallFunctionNode and
+                  type(node.expression) == GetUDNNode and
+                  type(node.expression.expression) == PlaceholderNode and
+                  node.expression.expression.name == 'my_lib' and
+                  node.expression.name == 'foo')
+
+    foo_call = self._find_node(analyzed_ast, pred)
+    if not foo_call:
+      self.fail('Expected my_libfoo() in ast')
+    self.assertEqual(foo_call.needs_sanitization_wrapper, SanitizedState.MAYBE)
+
 
 if __name__ == '__main__':
   unittest.main()

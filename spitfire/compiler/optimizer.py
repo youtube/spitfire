@@ -796,6 +796,18 @@ class FinalPassAnalyzer(_BaseAnalyzer):
       self.collect_writes(if_node)
       self.collect_writes(if_node.else_)
 
+  def analyzeBufferWrite(self, buffer_write):
+    """Perform BufferWrite optimizations.
+
+    Do this in the final pass optimizer to make sure that the
+    optimization is handled after caching placeholders.
+    """
+    self.visit_ast(buffer_write.expression, buffer_write)
+    # No need to generate sanitized placeholders when writing
+    # directly to the buffer.
+    if isinstance(buffer_write.expression, CallFunctionNode):
+      buffer_write.expression.needs_sanitization_wrapper = SanitizedState.NO
+
   def hoist(self, parent_node, parent_block, insertion_point, alias_node,
             assign_alias_node):
 
