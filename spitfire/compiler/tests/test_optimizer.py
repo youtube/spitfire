@@ -55,6 +55,26 @@ class BaseTest(unittest.TestCase):
     function_node.append(if_node)
     return (ast_root, function_node, if_node)
 
+  def _find_node(self, ast, pred):
+    """Look for a given node based on a predicate function.
+    Return the first one found"""
+    if pred(ast):
+      return ast
+    for child_node in ast.child_nodes:
+      found = self._find_node(child_node, pred)
+      if found:
+        return found
+      if isinstance(ast, (CallFunctionNode, FilterNode)):
+        found = self._find_node(ast.expression, pred)
+        if found:
+          return found
+    return None
+
+  def _compile(self, template_content):
+    template_node = util.parse_template(template_content)
+    template_node.source_path = 'test_template.spt'
+    return template_node
+
 
 class TestAnalyzeListLiteralNode(BaseTest):
 
@@ -809,11 +829,6 @@ class TestCollectWrites(BaseTest):
 
 class TestDoNode(BaseTest):
 
-  def _compile(self, template_content):
-    template_node = util.parse_template(template_content)
-    template_node.source_path = 'test_template.spt'
-    return template_node
-
   def test_do_placeholder_replace(self):
     code = """
 #global $bar
@@ -832,6 +847,34 @@ class TestDoNode(BaseTest):
 
     optimization_analyzer = self._get_analyzer(analyzed_tree)
     optimization_analyzer.optimize_ast()
+
+
+class TestCacheFilterArgs(BaseTest):
+
+  def test_cache_filter_args(self):
+    code = """
+#from foo import bar
+
+#def func
+  $bar.baz('arg')
+#end def
+    """
+    ast_root = self._compile(code)
+    semantic_analyzer = analyzer.SemanticAnalyzer(
+        'TestTemplate',
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+    analyzed_tree = semantic_analyzer.get_ast()
+
+    optimization_analyzer = self._get_analyzer(analyzed_tree)
+    optimized_tree = optimization_analyzer.optimize_ast()
+
+    def pred(node):
+      return type(node) == AssignNode
+    alias_assign = self._find_node(optimized_tree, pred)
+    if not alias_assign:
+      self.fail('There should be an AssignNode due to caching')
 
 
 if __name__ == '__main__':

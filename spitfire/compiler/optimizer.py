@@ -397,6 +397,10 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     """Given a node, generate a name for the cached filtered placeholder"""
     return '_fph%08X' % unsigned_hash(node)
 
+  def _generate_cached_udn_placeholder(self, node):
+    """Given a node, generate a name for the cached udn placeholder"""
+    return '_cudn%08X' % unsigned_hash(node)
+
   def analyzeFilterNode(self, filter_node):
     self.visit_ast(filter_node.expression, filter_node)
 
@@ -404,6 +408,31 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         isinstance(filter_node.expression.expression, TemplateMethodIdentifierNode)):
       filter_node.parent.replace(filter_node, filter_node.expression)
       return
+
+    # A CallFunctionNode will require passing in both the value and the
+    # function to the filter_function. If the CallFunctionNode's expression is a
+    # GetUDNNode, we can avoid looking up the attribute twice by caching its
+    # value. This is also true if the CallFunctionNode's expression is an
+    # IdentifierNode with a '.' in the name.
+    if isinstance(filter_node.expression, CallFunctionNode):
+      fn_node = filter_node.expression
+      if (isinstance(fn_node.expression, GetUDNNode) or
+          (isinstance(fn_node.expression, IdentifierNode) and
+           '.' in fn_node.expression.name)):
+        scope = self.get_parent_scope(filter_node)
+        udn_node = fn_node.expression
+        # For some udn style node, create a cached variable. ex. _cudn12345
+        alias_name = self._generate_cached_udn_placeholder(udn_node)
+        alias = IdentifierNode(alias_name, pos=filter_node.pos)
+        scope.local_identifiers.add(alias)
+        # Create an assignment node that assigns the udn node to the
+        # IdentifierNode.
+        assign_alias = AssignNode(alias, udn_node, pos=filter_node.pos)
+        insert_block, insert_marker = self.get_insert_block_and_point(filter_node)
+        # Insert the assignment before the FilterNode
+        insert_block.insert_before(insert_marker, assign_alias)
+        # Replace the udn node in the CallFunctionNode with the alias.
+        filter_node.expression.replace(udn_node, alias)
 
     if self.options.cache_filtered_placeholders:
       # NOTE: you *must* analyze the node before putting it in a dict
