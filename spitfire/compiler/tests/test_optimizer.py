@@ -60,14 +60,15 @@ class BaseTest(unittest.TestCase):
     Return the first one found"""
     if pred(ast):
       return ast
-    for child_node in ast.child_nodes:
+    children = ast.child_nodes
+    if isinstance(ast, (CallFunctionNode, FilterNode)):
+      children.append(ast.expression)
+    if isinstance(ast, BinOpNode):
+      children.extend((ast.left, ast.right))
+    for child_node in children:
       found = self._find_node(child_node, pred)
       if found:
         return found
-      if isinstance(ast, (CallFunctionNode, FilterNode)):
-        found = self._find_node(ast.expression, pred)
-        if found:
-          return found
     return None
 
   def _compile(self, template_content):
@@ -876,6 +877,73 @@ class TestCacheFilterArgs(BaseTest):
     if not alias_assign:
       self.fail('There should be an AssignNode due to caching')
 
+
+class TestFilterInMacro(BaseTest):
+
+  def test_filter_function_macro(self):
+    code = """
+    #def foo
+      $my_macro()
+    #end def
+    """
+
+    def macro_function(macro_node, arg_map, compiler):
+      return '#set $bar = self.filter_function("test")\n'
+
+    self.compiler.register_macro('macro_function_my_macro', macro_function,
+                                 parse_rule='fragment_goal')
+
+    ast_root = self._compile(code)
+    semantic_analyzer = analyzer.SemanticAnalyzer(
+        'TestTemplate',
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+    analyzed_tree = semantic_analyzer.get_ast()
+
+    optimization_analyzer = self._get_analyzer(analyzed_tree)
+    optimized_tree = optimization_analyzer.optimize_ast()
+
+    def pred(node):
+      print str(node)
+      return bool(type(node) == IdentifierNode and
+                  node.name == '_self_filter_function')
+
+    filter_node = self._find_node(optimized_tree, pred)
+    if not filter_node:
+      self.fail('Expected _self_filter_function in ast')
+
+  def test_private_filter_function_macro(self):
+    code = """
+    #def foo
+      $my_macro()
+    #end def
+    """
+
+    def macro_function(macro_node, arg_map, compiler):
+      return '#set $bar = self._filter_function("test")\n'
+
+    self.compiler.register_macro('macro_function_my_macro', macro_function,
+                                 parse_rule='fragment_goal')
+
+    ast_root = self._compile(code)
+    semantic_analyzer = analyzer.SemanticAnalyzer(
+        'TestTemplate',
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+    analyzed_tree = semantic_analyzer.get_ast()
+
+    optimization_analyzer = self._get_analyzer(analyzed_tree)
+    optimized_tree = optimization_analyzer.optimize_ast()
+
+    def pred(node):
+      return bool(type(node) == IdentifierNode and
+                  node.name == '_self_private_filter_function')
+
+    filter_node = self._find_node(optimized_tree, pred)
+    if not filter_node:
+      self.fail('Expected _self_private_filter_function in ast')
 
 if __name__ == '__main__':
   unittest.main()

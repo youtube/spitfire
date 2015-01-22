@@ -739,6 +739,18 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     if not self.options.prefer_whole_udn_expressions:
       self.visit_ast(node.expression, node)
 
+    # If self._filter_function is created in a macro, make sure we rename it.
+    self_node = IdentifierNode('self')
+    if node.expression == self_node and node.name == '_filter_function':
+      alias = IdentifierNode('_self_private_filter_function', pos=node.pos)
+      node.parent.replace(node, alias)
+      return
+    # If self.filter_function is created in a macro, make sure we rename it.
+    if node.expression == self_node and node.name == 'filter_function':
+      alias = IdentifierNode('_self_filter_function', pos=node.pos)
+      node.parent.replace(node, alias)
+      return
+
     if self.options.cache_resolved_udn_expressions:
       cached_udn = IdentifierNode('_rudn_%s' % unsigned_hash(node),
                                   pos=node.pos)

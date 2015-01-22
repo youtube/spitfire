@@ -232,6 +232,8 @@ class CodeGenerator(object):
       self.build_code(node.expression)[0])
     if expression == '_self_filter_function':
       self.function_stack[-1].uses_filter_function = True
+    if expression == '_self_private_filter_function':
+      self.function_stack[-1].uses_private_filter_function = True
     if node.arg_list:
       arg_list = self.generate_python(
         self.build_code(node.arg_list)[0])
