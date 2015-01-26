@@ -103,6 +103,9 @@ class AnalyzerOptions(object):
     # Spitfire templates do not allow for the use of |raw.
     self.baked_mode = False
 
+    # Throw compiler errors if variables are used outside of their scope.
+    self.static_analysis = False
+
     self.enable_psyco = False
     self.__dict__.update(kargs)
 

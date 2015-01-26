@@ -882,9 +882,9 @@ class TestFilterInMacro(BaseTest):
 
   def test_filter_function_macro(self):
     code = """
-    #def foo
-      $my_macro()
-    #end def
+#def foo
+  $my_macro()
+#end def
     """
 
     def macro_function(macro_node, arg_map, compiler):
@@ -905,7 +905,6 @@ class TestFilterInMacro(BaseTest):
     optimized_tree = optimization_analyzer.optimize_ast()
 
     def pred(node):
-      print str(node)
       return bool(type(node) == IdentifierNode and
                   node.name == '_self_filter_function')
 
@@ -915,9 +914,9 @@ class TestFilterInMacro(BaseTest):
 
   def test_private_filter_function_macro(self):
     code = """
-    #def foo
-      $my_macro()
-    #end def
+#def foo
+  $my_macro()
+#end def
     """
 
     def macro_function(macro_node, arg_map, compiler):
@@ -944,6 +943,166 @@ class TestFilterInMacro(BaseTest):
     filter_node = self._find_node(optimized_tree, pred)
     if not filter_node:
       self.fail('Expected _self_private_filter_function in ast')
+
+
+class TestHoistOnlyClean(BaseTest):
+
+  def setUp(self):
+    options = sptoptions.o3_options
+    self.compiler = sptcompiler.Compiler(
+        analyzer_options=options,
+        xspt_mode=False,
+        compiler_stack_traces=True)
+    self.compiler.new_registry_format = True
+    self.compiler.function_name_registry['reg_f'] = ('a.reg_f', ['skip_filter'])
+
+  def _get_final_tree(self, code):
+    ast_root = self._compile(code)
+    semantic_analyzer = analyzer.SemanticAnalyzer(
+        'TestTemplate',
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+    analyzed_tree = semantic_analyzer.get_ast()
+
+    optimization_analyzer = self._get_analyzer(analyzed_tree)
+    optimized_tree = optimization_analyzer.optimize_ast()
+
+    final_pass_analyzer = optimizer.FinalPassAnalyzer(
+        optimized_tree,
+        self.compiler.analyzer_options,
+        self.compiler)
+
+    return final_pass_analyzer.optimize_ast()
+
+  def test_should_hoist_for(self):
+    code = """
+#def foo($bar)
+  #for $i in []
+    $reg_f($bar)
+  #end for
+#end def
+    """
+
+    final_tree = self._get_final_tree(code)
+    def pred(node):
+      return type(node) == AssignNode and type(node.parent) == FunctionNode
+    alias = self._find_node(final_tree, pred)
+    if not alias:
+      self.fail('Expected to find AssignNode hoisted to function scope.')
+
+  def test_should_not_hoist_for(self):
+    code = """
+#def foo($bar)
+  #for $i in []
+    #set $bar["1"] = 1
+    $reg_f($bar)
+  #end for
+#end def
+    """
+
+    final_tree = self._get_final_tree(code)
+    def pred(node):
+      return type(node) == AssignNode and type(node.parent) == FunctionNode
+    alias = self._find_node(final_tree, pred)
+    if alias:
+      self.fail('AssignNode should not be hoisted to function scope.')
+
+  def test_should_hoist_if(self):
+    code = """
+#def foo($bar)
+  #if True
+    $reg_f($bar)
+  #else
+    $reg_f($bar)
+  #end if
+#end def
+    """
+    final_tree = self._get_final_tree(code)
+    def pred(node):
+      return type(node) == AssignNode and type(node.parent) == FunctionNode
+    alias = self._find_node(final_tree, pred)
+    if not alias:
+      self.fail('Expected to find AssignNode hoisted to function scope.')
+
+  def test_should_not_hoist_if_do(self):
+    code = """
+#def f
+#end def
+#def foo($bar)
+  #if True
+    #do $f($bar)
+    $reg_f($bar)
+  #else
+    $reg_f($bar)
+  #end if
+#end def
+    """
+
+    final_tree = self._get_final_tree(code)
+    def pred_if(node):
+      return type(node) == IfNode
+
+    if_node = self._find_node(final_tree, pred_if)
+
+    def pred(node):
+      return type(node) == AssignNode
+
+    alias = self._find_node(if_node, pred)
+    if not alias:
+      self.fail('AssignNode should be present in the If block.')
+
+
+  def test_should_not_hoist_if_set(self):
+    code = """
+#def foo($bar)
+  #if True
+    #set $bar[1] = 1
+    $reg_f($bar)
+  #else
+    $reg_f($bar)
+  #end if
+#end def
+    """
+
+    final_tree = self._get_final_tree(code)
+    def pred_if(node):
+      return type(node) == IfNode
+
+    if_node = self._find_node(final_tree, pred_if)
+
+    def pred(node):
+      return type(node) == AssignNode and type(node.left) == IdentifierNode
+
+    alias = self._find_node(if_node, pred)
+    if not alias:
+      self.fail('AssignNode should be present in the If block.')
+
+  def test_should_not_hoist_if_set_output(self):
+    code = """
+#def foo($bar)
+  #if True
+    #set $bar[1] = 1
+    $bar
+  #else
+    $bar
+  #end if
+#end def
+    """
+
+    final_tree = self._get_final_tree(code)
+    def pred_if(node):
+      return type(node) == IfNode
+
+    if_node = self._find_node(final_tree, pred_if)
+
+    def pred(node):
+      return type(node) == AssignNode and type(node.left) == IdentifierNode
+
+    alias = self._find_node(if_node, pred)
+    if not alias:
+      self.fail('AssignNode should be present in the If block.')
+
 
 if __name__ == '__main__':
   unittest.main()

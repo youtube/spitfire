@@ -15,13 +15,73 @@ _BINOP_INVALID_COUNT = 1000  # Any value > 0 will work.
 _BINOP_INITIAL_COUNT = 0
 _BINOP_FIRST_PASS = 1
 
+def _get_local_identifiers(node):
+  local_identifiers = []
+  partial_local_identifiers = []
+  dirty_local_identifiers = []
+
+  # search the parent scopes
+  # fixme: should this be recursive?
+  node = node.parent
+  while node is not None:
+    if isinstance(node, ForNode):
+      local_identifiers.extend(node.loop_variant_set)
+      local_identifiers.extend(node.scope.local_identifiers)
+      partial_local_identifiers.extend(node.scope.partial_local_identifiers)
+      dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
+    elif isinstance(node, IfNode):
+      local_identifiers.extend(node.scope.local_identifiers)
+      partial_local_identifiers.extend(node.scope.partial_local_identifiers)
+      dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
+    elif isinstance(node, ElseNode):
+      # in this case, we don't want to go to the parent node, which is the
+      # IfNode - we want to go to the parent 'scope'
+      local_identifiers.extend(node.scope.local_identifiers)
+      partial_local_identifiers.extend(node.scope.partial_local_identifiers)
+      dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
+      node = node.parent.parent
+      continue
+    elif isinstance(node, FunctionNode):
+      local_identifiers.extend(node.scope.local_identifiers)
+      partial_local_identifiers.extend(node.scope.partial_local_identifiers)
+      dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
+      break
+    node = node.parent
+  return (frozenset(local_identifiers), frozenset(partial_local_identifiers), frozenset(dirty_local_identifiers))
+
+def _get_identifiers_from_expression(node):
+  """Find the IdentifierNodes present in an expression.
+
+  This function searches through the nodes of an expression and returns a set
+  of the IdentiferNodes that are present. This function doesn't traverse
+  GetAttrNode or any LiteralNodes such as ListLiteral or DictLiteral nodes.
+  """
+  return set([n for n in flatten_tree(node) if isinstance(n, IdentifierNode)])
+
+def _is_clean(node, scope):
+  """Determine if the node references any dirty identifiers in the scope.
+
+  If there are any Identifiers in the node that are considered "dirty", this
+  function will return False. This is because it is not safe to hoist a node
+  that depends on modifications made within its parent scope.
+  """
+  dirty_identifiers = scope.dirty_local_identifiers
+  node_identifiers = _get_identifiers_from_expression(node)
+  # There are no dirty idenitifiers in the node being hoisted.
+  return not node_identifiers & dirty_identifiers
+
 class _BaseAnalyzer(object):
   def __init__(self, ast_root, options, compiler):
     self.ast_root = ast_root
     self.options = options
     self.compiler = compiler
     self.unoptimized_node_types = set()
+    # Used as a flag to determine how many binops we have analyzed.
     self.binop_count = _BINOP_INVALID_COUNT
+    # Used as a flag to determine if we are in a FilterNode. This is needed
+    # because the uses of Identifiers in the expression of a FilterNode should
+    # not be marked as dirty.
+    self.in_filter_node = False
 
   def optimize_ast(self):
     self.visit_ast(self.ast_root)
@@ -132,7 +192,7 @@ class _BaseAnalyzer(object):
         #print "    alias_node:", alias_node
         assign_alias_node = AssignNode(alias, alias_node, pos=alias_node.pos)
         if alias_node in parent_block.scope.aliased_expression_map:
-          if self.is_condition_invariant(alias_node, conditional_node):
+          if self._is_condition_invariant(alias_node, conditional_node):
             #print "  hoist:", assign_alias_node
             self.hoist(
               conditional_node, parent_block, insertion_point, alias_node,
@@ -148,27 +208,43 @@ class _BaseAnalyzer(object):
     for alias_node, alias in loop_node.scope.aliased_expression_map.items():
       assign_alias = AssignNode(alias, alias_node, pos=alias_node.pos)
       if alias_node in parent_block.scope.aliased_expression_map:
-        if self.is_loop_invariant(alias_node, loop_node):
+        if self._is_loop_invariant(alias_node, loop_node):
           self.hoist(loop_node, parent_block, insertion_point, alias_node,
                      assign_alias)
       else:
         # if this alias is not already used in the parent scope, that's
         # ok, hoist it if it's loop invariant
-        if self.is_loop_invariant(alias_node, loop_node):
+        if self._is_loop_invariant(alias_node, loop_node):
           loop_node.remove(assign_alias)
           parent_block.insert_before(loop_node, assign_alias)
           parent_block.scope.hoisted_aliases.append(alias_node)
 
-  def is_condition_invariant(self, node, conditional_node):
+  def _is_condition_invariant(self, node, conditional_node):
+    """The _is_condition_invariant_legacy function is broken, but seems to be
+    correct in some cases. Out of fear and redundancy, in order for something to
+    be hoisted, it must pass the old and new tests.
+    """
+    return (self._is_condition_invariant_legacy(node, conditional_node) and
+            _is_clean(node, conditional_node.scope))
+
+  def _is_condition_invariant_legacy(self, node, conditional_node):
     node_dependency_set = self.get_node_dependencies(node)
-    condition_invariant = not node_dependency_set.intersection(
-      conditional_node.scope.local_identifiers)
+    condition_invariant = (not node_dependency_set &
+                           conditional_node.scope.local_identifiers)
     #print "is_condition_invariant:", condition_invariant
     #print "  locals:", conditional_node.scope.local_identifiers
     #print "  deps:", node_dependency_set
     return condition_invariant
 
-  def is_loop_invariant(self, node, loop_node):
+  def _is_loop_invariant(self, node, loop_node):
+    """The _is_loop_invariant_legacy function is broken, but seems to be correct in
+    some cases. Out of fear and redundancy, in order for something to be
+    hoisted, it must pass the old and new tests.
+    """
+    return (self._is_loop_invariant_legacy(node, loop_node) and
+            _is_clean(node, loop_node.scope))
+
+  def _is_loop_invariant_legacy(self, node, loop_node):
     node_dependency_set = self.get_node_dependencies(node)
 #     print "is loop invariant node:", node
 #     for x in node_dependency_set:
@@ -286,9 +362,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 
   def analyzeAssignNode(self, node):
     scope = self.get_parent_scope(node)
-    local_identifiers, _, dirty_identifiers = self.get_local_identifiers(node)
+    local_identifiers, _, dirty_identifiers = _get_local_identifiers(node)
+    # This is an assignment at an index.
     if isinstance(node.left, SliceNode):
       _identifier = IdentifierNode(node.left.expression.name, pos=node.pos)
+      scope.dirty_local_identifiers.add(_identifier)
       if _identifier not in local_identifiers:
         self.compiler.error(
             SemanticAnalyzerError(
@@ -297,7 +375,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     else:
       _identifier = IdentifierNode(node.left.name, pos=node.pos)
       alias_name = self.generate_filtered_placeholder(_identifier)
-      if alias_name in scope.alias_name_set or _identifier in dirty_identifiers:
+      if alias_name in scope.alias_name_set:
         if self.options.double_assign_error:
           self.compiler.error(
               SemanticAnalyzerError('Multiple assignment of %s' %
@@ -334,11 +412,16 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeArgListNode(self, arg_list_node):
     scope = self.get_parent_scope(arg_list_node)
     for n in arg_list_node:
-      # If an identifier is passed into a function, mark it as dirty.
-      if isinstance(n, PlaceholderNode):
-        scope.dirty_local_identifiers.add(IdentifierNode(n.name))
-      if isinstance(n, ParameterNode) and isinstance(n.default, PlaceholderNode):
-        scope.dirty_local_identifiers.add(IdentifierNode(n.default.name))
+      # If an identifier is passed into a function and we are not in a filter
+      # node, mark it as dirty. Filter nodes are always written out, therefore
+      # we don't consider the final call a modification. This assumption is
+      # predictaed on the fact that you can't modify a variable once it has been
+      # written.
+      if not self.in_filter_node:
+        if isinstance(n, PlaceholderNode):
+          scope.dirty_local_identifiers.add(IdentifierNode(n.name))
+        if isinstance(n, ParameterNode) and isinstance(n.default, PlaceholderNode):
+          scope.dirty_local_identifiers.add(IdentifierNode(n.default.name))
       self.visit_ast(n, arg_list_node)
 
   def analyzeTupleLiteralNode(self, tuple_literal_node):
@@ -402,7 +485,9 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     return '_cudn%08X' % unsigned_hash(node)
 
   def analyzeFilterNode(self, filter_node):
+    self.in_filter_node = True
     self.visit_ast(filter_node.expression, filter_node)
+    self.in_filter_node = False
 
     if (isinstance(filter_node.expression, CallFunctionNode) and
         isinstance(filter_node.expression.expression, TemplateMethodIdentifierNode)):
@@ -515,7 +600,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       cached_placeholder = IdentifierNode('_rph_%s' % local_var.name,
                                           pos=placeholder.pos)
       (local_identifiers, partial_local_identifiers, _) = (
-          self.get_local_identifiers(placeholder))
+          _get_local_identifiers(placeholder))
       attrs = set([IdentifierNode(node.name) for node in self.ast_root.attr_nodes])
       non_local_identifiers = (partial_local_identifiers -
                                local_identifiers - attrs)
@@ -610,7 +695,6 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 
     node.parent.replace(node, alias)
 
-
   def analyzeIfNode(self, if_node):
     self.visit_ast(if_node.test_expression, if_node)
 
@@ -650,11 +734,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
                                     if_node.else_.scope.local_identifiers) |
                                    if_node.scope.partial_local_identifiers |
                                    if_node.else_.scope.partial_local_identifiers)
+
       common_alias_name_set = (if_node.scope.alias_name_set &
                                if_node.else_.scope.alias_name_set)
-      common_keys = (
-          set(if_node.scope.aliased_expression_map.iterkeys()) &
-          set(if_node.else_.scope.aliased_expression_map.iterkeys()))
+      common_keys = (set(if_node.scope.aliased_expression_map.iterkeys()) &
+                     set(if_node.else_.scope.aliased_expression_map.iterkeys()))
       common_aliased_expression_map = {}
       for key in common_keys:
         common_aliased_expression_map[key] = if_node.scope.aliased_expression_map[key]
@@ -668,6 +752,12 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     non_parent_scope_identifiers = (partial_local_identifiers -
                                     parent_scope.local_identifiers)
     parent_scope.partial_local_identifiers.update(non_parent_scope_identifiers)
+    # Any variable considered dirty in an if or else block should be dirty in
+    # the parent scope as well.
+    if_dirty_identifiers = if_node.scope.dirty_local_identifiers
+    else_dirty_identifiers = if_node.else_.scope.dirty_local_identifiers
+    parent_scope.dirty_local_identifiers.update(if_dirty_identifiers)
+    parent_scope.dirty_local_identifiers.update(else_dirty_identifiers)
 
   def analyzeBinOpNode(self, n):
     # if you are trying to use short-circuit behavior, these two optimizations
@@ -701,40 +791,6 @@ class OptimizationAnalyzer(_BaseAnalyzer):
   def analyzeUnaryOpNode(self, op_node):
     self.visit_ast(op_node.expression, op_node)
 
-  def get_local_identifiers(self, node):
-    local_identifiers = []
-    partial_local_identifiers = []
-    dirty_local_identifiers = []
-
-    # search the parent scopes
-    # fixme: should this be recursive?
-    node = node.parent
-    while node is not None:
-      if isinstance(node, ForNode):
-        local_identifiers.extend(node.loop_variant_set)
-        local_identifiers.extend(node.scope.local_identifiers)
-        partial_local_identifiers.extend(node.scope.partial_local_identifiers)
-        dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
-      elif isinstance(node, IfNode):
-        local_identifiers.extend(node.scope.local_identifiers)
-        partial_local_identifiers.extend(node.scope.partial_local_identifiers)
-        dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
-      elif isinstance(node, ElseNode):
-        # in this case, we don't want to go to the parent node, which is the
-        # IfNode - we want to go to the parent 'scope'
-        local_identifiers.extend(node.scope.local_identifiers)
-        partial_local_identifiers.extend(node.scope.partial_local_identifiers)
-        dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
-        node = node.parent.parent
-        continue
-      elif isinstance(node, FunctionNode):
-        local_identifiers.extend(node.scope.local_identifiers)
-        partial_local_identifiers.extend(node.scope.partial_local_identifiers)
-        dirty_local_identifiers.extend(node.scope.dirty_local_identifiers)
-        break
-      node = node.parent
-    return (frozenset(local_identifiers), frozenset(partial_local_identifiers), frozenset(dirty_local_identifiers))
-
   def analyzeGetUDNNode(self, node):
     if not self.options.prefer_whole_udn_expressions:
       self.visit_ast(node.expression, node)
@@ -754,7 +810,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     if self.options.cache_resolved_udn_expressions:
       cached_udn = IdentifierNode('_rudn_%s' % unsigned_hash(node),
                                   pos=node.pos)
-      (local_identifiers, _, _) = self.get_local_identifiers(node)
+      (local_identifiers, _, _) = _get_local_identifiers(node)
       if cached_udn in local_identifiers:
         node.parent.replace(node, cached_udn)
       else:

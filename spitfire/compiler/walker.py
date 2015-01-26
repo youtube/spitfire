@@ -4,7 +4,7 @@ class TreeWalkError(Exception):
 
 def print_tree(root):
   print TreeVisitor(root).get_text()
-    
+
 # perform an in-order traversal of the AST and call the generate methods
 class TreeVisitor(object):
   def __init__(self, root):
@@ -18,7 +18,7 @@ class TreeVisitor(object):
 
   def visitDefault(self, node):
     pass
-    
+
   def visitASTTemplateNode(self, node):
     self.visitDefault(node)
     if node.import_nodes:
@@ -32,7 +32,7 @@ class TreeVisitor(object):
         self.walk(n)
     for n in node.attr_nodes:
       self.walk(n)
-    
+
     for n in node.child_nodes:
       self.walk(n)
 
@@ -47,7 +47,7 @@ class TreeVisitor(object):
   visitASTImportNode = visitASTExtendsNode
   visitASTFromNode = visitASTExtendsNode
   visitASTAbsoluteExtendsNode = visitASTExtendsNode
-  
+
   def visitASTCallFunctionNode(self, node):
     self.visitDefault(node)
     self.walk(node.expression)
@@ -74,7 +74,7 @@ class TreeVisitor(object):
   def visitASTAttributeNode(self, node):
     self.visitDefault(node)
     self.walk(node.default)
-    
+
   def visitASTParameterListNode(self, node):
     self.visitDefault(node)
     for n in node.child_nodes:
@@ -96,7 +96,7 @@ class TreeVisitor(object):
     self.visitDefault(node)
     if node.default:
       self.walk(node.default)
-    
+
   def visitASTGetUDNNode(self, node):
     self.visitDefault(node)
     self.walk(node.expression)
@@ -107,6 +107,7 @@ class TreeVisitor(object):
   visitASTBufferWrite = visitASTGetUDNNode
   visitASTFilterNode = visitASTGetUDNNode
   visitASTUnaryOpNode = visitASTGetUDNNode
+  visitASTDoNode = visitASTGetUDNNode
 
   def visitASTSliceNode(self, node):
     self.visitDefault(node)
@@ -119,7 +120,7 @@ class TreeVisitor(object):
     self.walk(node.right)
   visitASTBinOpNode = visitASTBinOpExpressionNode
   visitASTAssignNode = visitASTBinOpNode
-  
+
   def visitASTFunctionNode(self, node):
     self.visitDefault(node)
     if node.parameter_list:
@@ -138,9 +139,9 @@ class TreeVisitor(object):
 
   def visitASTLiteralNode(self, node):
     self.visitDefault(node)
-  visitASTTextNode = visitASTLiteralNode  
-  visitASTWhitespaceNode = visitASTLiteralNode  
-  visitASTOptionalWhitespaceNode = visitASTLiteralNode  
+  visitASTTextNode = visitASTLiteralNode
+  visitASTWhitespaceNode = visitASTLiteralNode
+  visitASTOptionalWhitespaceNode = visitASTLiteralNode
 
 
 # flatten a tree into an in-order list
@@ -156,4 +157,3 @@ def flatten_tree(node):
   cc = ClearCutter(node)
   cc.walk()
   return cc.node_list
-  
