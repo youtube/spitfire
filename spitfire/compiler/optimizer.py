@@ -70,6 +70,22 @@ def _is_clean(node, scope):
   # There are no dirty idenitifiers in the node being hoisted.
   return not node_identifiers & dirty_identifiers
 
+def _get_common_aliased_expression_map(*scopes):
+  """Get the common clean aliased expression map for multiple scopes."""
+  if not scopes:
+    return {}
+  clean_key_sets = []
+  for scope in scopes:
+    clean_scope_keys = set()
+    for alias in scope.aliased_expression_map.iterkeys():
+      if _is_clean(alias, scope):
+        clean_scope_keys.add(alias)
+    clean_key_sets.append(clean_scope_keys)
+
+  common_clean_keys = reduce(lambda x, y: x & y, clean_key_sets)
+  return dict([(key, scopes[0].aliased_expression_map[key]) for
+               key in common_clean_keys])
+
 class _BaseAnalyzer(object):
   def __init__(self, ast_root, options, compiler):
     self.ast_root = ast_root
@@ -737,11 +753,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 
       common_alias_name_set = (if_node.scope.alias_name_set &
                                if_node.else_.scope.alias_name_set)
-      common_keys = (set(if_node.scope.aliased_expression_map.iterkeys()) &
-                     set(if_node.else_.scope.aliased_expression_map.iterkeys()))
-      common_aliased_expression_map = {}
-      for key in common_keys:
-        common_aliased_expression_map[key] = if_node.scope.aliased_expression_map[key]
+
+      # Only promote aliased expressions to the parent scope when the alias
+      # would be used in both the if and else branches.
+      common_aliased_expression_map = _get_common_aliased_expression_map(
+          if_node.scope, if_node.else_.scope)
 
       parent_scope.local_identifiers.update(common_local_identifiers)
       parent_scope.alias_name_set.update(common_alias_name_set)

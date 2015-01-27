@@ -1066,17 +1066,13 @@ class TestHoistOnlyClean(BaseTest):
     """
 
     final_tree = self._get_final_tree(code)
-    def pred_if(node):
-      return type(node) == IfNode
-
-    if_node = self._find_node(final_tree, pred_if)
 
     def pred(node):
-      return type(node) == AssignNode and type(node.left) == IdentifierNode
+      return type(node) == AssignNode and type(node.parent) == FunctionNode
 
-    alias = self._find_node(if_node, pred)
-    if not alias:
-      self.fail('AssignNode should be present in the If block.')
+    alias = self._find_node(final_tree, pred)
+    if alias:
+      self.fail('AssignNode should not be hoisted to the FunctionNode.')
 
   def test_should_not_hoist_if_set_output(self):
     code = """
@@ -1091,17 +1087,13 @@ class TestHoistOnlyClean(BaseTest):
     """
 
     final_tree = self._get_final_tree(code)
-    def pred_if(node):
-      return type(node) == IfNode
-
-    if_node = self._find_node(final_tree, pred_if)
 
     def pred(node):
-      return type(node) == AssignNode and type(node.left) == IdentifierNode
+      return type(node) == AssignNode and type(node.parent) == FunctionNode
 
-    alias = self._find_node(if_node, pred)
-    if not alias:
-      self.fail('AssignNode should be present in the If block.')
+    alias = self._find_node(final_tree, pred)
+    if alias:
+      self.fail('AssignNode should not be hoisted to the FunctionNode.')
 
 
 if __name__ == '__main__':
