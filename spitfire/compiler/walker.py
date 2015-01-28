@@ -144,8 +144,25 @@ class TreeVisitor(object):
   visitASTOptionalWhitespaceNode = visitASTLiteralNode
 
 
+class _Finder(TreeVisitor):
+  """Find the first node in the tree that satisfies a predicate."""
+  def __init__(self, root, pred):
+    TreeVisitor.__init__(self, root)
+    self.pred = pred
+    self.node_list = []
+
+  def visitDefault(self, node):
+    if self.pred(node):
+      self.node_list.append(node)
+
+def find_node(node, pred):
+  """Find the first node in the tree that satisfies a predicate."""
+  finder = _Finder(node, pred)
+  finder.walk()
+  return finder.node_list[0] if finder.node_list else None
+
 # flatten a tree into an in-order list
-class ClearCutter(TreeVisitor):
+class _ClearCutter(TreeVisitor):
   def __init__(self, *pargs):
     TreeVisitor.__init__(self, *pargs)
     self.node_list = []
@@ -154,6 +171,7 @@ class ClearCutter(TreeVisitor):
     self.node_list.append(node)
 
 def flatten_tree(node):
-  cc = ClearCutter(node)
+  """Return a list of nodes in the tree."""
+  cc = _ClearCutter(node)
   cc.walk()
   return cc.node_list

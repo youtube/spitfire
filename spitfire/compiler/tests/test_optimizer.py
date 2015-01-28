@@ -5,6 +5,7 @@ from spitfire.compiler import compiler as sptcompiler
 from spitfire.compiler import optimizer
 from spitfire.compiler import options as sptoptions
 from spitfire.compiler import util
+from spitfire.compiler import walker
 
 
 class BaseTest(unittest.TestCase):
@@ -54,22 +55,6 @@ class BaseTest(unittest.TestCase):
     if_node = IfNode(condition_node)
     function_node.append(if_node)
     return (ast_root, function_node, if_node)
-
-  def _find_node(self, ast, pred):
-    """Look for a given node based on a predicate function.
-    Return the first one found"""
-    if pred(ast):
-      return ast
-    children = ast.child_nodes
-    if isinstance(ast, (CallFunctionNode, FilterNode)):
-      children.append(ast.expression)
-    if isinstance(ast, BinOpNode):
-      children.extend((ast.left, ast.right))
-    for child_node in children:
-      found = self._find_node(child_node, pred)
-      if found:
-        return found
-    return None
 
   def _compile(self, template_content):
     template_node = util.parse_template(template_content)
@@ -873,7 +858,7 @@ class TestCacheFilterArgs(BaseTest):
 
     def pred(node):
       return type(node) == AssignNode
-    alias_assign = self._find_node(optimized_tree, pred)
+    alias_assign = walker.find_node(optimized_tree, pred)
     if not alias_assign:
       self.fail('There should be an AssignNode due to caching')
 
@@ -908,7 +893,7 @@ class TestFilterInMacro(BaseTest):
       return bool(type(node) == IdentifierNode and
                   node.name == '_self_filter_function')
 
-    filter_node = self._find_node(optimized_tree, pred)
+    filter_node = walker.find_node(optimized_tree, pred)
     if not filter_node:
       self.fail('Expected _self_filter_function in ast')
 
@@ -940,7 +925,7 @@ class TestFilterInMacro(BaseTest):
       return bool(type(node) == IdentifierNode and
                   node.name == '_self_private_filter_function')
 
-    filter_node = self._find_node(optimized_tree, pred)
+    filter_node = walker.find_node(optimized_tree, pred)
     if not filter_node:
       self.fail('Expected _self_private_filter_function in ast')
 
@@ -987,7 +972,7 @@ class TestHoistOnlyClean(BaseTest):
     final_tree = self._get_final_tree(code)
     def pred(node):
       return type(node) == AssignNode and type(node.parent) == FunctionNode
-    alias = self._find_node(final_tree, pred)
+    alias = walker.find_node(final_tree, pred)
     if not alias:
       self.fail('Expected to find AssignNode hoisted to function scope.')
 
@@ -1004,7 +989,7 @@ class TestHoistOnlyClean(BaseTest):
     final_tree = self._get_final_tree(code)
     def pred(node):
       return type(node) == AssignNode and type(node.parent) == FunctionNode
-    alias = self._find_node(final_tree, pred)
+    alias = walker.find_node(final_tree, pred)
     if alias:
       self.fail('AssignNode should not be hoisted to function scope.')
 
@@ -1021,7 +1006,7 @@ class TestHoistOnlyClean(BaseTest):
     final_tree = self._get_final_tree(code)
     def pred(node):
       return type(node) == AssignNode and type(node.parent) == FunctionNode
-    alias = self._find_node(final_tree, pred)
+    alias = walker.find_node(final_tree, pred)
     if not alias:
       self.fail('Expected to find AssignNode hoisted to function scope.')
 
@@ -1043,12 +1028,12 @@ class TestHoistOnlyClean(BaseTest):
     def pred_if(node):
       return type(node) == IfNode
 
-    if_node = self._find_node(final_tree, pred_if)
+    if_node = walker.find_node(final_tree, pred_if)
 
     def pred(node):
       return type(node) == AssignNode
 
-    alias = self._find_node(if_node, pred)
+    alias = walker.find_node(if_node, pred)
     if not alias:
       self.fail('AssignNode should be present in the If block.')
 
@@ -1070,7 +1055,7 @@ class TestHoistOnlyClean(BaseTest):
     def pred(node):
       return type(node) == AssignNode and type(node.parent) == FunctionNode
 
-    alias = self._find_node(final_tree, pred)
+    alias = walker.find_node(final_tree, pred)
     if alias:
       self.fail('AssignNode should not be hoisted to the FunctionNode.')
 
@@ -1091,9 +1076,52 @@ class TestHoistOnlyClean(BaseTest):
     def pred(node):
       return type(node) == AssignNode and type(node.parent) == FunctionNode
 
-    alias = self._find_node(final_tree, pred)
+    alias = walker.find_node(final_tree, pred)
     if alias:
       self.fail('AssignNode should not be hoisted to the FunctionNode.')
+
+
+class TestNoSanitizationIfCondition(BaseTest):
+
+  def setUp(self):
+    options = sptoptions.default_options
+    self.compiler = sptcompiler.Compiler(
+        analyzer_options=options,
+        xspt_mode=False,
+        compiler_stack_traces=True,
+        baked_mode=True)
+
+  def _get_optimized_tree(self, code):
+    ast_root = self._compile(code)
+    semantic_analyzer = analyzer.SemanticAnalyzer(
+        'TestTemplate',
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+    analyzed_tree = semantic_analyzer.get_ast()
+
+    optimization_analyzer = self._get_analyzer(analyzed_tree)
+    return optimization_analyzer.optimize_ast()
+
+  def test_should_not_need_sanitization(self):
+    code = """
+#def foo($bar)
+  #if $bar.baz()
+    BLAH
+  #end if
+#end def
+    """
+
+    optimized_tree = self._get_optimized_tree(code)
+
+    def pred(node):
+      return type(node) == CallFunctionNode
+
+    call_node = walker.find_node(optimized_tree, pred)
+    if not call_node:
+      self.fail('Expected to find a CallFunctionNode.')
+    if call_node.needs_sanitization_wrapper != SanitizedState.NO:
+      self.fail('Expected node in test expression to not need sanitization.')
 
 
 if __name__ == '__main__':

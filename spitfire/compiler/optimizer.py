@@ -15,6 +15,28 @@ _BINOP_INVALID_COUNT = 1000  # Any value > 0 will work.
 _BINOP_INITIAL_COUNT = 0
 _BINOP_FIRST_PASS = 1
 
+# Utility functions for searching up the tree.
+def _get_parent_node_by_pred(node, pred, search_current=False):
+  """Find the first parent node that satisfies a predicate function."""
+  if not search_current:
+    node = node.parent
+  while node is not None:
+    if pred(node):
+      return node
+    node = node.parent
+  return None
+
+def _get_parent_node_by_type(node, node_type):
+  """Find the first parent node that satisfies a specified type or types."""
+  return _get_parent_node_by_pred(node, lambda n: isinstance(n, node_type))
+
+def _get_parent_loop(node):
+  return _get_parent_node_by_type(node, ForNode)
+
+def _get_parent_block(node):
+  return _get_parent_node_by_type(node,
+                                  (FunctionNode, ForNode, IfNode, ElseNode))
+
 def _get_local_identifiers(node):
   local_identifiers = []
   partial_local_identifiers = []
@@ -94,10 +116,6 @@ class _BaseAnalyzer(object):
     self.unoptimized_node_types = set()
     # Used as a flag to determine how many binops we have analyzed.
     self.binop_count = _BINOP_INVALID_COUNT
-    # Used as a flag to determine if we are in a FilterNode. This is needed
-    # because the uses of Identifiers in the expression of a FilterNode should
-    # not be marked as dirty.
-    self.in_filter_node = False
 
   def optimize_ast(self):
     self.visit_ast(self.ast_root)
@@ -125,24 +143,6 @@ class _BaseAnalyzer(object):
     # print "default_optimize_node", type(node)
     self.unoptimized_node_types.add(type(node))
     return
-
-  def get_parent_loop(self, node):
-    return self._get_parent_node_by_type(node, ForNode)
-
-  def get_parent_function(self, node):
-    return self._get_parent_node_by_type(node, FunctionNode)
-
-  def get_parent_block(self, node):
-    return self._get_parent_node_by_type(node,
-      (FunctionNode, ForNode, IfNode, ElseNode))
-
-  def _get_parent_node_by_type(self, node, node_type):
-    node = node.parent
-    while node is not None:
-      if isinstance(node, node_type):
-        return node
-      node = node.parent
-    return None
 
   # this function has some rules that are a bit unclean - you aren't actually
   # looking for the 'parent' scope, but one you might insert nodes into.
@@ -288,7 +288,7 @@ class _BaseAnalyzer(object):
 
   def get_node_dependencies(self, node):
     node_dependency_set = set(flatten_tree(node))
-    parent_block = self.get_parent_block(node)
+    parent_block = _get_parent_block(node)
 
     for n in list(node_dependency_set):
       # when this is an identifier, you need to check all of the potential
@@ -313,8 +313,7 @@ class _BaseAnalyzer(object):
               node_dependency_set.update(
                 flatten_tree(block_node.test_expression))
           else:
-            parent_block_to_check = self.get_parent_block(
-              parent_block_to_check)
+            parent_block_to_check = _get_parent_block(parent_block_to_check)
       #elif isinstance(n, (GetUDNNode, FilterNode)):
       #  node_dependency_set.update(
       #    self.get_node_dependencies(node.expression))
@@ -433,7 +432,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       # we don't consider the final call a modification. This assumption is
       # predictaed on the fact that you can't modify a variable once it has been
       # written.
-      if not self.in_filter_node:
+      if not _get_parent_node_by_type(arg_list_node, FilterNode):
         if isinstance(n, PlaceholderNode):
           scope.dirty_local_identifiers.add(IdentifierNode(n.name))
         if isinstance(n, ParameterNode) and isinstance(n.default, PlaceholderNode):
@@ -457,6 +456,15 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     self.visit_ast(do_node.expression, do_node)
 
   def analyzeCallFunctionNode(self, function_call):
+    # If the CallFunctionNode is in the test expression of an IfNode, do not
+    # wrap the function with a SanitizedPlaceholder.
+    def is_in_test_expression(node):
+      return (isinstance(node.parent, IfNode) and
+              node == node.parent.test_expression)
+    if _get_parent_node_by_pred(function_call, is_in_test_expression,
+                                search_current=True):
+      function_call.needs_sanitization_wrapper = SanitizedState.NO
+
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
 
@@ -501,9 +509,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     return '_cudn%08X' % unsigned_hash(node)
 
   def analyzeFilterNode(self, filter_node):
-    self.in_filter_node = True
     self.visit_ast(filter_node.expression, filter_node)
-    self.in_filter_node = False
 
     if (isinstance(filter_node.expression, CallFunctionNode) and
         isinstance(filter_node.expression.expression, TemplateMethodIdentifierNode)):
@@ -647,7 +653,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 #       alias = IdentifierNode(alias_name)
 #       function.aliased_expression_map[expression] = alias
 #       assign_alias = AssignNode(alias, expression)
-#       parent_loop = self.get_parent_loop(node)
+#       parent_loop = _get_parent_loop(node)
 #       # fixme: check to see if this expression is loop-invariant
 #       # must add a test case for this
 #       child_node_set = set(node.getChildNodes())
@@ -694,7 +700,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       scope.aliased_expression_map[node] = alias
       assign_alias = AssignNode(alias, node)
 
-      parent_loop = self.get_parent_loop(node)
+      parent_loop = _get_parent_loop(node)
       # fixme: check to see if this expression is loop-invariant
       # must add a test case for this
       child_node_set = set(node.getChildNodes())

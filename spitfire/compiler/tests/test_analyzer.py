@@ -4,6 +4,7 @@ from spitfire.compiler import analyzer
 from spitfire.compiler import options as sptoptions
 from spitfire.compiler import compiler as sptcompiler
 from spitfire.compiler import util
+from spitfire.compiler import walker
 
 
 class BaseTest(unittest.TestCase):
@@ -61,21 +62,6 @@ class BaseTest(unittest.TestCase):
     template_node = util.parse_template(template_content)
     template_node.source_path = 'test_template.spt'
     return template_node
-
-  def _find_node(self, ast, pred):
-    """Look for a given node based on a predicate function.
-    Return the first one found"""
-    if pred(ast):
-      return ast
-    for child_node in ast.child_nodes:
-      found = self._find_node(child_node, pred)
-      if found:
-        return found
-    if isinstance(ast, (CallFunctionNode, FilterNode)):
-      found = self._find_node(ast.expression, pred)
-      if found:
-        return found
-    return None
 
 
 class TestEmptyIfBlockError(BaseTest):
@@ -432,7 +418,7 @@ class TestSanitizedFunction(BaseTest):
                   type(node.expression) == PlaceholderNode and
                   node.expression.name == 'foo')
 
-    foo_call = self._find_node(analyzed_ast, pred)
+    foo_call = walker.find_node(analyzed_ast, pred)
     if not foo_call:
       self.fail('Expected foo() in ast')
     self.assertEqual(foo_call.needs_sanitization_wrapper, SanitizedState.YES)
@@ -453,7 +439,7 @@ class TestSanitizedFunction(BaseTest):
                   type(node.expression) == IdentifierNode and
                   node.expression.name == 'my_lib.foo')
 
-    foo_call = self._find_node(analyzed_ast, pred)
+    foo_call = walker.find_node(analyzed_ast, pred)
     if not foo_call:
       self.fail('Expected my_lib.foo() in ast')
     self.assertEqual(foo_call.needs_sanitization_wrapper, SanitizedState.YES)
@@ -476,7 +462,7 @@ class TestSanitizedFunction(BaseTest):
                   node.expression.expression.name == 'my_lib' and
                   node.expression.name == 'foo')
 
-    foo_call = self._find_node(analyzed_ast, pred)
+    foo_call = walker.find_node(analyzed_ast, pred)
     if not foo_call:
       self.fail('Expected my_libfoo() in ast')
     self.assertEqual(foo_call.needs_sanitization_wrapper, SanitizedState.MAYBE)
