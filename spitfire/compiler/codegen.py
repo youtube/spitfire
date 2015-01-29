@@ -124,6 +124,7 @@ class CodeGenerator(object):
       module_code.append_line('from spitfire.runtime.udn import resolve_placeholder_with_locals')
       module_code.append_line('from spitfire.runtime.udn import resolve_udn')
 
+    module_code.append_line('from spitfire.runtime import SanitizedPlaceholder')
     module_code.append_line('from spitfire.runtime.template import template_method')
     module_code.append_line('')
 
@@ -241,13 +242,16 @@ class CodeGenerator(object):
       arg_list = ''
     call = ASTCallFunctionNode_tmpl[0] % vars()
     if self.baked_mode:
-      needs_sanitization_wrapper = node.needs_sanitization_wrapper
-      if needs_sanitization_wrapper == SanitizedState.YES:
+      sanitization_state = node.sanitization_state
+      if sanitization_state == SanitizedState.SANITIZED_STRING:
+        return [CodeNode('SanitizedPlaceholder(%s)' % call, input_pos=node.pos)]
+      elif sanitization_state == SanitizedState.SANITIZED:
         self.function_stack[-1].uses_sanitize = True
         return [CodeNode('_self_mark_as_sanitized(%s)' % call, input_pos=node.pos)]
-      elif needs_sanitization_wrapper == SanitizedState.NO:
+      elif (sanitization_state == SanitizedState.UNSANITIZED or
+            sanitization_state == SanitizedState.NO):
         return [CodeNode(call, input_pos=node.pos)]
-      elif needs_sanitization_wrapper == SanitizedState.MAYBE:
+      elif sanitization_state == SanitizedState.UNKNOWN:
         self.function_stack[-1].uses_runtime_sanitize = True
         return [CodeNode(
             '_self_runtime_mark_as_sanitized(%(call)s, %(expression)s)' % vars(),

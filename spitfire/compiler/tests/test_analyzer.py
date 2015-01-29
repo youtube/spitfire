@@ -393,14 +393,19 @@ class TestAssignSlice(BaseTest):
 
 class TestSanitizedFunction(BaseTest):
 
-  def __init__(self, *args):
-    unittest.TestCase.__init__(self, *args)
+  def setUp(self):
     self.options = sptoptions.default_options
     self.options.update(cache_resolved_placeholders=True,
                         enable_warnings=True, warnings_as_errors=True,
                         baked_mode=True, generate_unicode=False)
+    self.compiler = sptcompiler.Compiler(
+        analyzer_options=self.options,
+        xspt_mode=False,
+        compiler_stack_traces=True)
+    self.compiler.new_registry_format = True
+    self.compiler.function_name_registry['reg_f'] = ('a.reg_f', ['skip_filter'])
 
-  def test_template_method_true(self):
+  def test_template_method_direct(self):
     code = """
     #def foo
       Hello
@@ -414,16 +419,17 @@ class TestSanitizedFunction(BaseTest):
     semantic_analyzer = self._get_analyzer(template)
     analyzed_ast = semantic_analyzer.get_ast()
     def pred(node):
-      return bool(type(node) == CallFunctionNode and
-                  type(node.expression) == PlaceholderNode and
-                  node.expression.name == 'foo')
+      return (type(node) == CallFunctionNode and
+              type(node.expression) == PlaceholderNode and
+              node.expression.name == 'foo')
 
     foo_call = walker.find_node(analyzed_ast, pred)
     if not foo_call:
       self.fail('Expected foo() in ast')
-    self.assertEqual(foo_call.needs_sanitization_wrapper, SanitizedState.YES)
+    self.assertEqual(foo_call.sanitization_state,
+                     SanitizedState.SANITIZED_STRING)
 
-  def test_library_function_true(self):
+  def test_library_function_direct(self):
     code = """
     #from module import library my_lib
 
@@ -435,16 +441,37 @@ class TestSanitizedFunction(BaseTest):
     semantic_analyzer = self._get_analyzer(template)
     analyzed_ast = semantic_analyzer.get_ast()
     def pred(node):
-      return bool(type(node) == CallFunctionNode and
-                  type(node.expression) == IdentifierNode and
-                  node.expression.name == 'my_lib.foo')
+      return (type(node) == CallFunctionNode and
+              type(node.expression) == IdentifierNode and
+              node.expression.name == 'my_lib.foo')
 
     foo_call = walker.find_node(analyzed_ast, pred)
     if not foo_call:
       self.fail('Expected my_lib.foo() in ast')
-    self.assertEqual(foo_call.needs_sanitization_wrapper, SanitizedState.YES)
+    self.assertEqual(foo_call.sanitization_state,
+                     SanitizedState.SANITIZED_STRING)
 
-  def test_external_function_false(self):
+  def test_library_function_registry_yes(self):
+    code = """
+    #def bar
+      $reg_f()
+    #end def
+    """
+    template = self._compile(code)
+    semantic_analyzer = self._get_analyzer(template)
+    analyzed_ast = semantic_analyzer.get_ast()
+    def pred(node):
+      return (type(node) == CallFunctionNode and
+              type(node.expression) == PlaceholderNode and
+              node.expression.name == 'reg_f')
+
+    foo_call = walker.find_node(analyzed_ast, pred)
+    if not foo_call:
+      self.fail('Expected reg_f() in ast')
+    self.assertEqual(foo_call.sanitization_state,
+                     SanitizedState.SANITIZED)
+
+  def test_external_function_maybe(self):
     code = """
     #from module import my_lib
 
@@ -456,16 +483,17 @@ class TestSanitizedFunction(BaseTest):
     semantic_analyzer = self._get_analyzer(template)
     analyzed_ast = semantic_analyzer.get_ast()
     def pred(node):
-      return bool(type(node) == CallFunctionNode and
-                  type(node.expression) == GetUDNNode and
-                  type(node.expression.expression) == PlaceholderNode and
-                  node.expression.expression.name == 'my_lib' and
-                  node.expression.name == 'foo')
+      return (type(node) == CallFunctionNode and
+              type(node.expression) == GetUDNNode and
+              type(node.expression.expression) == PlaceholderNode and
+              node.expression.expression.name == 'my_lib' and
+              node.expression.name == 'foo')
 
     foo_call = walker.find_node(analyzed_ast, pred)
     if not foo_call:
       self.fail('Expected my_libfoo() in ast')
-    self.assertEqual(foo_call.needs_sanitization_wrapper, SanitizedState.MAYBE)
+    self.assertEqual(foo_call.sanitization_state,
+                     SanitizedState.UNKNOWN)
 
 
 if __name__ == '__main__':

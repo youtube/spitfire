@@ -463,7 +463,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
               node == node.parent.test_expression)
     if _get_parent_node_by_pred(function_call, is_in_test_expression,
                                 search_current=True):
-      function_call.needs_sanitization_wrapper = SanitizedState.NO
+      function_call.sanitization_state = SanitizedState.NO
+    # If the CallFunctionNode is in a DoNode, do not wrap the function with a
+    # SanitizedPlaceholder.
+    if _get_parent_node_by_type(function_call, DoNode):
+      function_call.sanitization_state = SanitizedState.NO
 
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
@@ -922,10 +926,10 @@ class FinalPassAnalyzer(_BaseAnalyzer):
     optimization is handled after caching placeholders.
     """
     self.visit_ast(buffer_write.expression, buffer_write)
-    # No need to generate sanitized placeholders when writing
-    # directly to the buffer.
+    # All filterning is done before writing to the buffer. If the function
+    # output needed filtering then it would be wrapped in a FilterNode.
     if isinstance(buffer_write.expression, CallFunctionNode):
-      buffer_write.expression.needs_sanitization_wrapper = SanitizedState.NO
+      buffer_write.expression.sanitization_state =  SanitizedState.NO
 
   def hoist(self, parent_node, parent_block, insertion_point, alias_node,
             assign_alias_node):

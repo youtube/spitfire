@@ -76,7 +76,6 @@ class SpitfireTemplate(object):
     if getattr(function, 'skip_filter', False):
       if type(value) == str:
         return SanitizedPlaceholder(value)
-      return value
     return value
 
   @staticmethod

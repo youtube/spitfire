@@ -269,18 +269,28 @@ class DoNode(ASTNode):
 class SanitizedState(object):
   """An enum of the sanitization states of the return value for a function call.
 
-  YES: We know for sure that the return value is already filtered.
-  Therefore, we wrap the call in a SanitizedPlaceholder.
+  SANITIZED_STRING: We know for sure that the return value is already filtered
+  and is a string. Threrefore, we wrap the call in a SanitizedPlaceholder
+  directly.
 
-  MAYBE: We aren't sure if the return type is filtered. Therefore, we
+  SANITIZED: We know for sure that the return value is already filtered.
+  Therefore, we wrap the call in mark_as_sanitized.
+
+  UNKNOWN: We aren't sure if the return type is filtered. Therefore, we
   check for a skip_filter annotation on the function at runtime.
 
-  NO: We are sure that the function does not return a filtered value
+  UNSANITIZED: We are sure that the function does not return a filtered value
   so we should not do anything with the return value.
+
+  NO: We know that the function output will not be stored in a variable or
+  passed into another function. Therefore, we do not need to do anything with
+  the return value.
   """
-  YES = 1
-  MAYBE = 2
-  NO = 3
+  SANITIZED_STRING = 1
+  SANITIZED = 2
+  UNKNOWN = 3
+  UNSANITIZED = 4
+  NO = 5
 
 class CallFunctionNode(ASTNode):
   def __init__(self, expression=None, arg_list=None, pos=None):
@@ -290,7 +300,7 @@ class CallFunctionNode(ASTNode):
     self.library_function = False
     # What the current sanitized state is of the function call.
     # See SanitizedState.
-    self.needs_sanitization_wrapper = SanitizedState.MAYBE
+    self.sanitization_state = SanitizedState.UNKNOWN
     if arg_list:
       self.arg_list = arg_list
     else:
@@ -307,8 +317,8 @@ class CallFunctionNode(ASTNode):
                 self.library_function == node.library_function and
                 self.expression == node.expression and
                 self.arg_list == node.arg_list and
-                (self.needs_sanitization_wrapper ==
-                 node.needs_sanitization_wrapper) and
+                (self.sanitization_state ==
+                 node.sanitization_state) and
                 self.child_nodes == node.child_nodes)
 
   def __hash__(self):

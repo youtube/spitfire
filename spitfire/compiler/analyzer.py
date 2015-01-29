@@ -630,18 +630,18 @@ class SemanticAnalyzer(object):
         macro_function, macro_parse_rule = macro_data
         return self.handleMacro(fn, macro_function, macro_parse_rule)
       elif fn.expression.name in self.template.template_methods:
-        fn.needs_sanitization_wrapper = SanitizedState.YES
+        fn.sanitization_state = SanitizedState.SANITIZED_STRING
         if self.template.library:
           # Calling another library function from this library function.
           library_function = fn.expression.name
       elif skip_filter:
         # If the function is marked as skip_filter in the registry, we
         # know it is sanitized.
-        fn.needs_sanitization_wrapper = SanitizedState.YES
+        fn.sanitization_state = SanitizedState.SANITIZED
       elif skip_filter is False:
         # If the function is marked as skip_filter=False in the registry, we
         # know it is not sanitized.
-        fn.needs_sanitization_wrapper = SanitizedState.NO
+        fn.sanitization_state = SanitizedState.UNSANITIZED
     elif isinstance(fn.expression, GetUDNNode):
       identifier = [node.name for node in fn.expression.getChildNodes()]
       identifier = '.'.join(identifier)
@@ -656,7 +656,7 @@ class SemanticAnalyzer(object):
       # Pass the current template instance into the library function.
       fn.arg_list.child_nodes.insert(0, IdentifierNode('self'))
       # Library functions are spitfire functions so their output is sanitized.
-      fn.needs_sanitization_wrapper = SanitizedState.YES
+      fn.sanitization_state = SanitizedState.SANITIZED_STRING
       fn.library_function = True
 
     fn.expression = self.build_ast(fn.expression)[0]

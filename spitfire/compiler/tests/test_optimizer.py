@@ -1081,7 +1081,7 @@ class TestHoistOnlyClean(BaseTest):
       self.fail('AssignNode should not be hoisted to the FunctionNode.')
 
 
-class TestNoSanitizationIfCondition(BaseTest):
+class TestNoSanitization(BaseTest):
 
   def setUp(self):
     options = sptoptions.default_options
@@ -1103,7 +1103,7 @@ class TestNoSanitizationIfCondition(BaseTest):
     optimization_analyzer = self._get_analyzer(analyzed_tree)
     return optimization_analyzer.optimize_ast()
 
-  def test_should_not_need_sanitization(self):
+  def test_should_not_need_sanitization_if(self):
     code = """
 #def foo($bar)
   #if $bar.baz()
@@ -1120,8 +1120,26 @@ class TestNoSanitizationIfCondition(BaseTest):
     call_node = walker.find_node(optimized_tree, pred)
     if not call_node:
       self.fail('Expected to find a CallFunctionNode.')
-    if call_node.needs_sanitization_wrapper != SanitizedState.NO:
+    if call_node.sanitization_state != SanitizedState.NO:
       self.fail('Expected node in test expression to not need sanitization.')
+
+  def test_should_not_need_sanitization_do(self):
+    code = """
+#def foo($bar)
+  #do $bar.baz()
+#end def
+    """
+
+    optimized_tree = self._get_optimized_tree(code)
+
+    def pred(node):
+      return type(node) == CallFunctionNode
+
+    call_node = walker.find_node(optimized_tree, pred)
+    if not call_node:
+      self.fail('Expected to find a CallFunctionNode.')
+    if call_node.sanitization_state != SanitizedState.NO:
+      self.fail('Expected node in #do to not need sanitization.')
 
 
 if __name__ == '__main__':
