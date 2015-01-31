@@ -108,6 +108,15 @@ def _get_common_aliased_expression_map(*scopes):
   return dict([(key, scopes[0].aliased_expression_map[key]) for
                key in common_clean_keys])
 
+# Utility functions for generating names.
+def _generate_filtered_placeholder(node):
+  """Given a node, generate a name for the cached filtered placeholder"""
+  return '_fph%08X' % unsigned_hash(node)
+
+def _generate_cached_resolved_placeholder(node):
+  """Given a node, generate a name for the cached udn placeholder"""
+  return '_rudn%08X' % unsigned_hash(node)
+
 class _BaseAnalyzer(object):
   def __init__(self, ast_root, options, compiler):
     self.ast_root = ast_root
@@ -389,7 +398,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
                 _identifier.name), pos=node.pos)
     else:
       _identifier = IdentifierNode(node.left.name, pos=node.pos)
-      alias_name = self.generate_filtered_placeholder(_identifier)
+      alias_name = _generate_filtered_placeholder(_identifier)
       if alias_name in scope.alias_name_set:
         if self.options.double_assign_error:
           self.compiler.error(
@@ -463,11 +472,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
               node == node.parent.test_expression)
     if _get_parent_node_by_pred(function_call, is_in_test_expression,
                                 search_current=True):
-      function_call.sanitization_state = SanitizedState.NO
+      function_call.sanitization_state = SanitizedState.NOT_OUTPUTTED
     # If the CallFunctionNode is in a DoNode, do not wrap the function with a
     # SanitizedPlaceholder.
     if _get_parent_node_by_type(function_call, DoNode):
-      function_call.sanitization_state = SanitizedState.NO
+      function_call.sanitization_state = SanitizedState.NOT_OUTPUTTED
 
     self.visit_ast(function_call.expression, function_call)
     self.visit_ast(function_call.arg_list, function_call)
@@ -504,16 +513,15 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       if n:
         self.visit_ast(n, node)
 
-  def generate_filtered_placeholder(self, node):
-    """Given a node, generate a name for the cached filtered placeholder"""
-    return '_fph%08X' % unsigned_hash(node)
-
-  def _generate_cached_udn_placeholder(self, node):
-    """Given a node, generate a name for the cached udn placeholder"""
-    return '_cudn%08X' % unsigned_hash(node)
-
   def analyzeFilterNode(self, filter_node):
     self.visit_ast(filter_node.expression, filter_node)
+
+    if isinstance(filter_node.expression, CallFunctionNode):
+      # If a FilterNode has a CallFunctionNode as an expression, let the filter
+      # node handle determining if filtering should occur, rather than the
+      # sanitization wrapper.
+      filter_node.expression.sanitization_state = (
+          SanitizedState.OUTPUTTED_IMMEDIATELY)
 
     if (isinstance(filter_node.expression, CallFunctionNode) and
         isinstance(filter_node.expression.expression, TemplateMethodIdentifierNode)):
@@ -527,13 +535,13 @@ class OptimizationAnalyzer(_BaseAnalyzer):
     # IdentifierNode with a '.' in the name.
     if isinstance(filter_node.expression, CallFunctionNode):
       fn_node = filter_node.expression
-      if (isinstance(fn_node.expression, GetUDNNode) or
-          (isinstance(fn_node.expression, IdentifierNode) and
-           '.' in fn_node.expression.name)):
+      if (self.options.cache_resolved_udn_expressions and
+          isinstance(fn_node.expression, IdentifierNode) and
+          '.' in fn_node.expression.name):
         scope = self.get_parent_scope(filter_node)
         udn_node = fn_node.expression
-        # For some udn style node, create a cached variable. ex. _cudn12345
-        alias_name = self._generate_cached_udn_placeholder(udn_node)
+        # For some udn style node, create a cached variable. ex. _rudn12345
+        alias_name = _generate_cached_resolved_placeholder(udn_node)
         alias = IdentifierNode(alias_name, pos=filter_node.pos)
         scope.local_identifiers.add(alias)
         # Create an assignment node that assigns the udn node to the
@@ -553,7 +561,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       alias = scope.aliased_expression_map.get(filter_node)
 
       if not alias:
-        alias_name = self.generate_filtered_placeholder(filter_node.expression)
+        alias_name = _generate_filtered_placeholder(filter_node.expression)
         if alias_name in scope.alias_name_set:
           print "duplicate alias_name", alias_name
           print "scope", scope
@@ -834,7 +842,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
       return
 
     if self.options.cache_resolved_udn_expressions:
-      cached_udn = IdentifierNode('_rudn_%s' % unsigned_hash(node),
+      cached_udn = IdentifierNode(_generate_cached_resolved_placeholder(node),
                                   pos=node.pos)
       (local_identifiers, _, _) = _get_local_identifiers(node)
       if cached_udn in local_identifiers:
@@ -929,7 +937,8 @@ class FinalPassAnalyzer(_BaseAnalyzer):
     # All filterning is done before writing to the buffer. If the function
     # output needed filtering then it would be wrapped in a FilterNode.
     if isinstance(buffer_write.expression, CallFunctionNode):
-      buffer_write.expression.sanitization_state =  SanitizedState.NO
+      buffer_write.expression.sanitization_state = (
+          SanitizedState.OUTPUTTED_IMMEDIATELY)
 
   def hoist(self, parent_node, parent_block, insertion_point, alias_node,
             assign_alias_node):

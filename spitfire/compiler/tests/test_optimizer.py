@@ -837,7 +837,18 @@ class TestDoNode(BaseTest):
 
 class TestCacheFilterArgs(BaseTest):
 
-  def test_cache_filter_args(self):
+  def setUp(self):
+    options = sptoptions.default_options
+    options.update(cache_resolved_udn_expressions=True,
+                   enable_warnings=True, warnings_as_errors=True,
+                   directly_access_defined_variables=True,
+                   static_analysis=False)
+    self.compiler = sptcompiler.Compiler(
+        analyzer_options=options,
+        xspt_mode=False,
+        compiler_stack_traces=True)
+
+  def test_cache_filter_args_udn(self):
     code = """
 #from foo import bar
 
@@ -861,6 +872,32 @@ class TestCacheFilterArgs(BaseTest):
     alias_assign = walker.find_node(optimized_tree, pred)
     if not alias_assign:
       self.fail('There should be an AssignNode due to caching')
+
+  def test_cache_filter_args_identifier(self):
+    code = """
+#implements library
+#from foo import library bar
+
+#def func
+  $bar.baz('arg')
+#end def
+    """
+    ast_root = self._compile(code)
+    semantic_analyzer = analyzer.SemanticAnalyzer(
+        'TestTemplate',
+        ast_root,
+        self.compiler.analyzer_options,
+        self.compiler)
+    analyzed_tree = semantic_analyzer.get_ast()
+
+    optimization_analyzer = self._get_analyzer(analyzed_tree)
+    optimized_tree = optimization_analyzer.optimize_ast()
+
+    def pred(node):
+      return type(node) == AssignNode
+      alias_assign = walker.find_node(optimized_tree, pred)
+      if not alias_assign:
+        self.fail('There should be an AssignNode due to caching')
 
 
 class TestFilterInMacro(BaseTest):
@@ -1081,7 +1118,7 @@ class TestHoistOnlyClean(BaseTest):
       self.fail('AssignNode should not be hoisted to the FunctionNode.')
 
 
-class TestNoSanitization(BaseTest):
+class TestSanitizationOptimizations(BaseTest):
 
   def setUp(self):
     options = sptoptions.default_options
@@ -1120,7 +1157,7 @@ class TestNoSanitization(BaseTest):
     call_node = walker.find_node(optimized_tree, pred)
     if not call_node:
       self.fail('Expected to find a CallFunctionNode.')
-    if call_node.sanitization_state != SanitizedState.NO:
+    if call_node.sanitization_state != SanitizedState.NOT_OUTPUTTED:
       self.fail('Expected node in test expression to not need sanitization.')
 
   def test_should_not_need_sanitization_do(self):
@@ -1138,8 +1175,27 @@ class TestNoSanitization(BaseTest):
     call_node = walker.find_node(optimized_tree, pred)
     if not call_node:
       self.fail('Expected to find a CallFunctionNode.')
-    if call_node.sanitization_state != SanitizedState.NO:
+    if call_node.sanitization_state != SanitizedState.NOT_OUTPUTTED:
       self.fail('Expected node in #do to not need sanitization.')
+
+  def test_should_not_need_sanitization_filter(self):
+    code = """
+#def foo($bar)
+  $bar()
+#end def
+    """
+
+    optimized_tree = self._get_optimized_tree(code)
+
+    def pred(node):
+      return (type(node) == CallFunctionNode and
+              type(node.parent) == FilterNode)
+
+    call_node = walker.find_node(optimized_tree, pred)
+    if not call_node:
+      self.fail('Expected to find a CallFunctionNode.')
+    if call_node.sanitization_state != SanitizedState.OUTPUTTED_IMMEDIATELY:
+      self.fail('Expected node in FilterNode to not need sanitization.')
 
 
 if __name__ == '__main__':

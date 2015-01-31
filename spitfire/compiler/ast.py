@@ -282,15 +282,20 @@ class SanitizedState(object):
   UNSANITIZED: We are sure that the function does not return a filtered value
   so we should not do anything with the return value.
 
-  NO: We know that the function output will not be stored in a variable or
-  passed into another function. Therefore, we do not need to do anything with
-  the return value.
+  NOT_OUTPUTTED: We know that the function output will not be stored in a
+  variable or passed into another function. Therefore, we do not need to do
+  anything with the return value.
+
+  OUTPUTTED_IMMEDIATELY: We know that the result of the function will be used
+  immediately, so the skip_filter information on the function will be sufficient
+  and there is no need to wrap the result in a SanitizedPlaceholder.
   """
   SANITIZED_STRING = 1
   SANITIZED = 2
   UNKNOWN = 3
   UNSANITIZED = 4
-  NO = 5
+  NOT_OUTPUTTED = 5
+  OUTPUTTED_IMMEDIATELY = 6
 
 class CallFunctionNode(ASTNode):
   def __init__(self, expression=None, arg_list=None, pos=None):
