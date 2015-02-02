@@ -249,7 +249,8 @@ class CodeGenerator(object):
         self.function_stack[-1].uses_sanitize = True
         return [CodeNode('_self_mark_as_sanitized(%s)' % call, input_pos=node.pos)]
       elif (sanitization_state == SanitizedState.UNSANITIZED or
-            sanitization_state == SanitizedState.NO):
+            sanitization_state == SanitizedState.NOT_OUTPUTTED or
+            sanitization_state == SanitizedState.OUTPUTTED_IMMEDIATELY):
         return [CodeNode(call, input_pos=node.pos)]
       elif sanitization_state == SanitizedState.UNKNOWN:
         self.function_stack[-1].uses_runtime_sanitize = True
