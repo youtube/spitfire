@@ -7,8 +7,6 @@ import spitfire.runtime.repeater
 
 from spitfire.runtime.udn import (
   _resolve_from_search_list, UnresolvedPlaceholder)
-from spitfire.runtime import SanitizedPlaceholder
-
 
 # NOTE: in some instances, this is faster than using cStringIO
 # this is slightly counter intuitive and probably means there is more here than
@@ -64,30 +62,6 @@ class SpitfireTemplate(object):
       return value
     else:
       return self._filter_function(value)
-
-  @staticmethod
-  def runtime_mark_as_sanitized(value, function):
-    """Wrap a function's return value in a SanitizedPlaceholder.
-
-    This function is called often so it needs to be fast. This
-    function checks the skip_filter annotation on the function passed
-    in to determine if the value should be wrapped.
-    """
-    if getattr(function, 'skip_filter', False):
-      if type(value) == str:
-        return SanitizedPlaceholder(value)
-    return value
-
-  @staticmethod
-  def mark_as_sanitized(value):
-    """Wrap a value in a SanitizedPlaceholder.
-
-    This function is called often so it needs to be fast.
-    """
-    # The if branch is going to be taken in most cases.
-    if type(value) == str:
-      return SanitizedPlaceholder(value)
-    return value
 
   @staticmethod
   def new_buffer():

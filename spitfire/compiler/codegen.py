@@ -124,7 +124,9 @@ class CodeGenerator(object):
       module_code.append_line('from spitfire.runtime.udn import resolve_placeholder_with_locals')
       module_code.append_line('from spitfire.runtime.udn import resolve_udn')
 
-    module_code.append_line('from spitfire.runtime import SanitizedPlaceholder')
+    module_code.append_line('from spitfire.runtime.baked import SanitizedPlaceholder')
+    module_code.append_line('from spitfire.runtime.baked import runtime_mark_as_sanitized')
+    module_code.append_line('from spitfire.runtime.baked import mark_as_sanitized')
     module_code.append_line('from spitfire.runtime.template import template_method')
     module_code.append_line('')
 
@@ -246,16 +248,14 @@ class CodeGenerator(object):
       if sanitization_state == SanitizedState.SANITIZED_STRING:
         return [CodeNode('SanitizedPlaceholder(%s)' % call, input_pos=node.pos)]
       elif sanitization_state == SanitizedState.SANITIZED:
-        self.function_stack[-1].uses_sanitize = True
-        return [CodeNode('_self_mark_as_sanitized(%s)' % call, input_pos=node.pos)]
+        return [CodeNode('mark_as_sanitized(%s)' % call, input_pos=node.pos)]
       elif (sanitization_state == SanitizedState.UNSANITIZED or
             sanitization_state == SanitizedState.NOT_OUTPUTTED or
             sanitization_state == SanitizedState.OUTPUTTED_IMMEDIATELY):
         return [CodeNode(call, input_pos=node.pos)]
       elif sanitization_state == SanitizedState.UNKNOWN:
-        self.function_stack[-1].uses_runtime_sanitize = True
         return [CodeNode(
-            '_self_runtime_mark_as_sanitized(%(call)s, %(expression)s)' % vars(),
+            'runtime_mark_as_sanitized(%(call)s, %(expression)s)' % vars(),
             input_pos=node.pos)]
     return [CodeNode(call, input_pos=node.pos)]
 
@@ -430,8 +430,6 @@ class CodeGenerator(object):
     node.uses_private_filter_function = False
     node.uses_buffer_write = False
     node.uses_buffer_extend = False
-    node.uses_sanitize = False
-    node.uses_runtime_sanitize = False
     self.function_stack.append(node)
     if node.parameter_list:
       parameter_list = self.generate_python(
@@ -512,12 +510,6 @@ class CodeGenerator(object):
       insertion_point += 1
     if node.uses_private_filter_function:
       code_node.insert(insertion_point, CodeNode('_self_private_filter_function = self._filter_function'))
-      insertion_point += 1
-    if node.uses_sanitize:
-      code_node.insert(insertion_point, CodeNode('_self_mark_as_sanitized = self.mark_as_sanitized'))
-      insertion_point += 1
-    if node.uses_runtime_sanitize:
-      code_node.insert(insertion_point, CodeNode('_self_runtime_mark_as_sanitized = self.runtime_mark_as_sanitized'))
       insertion_point += 1
     if node.uses_buffer_write:
       code_node.insert(insertion_point, CodeNode('_buffer_write = _buffer.write'))

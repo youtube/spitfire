@@ -8,11 +8,6 @@ class PlaceholderError(KeyError):
 class UDNResolveError(Exception):
   pass
 
-class SanitizedPlaceholder(str):
-  """A sanitized placeholder wraps another value to let
-  the runtime know that this does not need to filtered again."""
-  pass
-
 # the idea is to have something that is always like None, but explodes when
 # you try to use it as a string. this means that you can resolve placeholders
 # and evaluate them in complex conditional expressions, allowing them to be
