@@ -245,9 +245,8 @@ class CodeGenerator(object):
     call = ASTCallFunctionNode_tmpl[0] % vars()
     if self.baked_mode:
       sanitization_state = node.sanitization_state
-      if sanitization_state == SanitizedState.SANITIZED_STRING:
-        return [CodeNode('SanitizedPlaceholder(%s)' % call, input_pos=node.pos)]
-      elif sanitization_state == SanitizedState.SANITIZED:
+      if (sanitization_state == SanitizedState.SANITIZED_STRING or
+          sanitization_state == SanitizedState.SANITIZED):
         return [CodeNode('mark_as_sanitized(%s)' % call, input_pos=node.pos)]
       elif (sanitization_state == SanitizedState.UNSANITIZED or
             sanitization_state == SanitizedState.NOT_OUTPUTTED or
