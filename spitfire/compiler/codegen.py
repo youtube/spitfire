@@ -245,6 +245,8 @@ class CodeGenerator(object):
     call = ASTCallFunctionNode_tmpl[0] % vars()
     if self.baked_mode:
       sanitization_state = node.sanitization_state
+      # For SANITIZED_STRING we could use SanitizedPlaceholder(), but the
+      # mark_as_sanitized() function is faster so we use that instead.
       if (sanitization_state == SanitizedState.SANITIZED_STRING or
           sanitization_state == SanitizedState.SANITIZED):
         return [CodeNode('mark_as_sanitized(%s)' % call, input_pos=node.pos)]
