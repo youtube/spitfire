@@ -615,6 +615,9 @@ class AllowUndeclaredGlobalsNode(ASTNode):
 class LooseResolutionNode(ASTNode):
   pass
 
+class AllowRawNode(ASTNode):
+  pass
+
 class ImportNode(ASTNode):
   def __init__(self, module_name_list, library=False, pos=None):
     ASTNode.__init__(self, pos=pos)
@@ -832,6 +835,7 @@ class TemplateNode(ASTNode):
     self.allow_undeclared_globals = False
     self.use_loose_resolution = False
     self.baked = False
+    self.explicitly_allow_raw = False
     self.global_placeholders = set()
     self.global_identifiers = set()
     self.cached_identifiers = set()

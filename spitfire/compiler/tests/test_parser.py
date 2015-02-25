@@ -1,6 +1,7 @@
 import unittest
 from spitfire.compiler.ast import *
 from spitfire.compiler import util
+from spitfire.compiler import walker
 import yappsrt
 
 
@@ -11,28 +12,12 @@ class BaseTest(unittest.TestCase):
     template_node.source_path = 'test_template.spt'
     return template_node
 
-  def _find_node(self, ast, pred):
-    """Look for a given node based on a predicate function.
-    Return the first one found"""
-    if pred(ast):
-      return ast
-    for child_node in ast.child_nodes:
-      found = self._find_node(child_node, pred)
-      if found:
-        return found
-      if isinstance(ast, (CallFunctionNode, FilterNode)):
-        found = self._find_node(ast.expression, pred)
-        if found:
-          return found
-    return None
-
 
 class TestEscapeHash(BaseTest):
 
   @staticmethod
   def _def_foo_pred(node):
-      return bool(type(node) == DefNode and
-                  node.name == 'foo')
+      return type(node) == DefNode and node.name == 'foo'
 
   def test_escape_simple(self):
     code = """
@@ -42,7 +27,7 @@ class TestEscapeHash(BaseTest):
     """
     template = self._compile(code)
 
-    def_node = self._find_node(template, TestEscapeHash._def_foo_pred)
+    def_node = walker.find_node(template, TestEscapeHash._def_foo_pred)
     text = ''.join([node.value for node in def_node.child_nodes if type(node) == TextNode])
     self.assertEqual(text, '#test')
 
@@ -54,11 +39,8 @@ class TestEscapeHash(BaseTest):
 #end def
     """
     template = self._compile(code)
-    def pred(node):
-      return bool(type(node) == DefNode and
-                  node.name == 'foo')
 
-    def_node = self._find_node(template, TestEscapeHash._def_foo_pred)
+    def_node = walker.find_node(template, TestEscapeHash._def_foo_pred)
     text = ''.join([node.value for node in def_node.child_nodes if type(node) == TextNode])
     self.assertEqual(text, '\\#test')
 
@@ -69,11 +51,8 @@ class TestEscapeHash(BaseTest):
 #end def
     """
     template = self._compile(code)
-    def pred(node):
-      return bool(type(node) == DefNode and
-                  node.name == 'foo')
 
-    def_node = self._find_node(template, TestEscapeHash._def_foo_pred)
+    def_node = walker.find_node(template, TestEscapeHash._def_foo_pred)
     text = ''.join([node.value for node in def_node.child_nodes if type(node) == TextNode])
     self.assertEqual(text, '#if')
 
@@ -82,7 +61,7 @@ class TestDo(BaseTest):
 
   @staticmethod
   def _do_pred(node):
-    return bool(type(node) == DoNode)
+    return type(node) == DoNode
 
   def test_do_syntax(self):
     code = """
@@ -91,8 +70,7 @@ class TestDo(BaseTest):
 #end def
     """
     template = self._compile(code)
-
-    do_node = self._find_node(template, TestDo._do_pred)
+    do_node = walker.find_node(template, TestDo._do_pred)
     if not do_node:
       self.fail('Do node should be present in AST')
 
@@ -112,9 +90,28 @@ class TestDo(BaseTest):
     """
     template = self._compile(code)
 
-    do_node = self._find_node(template, TestDo._do_pred)
+    do_node = walker.find_node(template, TestDo._do_pred)
     if not do_node:
       self.fail('Do node should be present in AST')
+
+class TestAllowRaw(BaseTest):
+
+  @staticmethod
+  def _allow_raw_pred(node):
+    return type(node) == AllowRawNode
+
+  def test_allow_raw(self):
+    code = """
+#allow_raw
+
+#def foo
+#end def
+"""
+    template = self._compile(code)
+
+    allow_raw_node = walker.find_node(template, TestAllowRaw._allow_raw_pred)
+    if not allow_raw_node:
+      self.fail('AllowRawNode should be present in AST')
 
 
 if __name__ == '__main__':

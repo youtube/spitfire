@@ -118,6 +118,8 @@ parser _SpitfireParser:
         |
         'loose_resolution' CLOSE_DIRECTIVE {{ return LooseResolutionNode() }}
         |
+        'allow_raw' CLOSE_DIRECTIVE {{ return AllowRawNode() }}
+        |
         'allow_undeclared_globals' CLOSE_DIRECTIVE {{ return AllowUndeclaredGlobalsNode() }}
         |
         'from' SPACE modulename SPACE 'import' SPACE library_keyword identifier CLOSE_DIRECTIVE {{ return FromNode(modulename, identifier, library=library_keyword) }}

@@ -67,6 +67,7 @@ class SemanticAnalyzer(object):
     self.ast_root = None
     self.template = None
     self.strip_lines = False
+    self.uses_raw = False
     self.base_extends_identifiers = []
     if self.compiler.base_extends_package:
       # this means that extends are supposed to all happen relative to some
@@ -149,6 +150,10 @@ class SemanticAnalyzer(object):
       built_nodes = self.build_ast(pn)
       if built_nodes and not self.template.library:
         self.template.main_function.extend(built_nodes)
+
+    if not self.uses_raw and self.template.explicitly_allow_raw:
+      self.compiler.error(
+          SemanticAnalyzerError('#allow_raw directive is not needed'))
 
     self.template.main_function.child_nodes = self.optimize_buffer_writes(
         self.template.main_function.child_nodes)
@@ -295,6 +300,10 @@ class SemanticAnalyzer(object):
 
   def analyzeLooseResolutionNode(self, pnode):
     self.template.use_loose_resolution = True
+    return []
+
+  def analyzeAllowRawNode(self, pnode):
+    self.template.explicitly_allow_raw = True
     return []
 
   def analyzeImportNode(self, pnode):
@@ -517,7 +526,17 @@ class SemanticAnalyzer(object):
         format_string == default_format_string and
         not isinstance(ph_expression, LiteralNode)):
       arg_node_map = pnode.parameter_list.get_arg_node_map()
-      if 'raw' not in arg_map:
+      if 'raw' in arg_map:
+        # If this is a |raw usage and the template does not allow raw, raise an
+        # error.
+        self.uses_raw = True
+        if self.options.no_raw and not self.template.explicitly_allow_raw:
+          self.compiler.error(
+              SemanticAnalyzerError(
+                  '|raw is not allowed in templates compiled with the '
+                  '--no-raw flag.'),
+              pos=pnode.pos)
+      else:
         # if we need to filter, wrap up the node and wait for further analysis
         # later on
         if skip_filter:

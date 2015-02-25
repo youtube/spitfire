@@ -106,6 +106,9 @@ class AnalyzerOptions(object):
     # Throw compiler errors if variables are used outside of their scope.
     self.static_analysis = False
 
+    # Disallow the use of raw in a template.
+    self.no_raw = False
+
     self.enable_psyco = False
     self.__dict__.update(kargs)
 
@@ -231,6 +234,8 @@ def add_common_options(op):
   op.add_option('--double-assign-error', default=False, action='store_true',
                 help='Throw an error if there is an unsafe double assignment.')
   op.add_option('--baked-mode', default=False, action='store_true',
+                help='A mode where the runtime tracks sanitization.')
+  op.add_option('--no-raw', default=False, action='store_true',
                 help='A stricter version of spitfire where |raw is prohibited.')
   op.add_option('--base-template-full-import-path',
                 action='store',

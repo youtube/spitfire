@@ -496,5 +496,55 @@ class TestSanitizedFunction(BaseTest):
                      SanitizedState.UNKNOWN)
 
 
+class TestNoRaw(BaseTest):
+
+  def setUp(self):
+    self.options = sptoptions.default_options
+    self.options.update(enable_warnings=True, warnings_as_errors=True,
+                        no_raw=True)
+    self.compiler = sptcompiler.Compiler(
+        analyzer_options=self.options,
+        xspt_mode=False,
+        compiler_stack_traces=True)
+
+  def test_error_with_raw(self):
+    code = """
+    #def foo
+      #set $a = "a"
+      ${a|raw}
+    #end def
+    """
+    template = self._compile(code)
+    semantic_analyzer = self._get_analyzer(template)
+    self.assertRaises(analyzer.SemanticAnalyzerError,
+                      semantic_analyzer.get_ast)
+
+  def test_allow_raw_no_error(self):
+    code = """
+    #allow_raw
+    #def foo
+      #set $a = "a"
+      ${a|raw}
+    #end def
+    """
+    template = self._compile(code)
+    semantic_analyzer = self._get_analyzer(template)
+    try:
+      semantic_analyzer.get_ast()
+    except analyzer.SemanticAnalyzerError:
+      self.fail('get_ast raised an error unexpectedly.')
+
+  def test_allow_raw_no_raw_error(self):
+    code = """
+    #allow_raw
+    #def foo
+    #end def
+    """
+    template = self._compile(code)
+    semantic_analyzer = self._get_analyzer(template)
+    self.assertRaises(analyzer.SemanticAnalyzerError,
+                      semantic_analyzer.get_ast)
+
+
 if __name__ == '__main__':
   unittest.main()

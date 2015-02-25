@@ -36,6 +36,7 @@ class Compiler(object):
       'include_path',
       'locale',
       'message_catalogue_file',
+      'no_raw',
       'normalize_whitespace',
       'optimizer_flags',
       'optimizer_level',
@@ -90,6 +91,7 @@ class Compiler(object):
     self.enable_warnings = False
     self.warnings_as_errors = False
     self.baked_mode = False
+    self.no_raw = False
 
     self.base_extends_package = None
     self.base_template_full_import_path = None
@@ -135,6 +137,7 @@ class Compiler(object):
           self.default_to_strict_resolution)
       self.analyzer_options.include_sourcemap = self.include_sourcemap
       self.analyzer_options.baked_mode = self.baked_mode
+      self.analyzer_options.no_raw = self.no_raw
 
     # slightly crappy code to support turning flags on and off from the
     # command line - probably should go in analyzer options?
