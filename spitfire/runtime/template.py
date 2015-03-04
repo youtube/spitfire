@@ -2,8 +2,10 @@
 
 #import StringIO
 import cStringIO as StringIO
+from spitfire.runtime import baked
 import spitfire.runtime.filters
 import spitfire.runtime.repeater
+from spitfire.runtime._template import filter_function as c_filter_function
 
 from spitfire.runtime.udn import (
   _resolve_from_search_list, UnresolvedPlaceholder)
@@ -55,13 +57,20 @@ class SpitfireTemplate(object):
   # times (avoids double escaping)
   # fixme: this could be a hotspot, having to call getattr all the time seems
   # like it might be a bit pokey
-  def filter_function(self, value, placeholder_function=None):
+  # This function is not used. See filter_function.
+  def py_filter_function(self, value, placeholder_function=None):
     #print "filter_function", placeholder_function, self._filter_function, "value: '%s'" % value
-    if (placeholder_function is not None and
+    # If the value is a SanitizedPlaceholder, it has already been filtered.
+    if type(value) is baked.SanitizedPlaceholder:
+      return value
+    elif (placeholder_function is not None and
         getattr(placeholder_function, 'skip_filter', False)):
       return value
     else:
       return self._filter_function(value)
+
+  def filter_function(self, value, placeholder_function=None):
+    return c_filter_function(self, value, placeholder_function)
 
   @staticmethod
   def new_buffer():
