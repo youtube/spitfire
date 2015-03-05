@@ -515,6 +515,10 @@ class SemanticAnalyzer(object):
             not [_arg for _arg in ph_expression.arg_list
                  if not isinstance(_arg, LiteralNode)])
         skip_filter = self.compiler.get_registry_value(fname, 'skip_filter')
+        skip_unless_baked = self.compiler.get_registry_value(
+            fname, 'skip_filter_unless_baked')
+        skip_filter = skip_filter or (not self.template.baked and
+                                      skip_unless_baked)
         cache_forever = self.compiler.get_registry_value(fname, 'cache_forever')
         never_cache = self.compiler.get_registry_value(fname, 'never_cache')
 
