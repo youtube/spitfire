@@ -14,12 +14,17 @@ def no_skip():
 
 
 class PySpitfireTemplate(template.SpitfireTemplate):
-  filter_function = template.SpitfireTemplate.py_filter_function
+
+  def __init__(self, *args, **kwargs):
+    super(PySpitfireTemplate, self).__init__(*args, **kwargs)
+    self.filter_function = self.py_baked_filter_function
 
 
 class CSpitfireTemplate(template.SpitfireTemplate):
-  def filter_function(self, value, placeholder_function=None):
-    return _template.filter_function(self, value, placeholder_function)
+
+  def __init__(self, *args, **kwargs):
+    super(CSpitfireTemplate, self).__init__(*args, **kwargs)
+    self.filter_function = self.baked_filter_function
 
 
 # Do not inherit from unittest.TestCase to ensure that these tests don't run.
@@ -30,7 +35,7 @@ class _TemplateTest(object):
   template_cls = None
 
   def setUp(self):
-    self.template = self.template_cls()
+    self.template = self.template_cls(baked=True)
     self.template._filter_function = lambda v: 'FILTERED'
 
   def test_skip_filter(self):
@@ -55,6 +60,18 @@ class TestTemplateC(_TemplateTest, unittest.TestCase):
 
 class TestTemplatePy(_TemplateTest, unittest.TestCase):
   template_cls = PySpitfireTemplate
+
+
+class TestTemplateBakedOff(unittest.TestCase):
+
+  def setUp(self):
+    self.template = template.SpitfireTemplate(baked=False)
+    self.template._filter_function = lambda v: 'FILTERED'
+
+  def test_filters_sanitized_placeholders(self):
+    got = self.template.filter_function(baked.SanitizedPlaceholder('foo'))
+    self.assertEqual(got, 'FILTERED')
+
 
 
 if __name__ == '__main__':

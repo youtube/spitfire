@@ -33,7 +33,7 @@ class SpitfireTemplate(object):
   placeholder_cache = None
 
   def __init__(self, search_list=None, default_filter=None,
-               use_placeholder_cache=False):
+               use_placeholder_cache=False, baked=False):
     # use_placeholder_cache - cache the values returned from the search_list?
     #   The cached values will live for the lifetime of this object.
     self.search_list = search_list
@@ -41,6 +41,9 @@ class SpitfireTemplate(object):
       self.placeholder_cache = {}
     if default_filter is not None:
       self._filter_function = default_filter
+
+    if baked:
+      self.filter_function = self.baked_filter_function
 
     # FIXME: repeater support is not needed most of the time, just
     # disable it for the time being
@@ -53,23 +56,29 @@ class SpitfireTemplate(object):
     var = self.get_var(name, default=UnresolvedPlaceholder)
     return var is not UnresolvedPlaceholder
 
+  def filter_function(self, value, placeholder_function=None):
+    if (placeholder_function is not None and
+        getattr(placeholder_function, 'skip_filter', False)):
+      return value
+    return self._filter_function(value)
+
   # wrap the underlying filter call so that items don't get filtered multiple
   # times (avoids double escaping)
   # fixme: this could be a hotspot, having to call getattr all the time seems
   # like it might be a bit pokey
   # This function is not used. See filter_function.
-  def py_filter_function(self, value, placeholder_function=None):
+  def py_baked_filter_function(self, value, placeholder_function=None):
     #print "filter_function", placeholder_function, self._filter_function, "value: '%s'" % value
     # If the value is a SanitizedPlaceholder, it has already been filtered.
     if type(value) is baked.SanitizedPlaceholder:
       return value
     elif (placeholder_function is not None and
-        getattr(placeholder_function, 'skip_filter', False)):
+          getattr(placeholder_function, 'skip_filter', False)):
       return value
     else:
       return self._filter_function(value)
 
-  def filter_function(self, value, placeholder_function=None):
+  def baked_filter_function(self, value, placeholder_function=None):
     return c_filter_function(self, value, placeholder_function)
 
   @staticmethod
