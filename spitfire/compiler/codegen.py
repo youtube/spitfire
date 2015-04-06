@@ -159,6 +159,11 @@ class CodeGenerator(object):
       extends_clause = ', '.join(extends)
       class_code = CodeNode(
         'class %(classname)s(%(extends_clause)s):' % vars())
+
+      # If this is a baked class, use the baked filter function.
+      if self.baked_mode:
+        class_code.append_line('_baked = True')
+
       module_code.append(class_code)
       for n in node.attr_nodes:
         class_code.extend(self.build_code(n))
