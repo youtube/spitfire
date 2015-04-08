@@ -12,28 +12,25 @@ is_skip.skip_filter = True
 def no_skip():
   pass
 
-class BakedSpitfireTemplate(template.SpitfireTemplate):
-  _baked = True
 
-
-class PySpitfireTemplate(BakedSpitfireTemplate):
+class PySpitfireTemplate(template.SpitfireTemplate):
 
   def __init__(self, *args, **kwargs):
     super(PySpitfireTemplate, self).__init__(*args, **kwargs)
-    self.filter_function = self.py_baked_filter_function
+    self.filter_function = self.py_filter_function
 
 
-class CSpitfireTemplate(BakedSpitfireTemplate):
+class CSpitfireTemplate(template.SpitfireTemplate):
 
   def __init__(self, *args, **kwargs):
     super(CSpitfireTemplate, self).__init__(*args, **kwargs)
-    self.filter_function = self.baked_filter_function
+    self.filter_function = self.filter_function
 
 
 # Do not inherit from unittest.TestCase to ensure that these tests don't run.
 # Add tests here and they will be run for the C and Python implementations. This
 # should make sure that both implementations are equivalent.
-class _TestTemplateBakedOn(object):
+class _TestTemplate(object):
 
   template_cls = None
 
@@ -57,25 +54,12 @@ class _TestTemplateBakedOn(object):
     self.assertEqual(type(got), type(want))
 
 
-class TestTemplateDefault(_TestTemplateBakedOn, unittest.TestCase):
-  template_cls = BakedSpitfireTemplate
-
-class TestTemplatePy(_TestTemplateBakedOn, unittest.TestCase):
-  template_cls = PySpitfireTemplate
-
-class TestTemplatePy(_TestTemplateBakedOn, unittest.TestCase):
+class TestTemplatePy(_TestTemplate, unittest.TestCase):
   template_cls = PySpitfireTemplate
 
 
-class TestTemplateBakedOff(unittest.TestCase):
-
-  def setUp(self):
-    self.template = template.SpitfireTemplate()
-    self.template._filter_function = lambda v: 'FILTERED'
-
-  def test_filters_sanitized_placeholders(self):
-    got = self.template.filter_function(baked.SanitizedPlaceholder('foo'))
-    self.assertEqual(got, 'FILTERED')
+class TestTemplatePy(_TestTemplate, unittest.TestCase):
+  template_cls = PySpitfireTemplate
 
 
 
