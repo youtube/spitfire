@@ -32,10 +32,8 @@ class SpitfireTemplate(object):
   repeat = None
   placeholder_cache = None
 
-  # TODO: Remove the baked constructor argument after removing the
-  # use in _base_servlet.py
   def __init__(self, search_list=None, default_filter=None,
-               use_placeholder_cache=False, baked=False):
+               use_placeholder_cache=False):
     # use_placeholder_cache - cache the values returned from the search_list?
     #   The cached values will live for the lifetime of this object.
     self.search_list = search_list
