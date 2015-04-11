@@ -534,6 +534,23 @@ class TestNoRaw(BaseTest):
     except analyzer.SemanticAnalyzerError:
       self.fail('get_ast raised an error unexpectedly.')
 
+  def test_allow_raw_macro_no_error(self):
+    code = """
+    #allow_raw
+    #global $a
+    #def foo
+      #i18n()#
+        ${a|raw}
+      #end i18n#
+    #end def
+    """
+    template = self._compile(code)
+    semantic_analyzer = self._get_analyzer(template)
+    try:
+      semantic_analyzer.get_ast()
+    except analyzer.SemanticAnalyzerError:
+      self.fail('get_ast raised an error unexpectedly.')
+
   def test_allow_raw_no_raw_error(self):
     code = """
     #allow_raw

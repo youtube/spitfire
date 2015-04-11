@@ -446,6 +446,19 @@ class SemanticAnalyzer(object):
       self.compiler.error(SemanticAnalyzerError("no handler registered for '%s'"
                                                 % macro_handler_name),
                           pos=pnode.pos)
+    try:
+      temp_fragment = util.parse(pnode.value,
+                                 macro_parse_rule or 'fragment_goal')
+    except Exception, e:
+      self.compiler.error(MacroParseError(e), pos=pnode.pos)
+
+    if not self.uses_raw:
+      for child_node in tree_walker(temp_fragment):
+        if (isinstance(child_node, PlaceholderSubstitutionNode) and
+            'raw' in child_node.parameter_list.get_arg_map()):
+          self.uses_raw = True
+          break
+
     return self.handleMacro(pnode, macro_function, macro_parse_rule)
 
   def analyzeGlobalNode(self, pnode):
