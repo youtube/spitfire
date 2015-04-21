@@ -78,7 +78,7 @@ init_template(void)
     return;
 
   baked_SanitizedPlaceholder = (struct _typeobject *)
-      PyObject_GetAttrString(baked_module,"SanitizedPlaceholder");
+      PyObject_GetAttrString(baked_module, "SanitizedPlaceholder");
   Py_DECREF(baked_module);
   if (baked_SanitizedPlaceholder == NULL)
     return;

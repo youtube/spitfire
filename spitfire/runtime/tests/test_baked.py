@@ -53,6 +53,48 @@ class _BakedTest(object):
     self.assertEqual(v, 'foo')
     self.assertEqual(type(v), self.SanitizedPlaceholder)
 
+  def test_add_sanitized(self):
+    a = self.SanitizedPlaceholder('foo')
+    b = self.SanitizedPlaceholder('bar')
+    v = a + b
+    self.assertEqual(v, 'foobar')
+    self.assertEqual(type(v), self.SanitizedPlaceholder)
+
+  def test_add_not_sanitized(self):
+    a = self.SanitizedPlaceholder('foo')
+    b = 'bar'
+    v = a + b
+    self.assertEqual(v, 'foobar')
+    self.assertEqual(type(v), str)
+
+  def test_add_reverse_not_sanitized(self):
+    a = self.SanitizedPlaceholder('foo')
+    b = 'bar'
+    v = b + a
+    self.assertEqual(v, 'barfoo')
+    self.assertEqual(type(v), str)
+
+  def test_mod_sanitized(self):
+    a = self.SanitizedPlaceholder('foo%s')
+    b = self.SanitizedPlaceholder('bar')
+    v = a % b
+    self.assertEqual(v, 'foobar')
+    self.assertEqual(type(v), self.SanitizedPlaceholder)
+
+  def test_mod_not_sanitized(self):
+    a = self.SanitizedPlaceholder('foo%s')
+    b = 'bar'
+    v = a % b
+    self.assertEqual(v, 'foobar')
+    self.assertEqual(type(v), str)
+
+  def test_mod_dict_not_sanitized(self):
+    a = self.SanitizedPlaceholder('foo%(b)s')
+    b = 'bar'
+    v = a % vars()
+    self.assertEqual(v, 'foobar')
+    self.assertEqual(type(v), str)
+
 
 class TestBakedPy(_BakedTest, unittest.TestCase):
   module = baked

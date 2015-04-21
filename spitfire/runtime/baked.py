@@ -8,7 +8,18 @@ class _SanitizedPlaceholder(str):
   SanitizedPlaceholder wraps another value to let the runtime know that this
   does not need to filtered again.
   """
-  pass
+
+  def __add__(self, other):
+    value = str.__add__(self, other)
+    if type(other) == _SanitizedPlaceholder:
+      value = _SanitizedPlaceholder(value)
+    return value
+
+  def __mod__(self, other):
+    value = str.__mod__(self, other)
+    if type(other) == _SanitizedPlaceholder:
+      value = _SanitizedPlaceholder(value)
+    return value
 
 
 def _runtime_mark_as_sanitized(value, function):
