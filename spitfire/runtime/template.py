@@ -5,7 +5,7 @@ import cStringIO as StringIO
 from spitfire.runtime import baked
 import spitfire.runtime.filters
 import spitfire.runtime.repeater
-from spitfire.runtime._template import filter_function as c_filter_function
+from spitfire.runtime import _template
 
 from spitfire.runtime.udn import (
   _resolve_from_search_list, UnresolvedPlaceholder)
@@ -19,7 +19,7 @@ class BufferIO(list):
   def getvalue(self):
     return ''.join(self)
 
-class SpitfireTemplate(object):
+class SpitfireTemplate(_template.BaseSpitfiretemplate):
   # store a reference to the filter function - this is tricky because of some
   # python stuff. filter functions look like this:
   #
@@ -68,9 +68,6 @@ class SpitfireTemplate(object):
       return value
     else:
       return self._filter_function(value)
-
-  def filter_function(self, value, placeholder_function=None):
-    return c_filter_function(self, value, placeholder_function)
 
   @staticmethod
   def new_buffer():

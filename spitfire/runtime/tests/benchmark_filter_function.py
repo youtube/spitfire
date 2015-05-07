@@ -17,8 +17,7 @@ class PySpitfireTemplate(template.SpitfireTemplate):
 
 
 class CSpitfireTemplate(template.SpitfireTemplate):
-  def filter_function(self, value, placeholder_function=None):
-    return _template.filter_function(self, value, placeholder_function)
+  pass
 
 
 sp_creation = ['foo', 'adafadfhasdkfh', 'dsafjadhf dafhaskfh kadsfadfadfasfjakfh', 'sdfsdfaa  adksj k jasdfljkasdf jka dsf']

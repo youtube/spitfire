@@ -20,13 +20,6 @@ class PySpitfireTemplate(template.SpitfireTemplate):
     self.filter_function = self.py_filter_function
 
 
-class CSpitfireTemplate(template.SpitfireTemplate):
-
-  def __init__(self, *args, **kwargs):
-    super(CSpitfireTemplate, self).__init__(*args, **kwargs)
-    self.filter_function = self.filter_function
-
-
 # Do not inherit from unittest.TestCase to ensure that these tests don't run.
 # Add tests here and they will be run for the C and Python implementations. This
 # should make sure that both implementations are equivalent.
@@ -54,8 +47,8 @@ class _TestTemplate(object):
     self.assertEqual(type(got), type(want))
 
 
-class TestTemplatePy(_TestTemplate, unittest.TestCase):
-  template_cls = PySpitfireTemplate
+class TestTemplateC(_TestTemplate, unittest.TestCase):
+  template_cls = template.SpitfireTemplate
 
 
 class TestTemplatePy(_TestTemplate, unittest.TestCase):
