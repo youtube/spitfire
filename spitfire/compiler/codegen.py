@@ -299,6 +299,11 @@ class CodeGenerator(object):
   def codegenASTLiteralNode(self, node):
     if (self.options and not self.options.generate_unicode and
         isinstance(node.value, basestring)):
+      # If the node is the empty string, we should mark it as sanitized by
+      # default. Eventually, all string literals should be marked as sanitized.
+      if self.baked_mode and node.value == '':
+        return [CodeNode("mark_as_sanitized('')", input_pos=node.pos)]
+
       return [CodeNode(repr(node.value.encode(self.ast_root.encoding)),
                        input_pos=node.pos)]
     else:
