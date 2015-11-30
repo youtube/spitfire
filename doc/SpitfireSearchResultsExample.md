@@ -1,9 +1,6 @@
-#summary a real-world Spitfire template
-#labels Featured
-
 This is a basic search template that I use a few hundred times a day in my desktop search tool.
 
-{{{
+```
 #from spitfire.runtime.filters import escape_html
 #filter escape_html
 <html>
@@ -38,4 +35,4 @@ This is a basic search template that I use a few hundred times a day in my deskt
     #end for
   </body>
 </html>
-}}}
+```

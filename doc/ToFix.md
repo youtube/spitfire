@@ -1,20 +1,17 @@
-#summary Known issues that need to be fixed.
+# Usability #
 
-= Usability =
+  * Support line continuations - all function arguments shouldn't need to be on the same line.
 
- * Support line continuations - all function arguments shouldn't need to be on the same line.
+  * Reassigning a name with `#set` should raise a compiler error if it will get ignored anyway.
 
- * Reassigning a name with `#set` should raise a compiler error if it will get ignored anyway.
-
- * Support `not in`.
+  * Support `not in`.
 
 
-= Internationalization =
+# Internationalization #
 
- * Support placeholder evaluation in $i18n() macros.
+  * Support placeholder evaluation in $i18n() macros.
 
- * Check in memtable (previously called xle).
+  * Check in memtable (previously called xle).
 
- * Build two implementations of the i18n macros. One using memtable and one using gettext. 
+  * Build two implementations of the i18n macros. One using memtable and one using gettext.
 
- 
