@@ -1,8 +1,11 @@
 import unittest
+from spitfire.runtime import _udn
 from spitfire.runtime import udn
+
 
 class Scope(object):
   boom = 'bam'
+
 
 class Foo(object):
   bar = 'baz'
@@ -58,6 +61,58 @@ class TestResolvePlaceholderWithLocals(unittest.TestCase):
     self.assertEqual(udn.resolve_placeholder_with_locals('foo', Foo,
                                                          {'foo': 'bar'},
                                                          None), 'bar')
+
+
+class Baz(object):
+  bar = 'win'
+
+
+class _UdnTest(object):
+
+  resolve_udn = None
+
+  def testResolveHitWithoutException(self):
+    self.assertEqual(self.resolve_udn(Baz(), 'bar'), 'win')
+
+  def testResolveHitWithException(self):
+    self.assertEqual(self.resolve_udn(Baz(), 'bar', raise_exception=True),
+                     'win')
+
+  def testResolveMissWithoutException(self):
+    self.assertIsInstance(self.resolve_udn(Baz(), 'missing'),
+                          udn.UndefinedAttribute)
+
+  def testResolveDoubleMissWithoutException(self):
+    """Shows that it's UndefinedAttribute's all the way down."""
+    undefined_attr = self.resolve_udn(Baz(), 'missing')
+    self.assertIsInstance(undefined_attr, udn.UndefinedAttribute)
+    undefined_attr2 = self.resolve_udn(undefined_attr, 'missing')
+    self.assertIsInstance(undefined_attr2, udn.UndefinedAttribute)
+
+  def testResolveMissWithException(self):
+    self.assertRaises(udn.UDNResolveError, self.resolve_udn, Baz(), 'misssing',
+                      raise_exception=True)
+
+
+class TestUdnC(_UdnTest, unittest.TestCase):
+  resolve_udn = staticmethod(_udn._resolve_udn)
+
+
+class TestUdnPyAttr3(_UdnTest, unittest.TestCase):
+  resolve_udn = staticmethod(udn.resolve_udn_prefer_attr3)
+
+
+class TestUdnPyAttr2(_UdnTest, unittest.TestCase):
+  resolve_udn = staticmethod(udn.resolve_udn_prefer_attr2)
+
+
+class TestUdnPyAttr(_UdnTest, unittest.TestCase):
+  resolve_udn = staticmethod(udn.resolve_udn_prefer_attr)
+
+
+class TestUdnPyDict(_UdnTest, unittest.TestCase):
+  resolve_udn = staticmethod(udn.resolve_udn_prefer_dict)
+
 
 if __name__ == '__main__':
   unittest.main()
