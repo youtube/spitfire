@@ -19,6 +19,13 @@ class TestCUdn(unittest.TestCase):
     self.assertIsInstance(_udn._resolve_udn(Foo(), 'missing'),
                           udn.UndefinedAttribute)
 
+  def testResolveDoubleMissWithoutException(self):
+    """Shows that it's UndefinedAttribute's all the way down."""
+    undefined_attr = _udn._resolve_udn(Foo(), 'missing')
+    self.assertIsInstance(undefined_attr, udn.UndefinedAttribute)
+    undefined_attr2 = _udn._resolve_udn(undefined_attr, 'missing')
+    self.assertIsInstance(undefined_attr2, udn.UndefinedAttribute)
+
   def testResolveMissWithException(self):
     self.assertRaises(udn.UDNResolveError, _udn._resolve_udn, Foo(), 'misssing',
                       raise_exception=True)
