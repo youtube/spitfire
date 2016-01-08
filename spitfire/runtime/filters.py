@@ -1,3 +1,8 @@
+# Copyright 2008 The Spitfire Authors. All Rights Reserved.
+#
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
 # a few helpful filter functions
 
 from spitfire.runtime.udn import UndefinedPlaceholder

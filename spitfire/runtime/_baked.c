@@ -1,3 +1,8 @@
+// Copyright 2015 The Spitfire Authors. All Rights Reserved.
+//
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 #include <Python.h>
 
 // Constant used when checking for the presence of the skip_filter attribute.
