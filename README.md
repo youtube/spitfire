@@ -1,13 +1,14 @@
-![http://spitfire.googlecode.com/svn/wiki/spitfire.png](http://spitfire.googlecode.com/svn/wiki/spitfire.png)
+![](https://gitcdn.xyz/repo/nicksay/spitfire/master/doc/spitfire.png)
 
-# Introduction #
+
+## Introduction
 
 Spitfire is a template language heavily inspired by Cheetah. It started out as an experiment to see if techniques from the compiler world were applicable to the mundane details of templates.
 
 At this point, Spitfire works - at least in theory. There are basic tests cases that assure templates parse, compile, generate and execute correctly. Most language features are covered with a high-level test, though it is possible that there are some bugs or shortcomings in the syntax.
 
 
-# Details #
+## Details
 
 The syntax itself is extremely similar to Cheetah, however there are some directives and language features that have been omitted (usually on purpose).  Trivial Cheetah templates will probably compile in Spitfire, so that's probably a good place to start.
 
@@ -17,13 +18,14 @@ There's also work being done on an attribute (i.e. XML namespace) variant of the
 
 There are also some vague notes on the internal CompilerDesign that are probably not useful to the majority of people.
 
-# Examples #
+
+## Examples
 
 Sometimes a good example is the best way to jump in.
   * SpitfireSearchResultsExample
 
 
-# Current Release #
+# Current Release
 
 [spitfire-0.6.17](http://spitfire.googlecode.com/svn/tags/spitfire-0.6.17)
   * fixes a couple of bugs in optimized output (-O2 or above)
@@ -33,12 +35,12 @@ Trunk is semi-stable as there are reasonable regression tests. Go ahead, be brav
   * [spitfire trunk](http://spitfire.googlecode.com/svn/trunk)
 
 
-
-# Release Notes #
+## Release Notes
 
 I note most of the progress in the [change log](http://spitfire.googlecode.com/svn/trunk/CHANGES). The biggest addition is the alternate front end to support an attribute language (think TAL or Kid).
 
-# Performance #
+
+## Performance
 
 Spitfire has a basic optimizer that can make certain operations much faster. I found a basic 10x1000 table generation benchmark written by the Genshi team. I modified it to add Cheetah (my baseline performance target) and Spitfire. This is by no means exhaustive proof that Spitfire is always fast, just that in a simple case of burning through a loop of generating text, it's not too shabby.
 
@@ -63,7 +65,7 @@ cStringIO                                      16.52 ms
 list concat                                    12.93 ms
 
 hannosch:spitfire hannosch$ python
-Python 2.4.5 (#1, Jul 20 2008, 12:34:19) 
+Python 2.4.5 (#1, Jul 20 2008, 12:34:19)
 [GCC 4.0.1 (Apple Inc. build 5465)] on darwin
 >>>
 ```
@@ -77,11 +79,11 @@ zope.pagetemplate template                    564.55 ms
 
 For comparison, here are two samples from PHP.
 ```
-hannosch:spitfire/tests/perf> php4 bigtable.php 
+hannosch:spitfire/tests/perf> php4 bigtable.php
 Smarty template:    21.04 ms
 PHP:                12.01 ms
 
-hannosch:spitfire/tests/perf> php5 bigtable.php 
+hannosch:spitfire/tests/perf> php5 bigtable.php
 Smarty template:    13.16 ms
 PHP:                 6.24 ms
 ```
