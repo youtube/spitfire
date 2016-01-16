@@ -3,19 +3,19 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from distutils.core import setup, Extension
 import os.path
+from setuptools import Extension
+from setuptools import setup
 
 import spitfire
 
 setup(
     name="spitfire",
-    version=spitfire.__version__,
     description="text-to-python template language",
+    version=spitfire.__version__,
     author=spitfire.__author__,
     author_email=spitfire.__author_email__,
     license=spitfire.__license__,
-    download_url="",
     platforms=["Posix", "MacOS X", "Windows"],
     classifiers=["Development Status :: 3 - Alpha",
                  "Intended Audience :: Developers",
@@ -34,7 +34,11 @@ setup(
     scripts=["scripts/crunner.py",
              "scripts/spitfire-compile",
              ],
-    ext_modules=[Extension("spitfire.runtime._udn",
-                           [os.path.join("spitfire", "runtime", "_udn.c")])
+    ext_modules=[Extension("spitfire.runtime._baked",
+                           [os.path.join("spitfire", "runtime", "_baked.c")]),
+                 Extension("spitfire.runtime._template",
+                           [os.path.join("spitfire", "runtime", "_template.c")]),
+                 Extension("spitfire.runtime._udn",
+                           [os.path.join("spitfire", "runtime", "_udn.c")]),
                  ],
-     ) 
+     )
