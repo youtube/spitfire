@@ -11,3 +11,4 @@ Path: third_party/yapps2
 Modifications:
   - Removed all files except LICENSE, yapps2.py, and yappsrt.py
   - Clarified copyright in LICENSE
+  - Patched yappsrt.py to improve error handling and token position tracking
