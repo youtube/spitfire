@@ -1,0 +1,13 @@
+This project depends on the following libraries.  These libraries, any
+modifications, and the licenses under which they are governed are summarized
+here.  See the individual LICENSE files under each directory for details.
+
+
+Yapps
+URL: http://theory.stanford.edu/~amitp/yapps/yapps2.zip
+Version: 2.0.4
+License: MIT
+Path: third_party/yapps2
+Modifications:
+  - Removed all files except LICENSE, yapps2.py, and yappsrt.py
+  - Clarified copyright in LICENSE
