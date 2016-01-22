@@ -7,25 +7,18 @@
 
 
 import copy
-import imp
 import logging
 import os.path
 import sys
 import traceback
 
-from pprint import pprint
-
-import spitfire.compiler.parser
-import spitfire.compiler.scanner
-import spitfire.compiler.analyzer
-import spitfire.compiler.optimizer
+import spitfire.compiler.compiler
+import spitfire.compiler.options
 import spitfire.compiler.util
+import spitfire.compiler.visitor
+import spitfire.runtime
 import spitfire.runtime.runner
 import spitfire.runtime.udn
-
-from spitfire.compiler import analyzer
-from spitfire.compiler.visitor import print_tree
-from spitfire.compiler.util import Compiler
 
 
 # this class let's me check if placeholder caching is working properly by
@@ -41,7 +34,7 @@ class ResolveCounter(object):
   @property
   def resolve_y(self):
     return self._get_item('resolve_y')
-  
+
   def _get_item(self, key):
     if key in self._dict:
       self._dict[key] += 1
@@ -51,12 +44,12 @@ class ResolveCounter(object):
 
   def __contains__(self, key):
     return key.startswith('resolve')
-  
+
   def __getitem__(self, key):
     if not key.startswith('resolve'):
       raise KeyError(key)
     return self._get_item(key)
-    
+
   def __getattr__(self, key):
     if not key.startswith('resolve'):
       raise AttributeError(key)
@@ -109,21 +102,21 @@ class TestRunner(object):
     if not self.options.quiet:
       if 'parse_tree' in self.options.debug_flags:
         print "parse_tree:"
-        print_tree(self.compiler._parse_tree)
+        spitfire.compiler.visitor.print_tree(self.compiler._parse_tree)
       if 'analyzed_tree' in self.options.debug_flags:
         print "analyzed_tree:"
-        print_tree(self.compiler._analyzed_tree)
+        spitfire.compiler.visitor.print_tree(self.compiler._analyzed_tree)
       if 'optimized_tree' in self.options.debug_flags:
         print "optimized_tree:"
-        print_tree(self.compiler._optimized_tree)
+        spitfire.compiler.visitor.print_tree(self.compiler._optimized_tree)
       if 'hoisted_tree' in self.options.debug_flags:
         print "hoisted_tree:"
-        print_tree(self.compiler._hoisted_tree)
+        spitfire.compiler.visitor.print_tree(self.compiler._hoisted_tree)
       if 'source_code' in self.options.debug_flags:
         print "source_code:"
         for i, line in enumerate(self.compiler._source_code.split('\n')):
           print '% 3s' % (i + 1), line
-    
+
 
     if self.options.test:
       print_output("test", classname, '...')
@@ -192,10 +185,10 @@ class TestRunner(object):
 if __name__ == '__main__':
   reload(sys)
   sys.setdefaultencoding('utf8')
-  
+
   from optparse import OptionParser
   op = OptionParser()
-  spitfire.compiler.util.add_common_options(op)
+  spitfire.compiler.options.add_common_options(op)
   op.add_option('-c', '--compile', action='store_true', default=False)
   op.add_option('-t', '--test', action='store_true', default=False)
   op.add_option('--test-input')
@@ -215,9 +208,10 @@ if __name__ == '__main__':
   spitfire.runtime.udn.set_accelerator(
     options.enable_c_accelerator, enable_test_mode=True)
 
-  compiler_args = Compiler.args_from_optparse(options)
-  compiler = Compiler(**compiler_args)
-  
+  compiler_args = (
+        spitfire.compiler.compiler.Compiler.args_from_optparse(options))
+  compiler = spitfire.compiler.compiler.Compiler(**compiler_args)
+
   test_runner = TestRunner(compiler, options)
   for filename in args:
     test_runner.process_file(filename)
