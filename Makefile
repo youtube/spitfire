@@ -3,12 +3,8 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-ifndef PYTHONPATH
-	export PYTHONPATH = ../yapps2
-endif
-
 ifndef YAPPS
-	export YAPPS = ../yapps2/yapps2.py
+	export YAPPS = third_party/yapps2/yapps2.py
 endif
 
 ifndef PYTHON

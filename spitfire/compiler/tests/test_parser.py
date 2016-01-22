@@ -7,7 +7,7 @@ import unittest
 from spitfire.compiler.ast import *
 from spitfire.compiler import util
 from spitfire.compiler import walker
-import yappsrt
+from third_party.yapps2 import yappsrt
 
 
 class BaseTest(unittest.TestCase):
