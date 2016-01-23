@@ -63,7 +63,7 @@ def init_psyco(options):
       psyco.bind(spitfire.compiler.scanner.SpitfireScanner.scan)
       import copy
       psyco.bind(copy.deepcopy)
-      import yappsrt
+      from third_party.yapps2 import yappsrt
       psyco.bind(yappsrt.Scanner.token)
       import spitfire.compiler.ast
       psyco.bind(spitfire.compiler.ast.NodeList.__iter__)

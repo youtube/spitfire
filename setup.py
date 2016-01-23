@@ -30,7 +30,7 @@ setup(
               "spitfire.compiler.macros",
               "spitfire.runtime",
               ],
-    py_modules=['yappsrt'],
+    py_modules=['third_party.yapps2.yappsrt'],
     scripts=["scripts/crunner.py",
              "scripts/spitfire-compile",
              ],

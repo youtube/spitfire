@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-import yappsrt
+from third_party.yapps2 import yappsrt
 
 import spitfire.compiler.parser
 
@@ -32,7 +32,7 @@ class SpitfireScanner(spitfire.compiler.parser._SpitfireParserScanner):
       elif not restrict and not restriction:
         return self.tokens[i]
     raise yappsrt.NoMoreTokens(i, len(self.tokens), self.tokens[i], restrict, self.restrictions[i], self.tokens)
-  
+
   def scan(self, restrict):
     """Should scan another token and add it to the list, self.tokens,
     and add the restriction to self.restrictions"""
