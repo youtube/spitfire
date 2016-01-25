@@ -3,13 +3,21 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+# Default
 .PHONY: all
+# Build
 .PHONY: build parser extensions
+# Test
 .PHONY: tests unit_tests no_whitespace_tests whitespace_tests test_function_registry test_opt
+# Clean up
 .PHONY: clean clean_build clean_tests
+# Format code
+.PHONY: fix lint
+
 
 PYTHON ?= python
 PIP ?= pip
+YAPF ?= yapf
 
 COMPILER = $(PYTHON) scripts/spitfire-compile
 CRUNNER = $(PYTHON) scripts/crunner.py
@@ -31,6 +39,15 @@ extensions: spitfire/runtime/_baked.so spitfire/runtime/_template.so spitfire/ru
 
 spitfire/runtime/_baked.so spitfire/runtime/_template.so spitfire/runtime/_udn.so: spitfire/runtime/_baked.c spitfire/runtime/_template.c spitfire/runtime/_udn.c
 	$(PIP) install --user --editable .
+
+
+fix:
+	@echo; echo 'Auto-formatting code...'
+	-@$(YAPF) --in-place --recursive --verify spitfire scripts
+
+lint:
+	@echo; echo 'Checking code format...'
+	@$(YAPF) --diff --recursive spitfire scripts || (st=$$?; echo 'Please run "make fix" to correct the formatting errors.'; exit $$st)
 
 
 tests: unit_tests no_whitespace_tests whitespace_tests test_function_registry test_opt
