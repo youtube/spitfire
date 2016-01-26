@@ -4,6 +4,8 @@
 # license that can be found in the LICENSE file.
 
 import unittest
+
+from spitfire import test_util
 from spitfire.compiler.ast import *
 from spitfire.compiler import analyzer
 from spitfire.compiler import options as sptoptions
@@ -32,7 +34,7 @@ class BaseTest(unittest.TestCase):
         ast_root,
         self.compiler.analyzer_options,
         self.compiler)
-    semantic_analyzer.get_ast = unittest.RecordedFunction(
+    semantic_analyzer.get_ast = test_util.RecordedFunction(
         semantic_analyzer.get_ast)
     return semantic_analyzer
 

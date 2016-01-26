@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file.
 
 import unittest
+
 from spitfire.compiler.ast import *
 from spitfire.compiler import util
 from spitfire.compiler import walker

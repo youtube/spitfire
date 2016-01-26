@@ -4,6 +4,8 @@
 # license that can be found in the LICENSE file.
 
 import unittest
+
+from spitfire import test_util
 from spitfire.compiler.ast import *
 from spitfire.compiler import analyzer
 from spitfire.compiler import compiler as sptcompiler
@@ -30,7 +32,7 @@ class BaseTest(unittest.TestCase):
         ast_root,
         self.compiler.analyzer_options,
         self.compiler)
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+    optimization_analyzer.visit_ast = test_util.RecordedFunction(
         optimization_analyzer.visit_ast)
     return optimization_analyzer
 
@@ -120,7 +122,7 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
         self.compiler.analyzer_options,
         self.compiler)
 
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+    optimization_analyzer.visit_ast = test_util.RecordedFunction(
         optimization_analyzer.visit_ast)
 
     self.assertRaises(sptcompiler.Warning,
@@ -149,7 +151,7 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
         self.compiler.analyzer_options,
         self.compiler)
 
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+    optimization_analyzer.visit_ast = test_util.RecordedFunction(
         optimization_analyzer.visit_ast)
 
     try:
@@ -495,7 +497,7 @@ class TestFinalPassHoistConditional(BaseTest):
         self.compiler.analyzer_options,
         self.compiler)
 
-    final_pass_analyzer.hoist = unittest.RecordedFunction(
+    final_pass_analyzer.hoist = test_util.RecordedFunction(
         final_pass_analyzer.hoist)
 
     final_pass_analyzer.visit_ast(ast_root)
@@ -524,7 +526,7 @@ class TestHoistPlaceholders(BaseTest):
 
   def _get_analyzer_and_visit(self, ast_root):
     analyzer = self._get_analyzer(ast_root)
-    analyzer._placeholdernode_replacement = unittest.RecordedFunction(
+    analyzer._placeholdernode_replacement = test_util.RecordedFunction(
         self.fake_placeholdernode_replacement)
     analyzer.visit_ast(ast_root)
     return analyzer
@@ -679,7 +681,7 @@ class TestCollectWrites(BaseTest):
         ast_root,
         self.compiler.analyzer_options,
         self.compiler)
-    optimization_analyzer.visit_ast = unittest.RecordedFunction(
+    optimization_analyzer.visit_ast = test_util.RecordedFunction(
         optimization_analyzer.visit_ast)
     return optimization_analyzer
 

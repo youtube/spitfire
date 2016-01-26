@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file.
 
 import unittest
+
 from spitfire.runtime import _udn
 from spitfire.runtime import udn
 
