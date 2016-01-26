@@ -44,8 +44,6 @@ I note most of the progress in the [change log](http://spitfire.googlecode.com/s
 
 Spitfire has a basic optimizer that can make certain operations much faster. I found a basic 10x1000 table generation benchmark written by the Genshi team. I modified it to add Cheetah (my baseline performance target) and Spitfire. This is by no means exhaustive proof that Spitfire is always fast, just that in a simple case of burning through a loop of generating text, it's not too shabby.
 
-PN: Note, to run the bigtable test, you'll need psyco http://psyco.sourceforge.net/
-
 ```
 hannosch:spitfire hannosch$ python tests/perf/bigtable.py
 Genshi tag builder                            671.49 ms
@@ -59,7 +57,6 @@ Spitfire template                              65.32 ms
 Spitfire template -O1                          40.19 ms
 Spitfire template -O2                          15.99 ms
 Spitfire template -O3                          16.02 ms
-Spitfire template -O4                          11.09 ms
 StringIO                                       80.85 ms
 cStringIO                                      16.52 ms
 list concat                                    12.93 ms

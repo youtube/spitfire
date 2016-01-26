@@ -152,12 +152,6 @@ if SpitfireTemplate:
         spitfire_src, 'spitfire_tmpl_o3', spitfire.compiler.analyzer.o3_options,
         {'enable_filters':enable_filters})
 
-    spitfire_tmpl_o4 = spitfire.compiler.util.load_template(
-        spitfire_src, 'spitfire_tmpl_o4', spitfire.compiler.analyzer.o4_options,
-        {'enable_filters':enable_filters})
-    # run once to get psyco warmed up
-    spitfire_tmpl_o4(search_list=[{'table':table}]).main()
-
 
     def test_spitfire():
         """Spitfire template"""
@@ -179,11 +173,6 @@ if SpitfireTemplate:
         data = spitfire_tmpl_o3(search_list=[{'table':table}]).main()
         #print "spitfire -O3", len(data)
 
-    def test_spitfire_o4():
-        """Spitfire template -O4"""
-        data = spitfire_tmpl_o4(search_list=[{'table':table}]).main()
-        #print "spitfire -O4", len(data)
-
 if CheetahTemplate:
     cheetah_src = """<table>
 #for $row in $table
@@ -199,7 +188,7 @@ if CheetahTemplate:
     # force compile
     post = set([k for k, v in sys.modules.iteritems() if v])
     #print post - pre
-    
+
     #print type(cheetah_template)
     cheetah_template.respond()
     cheetah_template = type(cheetah_template)
@@ -282,7 +271,7 @@ if et:
         et.tostring(_table)
 
 if cet:
-    def test_cet(): 
+    def test_cet():
         """cElementTree"""
         _table = cet.Element('table')
         for row in table:
@@ -328,7 +317,7 @@ def test_python_stringio():
     """StringIO"""
     buffer = StringIO.StringIO()
     write = buffer.write
-    
+
     write('<table>\n')
     for row in table:
         write('<tr>\n')
@@ -339,12 +328,12 @@ def test_python_stringio():
         write('</tr>\n')
     write('</table>')
     return buffer.getvalue()
-    
+
 def test_python_array():
     """list concat"""
     buffer = []
     write = buffer.append
-    
+
     write('<table>\n')
     for row in table:
         write('<tr>\n')
@@ -364,7 +353,7 @@ def run(which=None, number=10):
              'test_et', 'test_cet', 'test_clearsilver', 'test_django',
              'test_cheetah',
              'test_spitfire', 'test_spitfire_o1',
-             'test_spitfire_o2', 'test_spitfire_o3', 'test_spitfire_o4',
+             'test_spitfire_o2', 'test_spitfire_o3',
              'test_python_stringio', 'test_python_cstringio', 'test_python_array'
              ]
 

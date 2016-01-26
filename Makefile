@@ -78,12 +78,6 @@ whitespace_tests: clean_tests build
 	$(COMPILER) -O3 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
 	$(CRUNNER) -O3 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
 
-test_opt: clean_tests build
-	$(COMPILER) -O4 tests/*.txt tests/*.tmpl tests/*.o4txt
-	$(CRUNNER) -O4 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl tests/*.o4txt
-	$(COMPILER) -O4 --preserve-optional-whitespace tests/*.txt tests/*.tmpl tests/*.o4txt
-	$(CRUNNER) -O4 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl tests/*.o4txt
-
 xhtml_tests: clean_tests build
 	$(COMPILER) --xspt-mode tests/*.xhtml
 	$(CRUNNER) --xspt-mode --test-input tests/input/search_list_data.pye --test-output output-xhtml -qt tests/*.xhtml

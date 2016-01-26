@@ -79,11 +79,6 @@ class SpitfireTemplate(_template.BaseSpitfiretemplate):
     return BufferIO()
 
 
-def enable_psyco(template_class):
-  import psyco
-  psyco.bind(SpitfireTemplate)
-  psyco.bind(template_class)
-
 def template_method(function):
   function.template_method = True
   function.skip_filter = True

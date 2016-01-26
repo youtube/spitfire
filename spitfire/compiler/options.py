@@ -114,7 +114,6 @@ class AnalyzerOptions(object):
     # Disallow the use of raw in a template.
     self.no_raw = False
 
-    self.enable_psyco = False
     self.__dict__.update(kargs)
 
   def update(self, **kargs):
@@ -146,15 +145,11 @@ o3_options.cache_filtered_placeholders = True
 o3_options.omit_local_scope_search = True
 o3_options.batch_buffer_writes = True
 
-o4_options = copy.copy(o3_options)
-o4_options.enable_psyco = True
-
 optimizer_map = {
     0: default_options,
     1: o1_options,
     2: o2_options,
     3: o3_options,
-    4: o4_options,
 }
 
 
@@ -191,12 +186,6 @@ def add_common_options(op):
   op.add_option('-o', '--output-file', dest='output_file', default=None)
   op.add_option('--xspt-mode', action='store_true', default=False,
                 help='enable attribute language syntax')
-  op.add_option('--x-enable-psyco', dest='x_psyco', default=False,
-                action='store_true',
-                help='disable psyco')
-  op.add_option('--x-psyco-profile',
-                action='store_true',
-                help='enable psyco profiler logging')
 
   op.add_option('--disable-filters', dest='enable_filters',
                 action='store_false', default=True)
