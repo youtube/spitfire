@@ -8,6 +8,7 @@
 
 import copy
 import logging
+import optparse
 import os.path
 import sys
 import time
@@ -15,13 +16,13 @@ import traceback
 
 import cStringIO as StringIO
 
-import spitfire.compiler.compiler
-import spitfire.compiler.options
-import spitfire.compiler.util
-import spitfire.compiler.visitor
-import spitfire.runtime
-import spitfire.runtime.runner
-import spitfire.runtime.udn
+from spitfire.compiler import compiler
+from spitfire.compiler import options
+from spitfire.compiler import util
+from spitfire.compiler import visitor
+from spitfire import runtime
+from spitfire.runtime import runner
+from spitfire.runtime import udn
 
 
 # this class let's me check if placeholder caching is working properly by
@@ -66,18 +67,17 @@ def reset_sys_modules():
       del sys.modules[key]
 
 class TestRunner(object):
-  def __init__(self, compiler, options, files):
-    self.compiler = compiler
-    self.options = options
-    self.files = files
+  def __init__(self, spt_compiler, spt_options, spt_files):
+    self.compiler = spt_compiler
+    self.options = spt_options
+    self.files = spt_files
     self._search_list = [
       {'tier1': {'tier2': ResolveCounter()}},
       {'nest': ResolveCounter()},
       ResolveCounter(),
     ]
-    if options.test_input:
-      self._search_list.append(
-          spitfire.runtime.runner.load_search_list(options.test_input))
+    if self.options.test_input:
+      self._search_list.append(runner.load_search_list(self.options.test_input))
     self.buffer = StringIO.StringIO()
     self.start_time = 0
     self.finish_time = 0
@@ -118,8 +118,8 @@ class TestRunner(object):
     buffer = StringIO.StringIO()
     reset_sys_modules()
 
-    classname = spitfire.compiler.util.filename2classname(filename)
-    modulename = spitfire.compiler.util.filename2modulename(filename)
+    classname = util.filename2classname(filename)
+    modulename = util.filename2modulename(filename)
     test_output_path = os.path.join(self.options.test_output,
                                     classname + '.txt')
 
@@ -139,16 +139,16 @@ class TestRunner(object):
       if self.options.debug:
         if 'parse_tree' in self.options.debug_flags:
           print >> buffer, "parse_tree:"
-          spitfire.compiler.visitor.print_tree(self.compiler._parse_tree, output=buffer)
+          visitor.print_tree(self.compiler._parse_tree, output=buffer)
         if 'analyzed_tree' in self.options.debug_flags:
           print >> buffer, "analyzed_tree:"
-          spitfire.compiler.visitor.print_tree(self.compiler._analyzed_tree, output=buffer)
+          visitor.print_tree(self.compiler._analyzed_tree, output=buffer)
         if 'optimized_tree' in self.options.debug_flags:
           print >> buffer, "optimized_tree:"
-          spitfire.compiler.visitor.print_tree(self.compiler._optimized_tree, output=buffer)
+          visitor.print_tree(self.compiler._optimized_tree, output=buffer)
         if 'hoisted_tree' in self.options.debug_flags:
           print >> buffer, "hoisted_tree:"
-          spitfire.compiler.visitor.print_tree(self.compiler._hoisted_tree, output=buffer)
+          visitor.print_tree(self.compiler._hoisted_tree, output=buffer)
         if 'source_code' in self.options.debug_flags:
           print >> buffer, "source_code:"
           for i, line in enumerate(self.compiler._source_code.split('\n')):
@@ -163,10 +163,10 @@ class TestRunner(object):
       raised_exception = False
       try:
         if self.options.debug or self.options.compile:
-          template_module = spitfire.compiler.util.load_module_from_src(
+          template_module = util.load_module_from_src(
             self.compiler._source_code, filename, modulename)
         else:
-          template_module = spitfire.runtime.import_module_symbol(modulename)
+          template_module = runtime.import_module_symbol(modulename)
       except Exception as e:
         # An exception here means the template is unavailble; the test fails.
         test_failed = True
@@ -252,36 +252,34 @@ if __name__ == '__main__':
   reload(sys)
   sys.setdefaultencoding('utf8')
 
-  from optparse import OptionParser
-  op = OptionParser()
-  spitfire.compiler.options.add_common_options(op)
-  op.add_option('-c', '--compile', action='store_true', default=False)
-  op.add_option('--skip-test', action='store_true', default=False)
-  op.add_option('--test-input', default='tests/input/search_list_data.pye',
+  option_parser = optparse.OptionParser()
+  options.add_common_options(option_parser)
+  option_parser.add_option('-c', '--compile', action='store_true', default=False)
+  option_parser.add_option('--skip-test', action='store_true', default=False)
+  option_parser.add_option('--test-input', default='tests/input/search_list_data.pye',
                 help='input data file for templates (.pkl or eval-able file)')
-  op.add_option('--test-output', default='tests/output',
+  option_parser.add_option('--test-output', default='tests/output',
           help="directory for output")
-  op.add_option('--test-accept-result', action='store_true', default=False,
+  option_parser.add_option('--test-accept-result', action='store_true', default=False,
           help='accept current code output as correct for future tests')
-  op.add_option('--debug', action='store_true', default=False)
-  op.add_option('--debug-flags', action='store',
+  option_parser.add_option('--debug', action='store_true', default=False)
+  option_parser.add_option('--debug-flags', action='store',
                 default='hoisted_tree,source_code',
                 help='parse_tree, analyzed_tree, optimized_tree, hoisted_tree, source_code'
                 )
-  op.add_option('--enable-c-accelerator', action='store_true', default=False)
-  (options, args) = op.parse_args()
-  if options.debug:
-    options.verbose = True
-    options.debug_flags = getattr(options, 'debug_flags').split(',')
+  option_parser.add_option('--enable-c-accelerator', action='store_true', default=False)
+
+  (spt_options, spt_args) = option_parser.parse_args()
+  if spt_options.debug:
+    spt_options.verbose = True
+    spt_options.debug_flags = getattr(spt_options, 'debug_flags').split(',')
   else:
-    options.debug_flags = []
+    spt_options.debug_flags = []
 
-  spitfire.runtime.udn.set_accelerator(
-    options.enable_c_accelerator, enable_test_mode=True)
+  udn.set_accelerator(spt_options.enable_c_accelerator, enable_test_mode=True)
 
-  compiler_args = (
-        spitfire.compiler.compiler.Compiler.args_from_optparse(options))
-  compiler = spitfire.compiler.compiler.Compiler(**compiler_args)
+  spt_compiler_args = compiler.Compiler.args_from_optparse(spt_options)
+  spt_compiler = compiler.Compiler(**spt_compiler_args)
 
-  test_runner = TestRunner(compiler, options, args)
+  test_runner = TestRunner(spt_compiler, spt_options, spt_args)
   test_runner.run()

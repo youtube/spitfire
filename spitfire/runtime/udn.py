@@ -13,9 +13,7 @@ import __builtin__
 import inspect
 import logging
 
-from spitfire.runtime import (
-  PlaceholderError, UDNResolveError, UnresolvedPlaceholder,
-  UndefinedPlaceholder, UndefinedAttribute)
+from spitfire import runtime
 
 # create a sentinel value for missing attributes
 class __MissingAttr(object):
@@ -46,10 +44,10 @@ class CallOnlyPlaceholder(object):
     return getattr(self.function, 'skip_filter')
 
   def __cmp__(self, unused_other):
-    raise PlaceholderError(self.name, 'function placeholder was not called')
+    raise runtime.PlaceholderError(self.name, 'function placeholder was not called')
 
   def __nonzero__(self):
-    raise PlaceholderError(self.name, 'function placeholder was not called')
+    raise runtime.PlaceholderError(self.name, 'function placeholder was not called')
 
 
 # TODO - optimize performance
@@ -61,9 +59,9 @@ def resolve_udn_prefer_attr(_object, name, raise_exception=False):
       return _object[name]
     except (KeyError, TypeError):
       if raise_exception:
-        raise UDNResolveError(name, dir(_object))
+        raise runtime.UDNResolveError(name, dir(_object))
       else:
-        return UndefinedAttribute(name, dir(_object))
+        return runtime.UndefinedAttribute(name, dir(_object))
 
 def resolve_udn_prefer_dict(_object, name, raise_exception=False):
   try:
@@ -73,9 +71,9 @@ def resolve_udn_prefer_dict(_object, name, raise_exception=False):
       return getattr(_object, name)
     except AttributeError:
       if raise_exception:
-        raise UDNResolveError(name, dir(_object))
+        raise runtime.UDNResolveError(name, dir(_object))
       else:
-        return UndefinedAttribute(name, dir(_object))
+        return runtime.UndefinedAttribute(name, dir(_object))
 
 # this is always faster than catching an exception when that exception isn't
 # truly exceptional,  but semi-expected
@@ -90,9 +88,9 @@ def resolve_udn_prefer_attr2(_object, name, raise_exception=False):
     return _object[name]
   except (KeyError, TypeError):
     if raise_exception:
-      raise UDNResolveError(name, dir(_object))
+      raise runtime.UDNResolveError(name, dir(_object))
     else:
-      return UndefinedAttribute(name, dir(_object))
+      return runtime.UndefinedAttribute(name, dir(_object))
 
 # this version is slightly faster when there are a lot of misses on attributes
 def resolve_udn_prefer_attr3(_object, name, raise_exception=False):
@@ -102,9 +100,9 @@ def resolve_udn_prefer_attr3(_object, name, raise_exception=False):
     return _object[name]
   except (KeyError, TypeError):
     if raise_exception:
-      raise UDNResolveError(name, dir(_object))
+      raise runtime.UDNResolveError(name, dir(_object))
     else:
-      return UndefinedAttribute(name, dir(_object))
+      return runtime.UndefinedAttribute(name, dir(_object))
 
 _resolve_udn = resolve_udn_prefer_attr3
 
@@ -117,7 +115,7 @@ def _resolve_placeholder(name, template, global_vars):
 
   # Note: getattr with 3 args is somewhat slower if the attribute
   # is found, but much faster if the attribute is not found.
-  udn_ph = UndefinedPlaceholder
+  udn_ph = runtime.UndefinedPlaceholder
   result = getattr(template, name, udn_ph)
   if result is not udn_ph:
     if placeholder_cache is not None:
@@ -127,7 +125,7 @@ def _resolve_placeholder(name, template, global_vars):
   search_list = template.search_list
   if search_list:
     ph = _resolve_from_search_list(search_list, name)
-    if ph is not UnresolvedPlaceholder:
+    if ph is not runtime.UnresolvedPlaceholder:
       if placeholder_cache is not None:
         placeholder_cache[name] = ph
       return ph
@@ -142,7 +140,7 @@ def _resolve_placeholder(name, template, global_vars):
     except KeyError:
       pass
     except TypeError:
-      raise PlaceholderError('unexpected type for global_vars: %s' %
+      raise runtime.PlaceholderError('unexpected type for global_vars: %s' %
                              type(global_vars))
 
   # fixme: finally try to resolve builtins - this should be configurable
@@ -150,7 +148,7 @@ def _resolve_placeholder(name, template, global_vars):
   try:
     return getattr(__builtin__, name)
   except AttributeError:
-    return UndefinedPlaceholder(name, search_list)
+    return runtime.UndefinedPlaceholder(name, search_list)
 
 
 resolve_placeholder = _resolve_placeholder
@@ -166,7 +164,7 @@ def _resolve_placeholder_with_locals(name, template, local_vars, global_vars):
     except KeyError:
       pass
     except TypeError:
-      raise PlaceholderError('unexpected type for local_vars: %s' %
+      raise runtime.PlaceholderError('unexpected type for local_vars: %s' %
                              type(local_vars))
 
   return _resolve_placeholder(name, template, global_vars)
@@ -203,13 +201,13 @@ def _resolve_from_search_list(search_list, name, default=Unspecified):
       except AttributeError:
         pass
   except TypeError:
-    # if this isn't iterable, let's just return UndefinedPlaceholder
+    # if this isn't iterable, let's just return runtime.UndefinedPlaceholder
     pass
 
   if default != Unspecified:
     return default
   else:
-    return UnresolvedPlaceholder
+    return runtime.UnresolvedPlaceholder
 
 
 # apply some acceleration if this c module is available

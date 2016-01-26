@@ -5,6 +5,7 @@
 
 import unittest
 
+from spitfire import runtime
 from spitfire.runtime import _udn
 from spitfire.runtime import udn
 
@@ -17,7 +18,7 @@ class Foo(object):
   bar = 'baz'
   search_list = [
     {'win': 'boo'},
-    Scope(),
+   Scope(),
   ]
   placeholder_cache = None
 
@@ -41,7 +42,7 @@ class TestResolvePlaceholder(unittest.TestCase):
 
   def test_undefined(self):
     self.assertEqual(type(udn.resolve_placeholder('wowza', Foo, None)),
-                     udn.UndefinedPlaceholder)
+                     runtime.UndefinedPlaceholder)
 
 
 class TestResolvePlaceholderWithCache(unittest.TestCase):
@@ -86,17 +87,17 @@ class _UdnTest(object):
 
   def testResolveMissWithoutException(self):
     self.assertIsInstance(self.resolve_udn(Baz(), 'missing'),
-                          udn.UndefinedAttribute)
+                          runtime.UndefinedAttribute)
 
   def testResolveDoubleMissWithoutException(self):
     """Shows that it's UndefinedAttribute's all the way down."""
     undefined_attr = self.resolve_udn(Baz(), 'missing')
-    self.assertIsInstance(undefined_attr, udn.UndefinedAttribute)
+    self.assertIsInstance(undefined_attr, runtime.UndefinedAttribute)
     undefined_attr2 = self.resolve_udn(undefined_attr, 'missing')
-    self.assertIsInstance(undefined_attr2, udn.UndefinedAttribute)
+    self.assertIsInstance(undefined_attr2, runtime.UndefinedAttribute)
 
   def testResolveMissWithException(self):
-    self.assertRaises(udn.UDNResolveError, self.resolve_udn, Baz(), 'misssing',
+    self.assertRaises(runtime.UDNResolveError, self.resolve_udn, Baz(), 'misssing',
                       raise_exception=True)
 
 

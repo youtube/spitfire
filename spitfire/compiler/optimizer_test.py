@@ -5,25 +5,25 @@
 
 import unittest
 
-from spitfire import test_util
-from spitfire.compiler.ast import *
 from spitfire.compiler import analyzer
-from spitfire.compiler import compiler as sptcompiler
+from spitfire.compiler import ast
+from spitfire.compiler import compiler
 from spitfire.compiler import optimizer
-from spitfire.compiler import options as sptoptions
+from spitfire.compiler import options
 from spitfire.compiler import util
 from spitfire.compiler import walker
+from spitfire import test_util
 
 
 class BaseTest(unittest.TestCase):
 
   def __init__(self, *args):
     unittest.TestCase.__init__(self, *args)
-    self.options = sptoptions.default_options
+    self.analyzer_options = options.default_options
 
   def setUp(self):
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=self.options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=self.analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
 
@@ -43,8 +43,8 @@ class BaseTest(unittest.TestCase):
     #def test_function
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    function_node = FunctionNode('test_function')
+    ast_root = ast.TemplateNode('TestTemplate')
+    function_node = ast.FunctionNode('test_function')
     ast_root.append(function_node)
     return (ast_root, function_node)
 
@@ -58,8 +58,8 @@ class BaseTest(unittest.TestCase):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    condition_node = condition or LiteralNode(True)
-    if_node = IfNode(condition_node)
+    condition_node = condition or ast.LiteralNode(True)
+    if_node = ast.IfNode(condition_node)
     function_node.append(if_node)
     return (ast_root, function_node, if_node)
 
@@ -76,10 +76,10 @@ class TestAnalyzeListLiteralNode(BaseTest):
     Input:
     [1, 2, 3]
     """
-    ast_root = ListLiteralNode('list')
-    ast_root.child_nodes.append(LiteralNode(1))
-    ast_root.child_nodes.append(LiteralNode(2))
-    ast_root.child_nodes.append(LiteralNode(3))
+    ast_root = ast.ListLiteralNode('list')
+    ast_root.child_nodes.append(ast.LiteralNode(1))
+    ast_root.child_nodes.append(ast.LiteralNode(2))
+    ast_root.child_nodes.append(ast.LiteralNode(3))
 
     optimization_analyzer = self._get_analyzer(ast_root)
     optimization_analyzer.visit_ast(ast_root)
@@ -89,11 +89,11 @@ class TestAnalyzeListLiteralNode(BaseTest):
 class TestAssignAfterFilterWarning(unittest.TestCase):
 
   def setUp(self):
-    options = sptoptions.default_options
-    options.update(cache_resolved_placeholders=True,
+    analyzer_options = options.default_options
+    analyzer_options.update(cache_resolved_placeholders=True,
                    enable_warnings=True, warnings_as_errors=True)
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
 
@@ -108,13 +108,13 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    first_assign = AssignNode(IdentifierNode('foo'), LiteralNode('foo'))
+    first_assign = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode('foo'))
     function_node.append(first_assign)
-    first_use = FilterNode(IdentifierNode('foo'))
+    first_use = ast.FilterNode(ast.IdentifierNode('foo'))
     function_node.append(first_use)
-    second_assign = AssignNode(IdentifierNode('foo'), LiteralNode('bar'))
+    second_assign = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode('bar'))
     function_node.append(second_assign)
-    second_use = FilterNode(IdentifierNode('foo'))
+    second_use = ast.FilterNode(ast.IdentifierNode('foo'))
     function_node.append(second_use)
 
     optimization_analyzer = optimizer.OptimizationAnalyzer(
@@ -125,7 +125,7 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
     optimization_analyzer.visit_ast = test_util.RecordedFunction(
         optimization_analyzer.visit_ast)
 
-    self.assertRaises(sptcompiler.Warning,
+    self.assertRaises(compiler.Warning,
                       optimization_analyzer.visit_ast,
                       ast_root)
 
@@ -139,11 +139,11 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    first_assign = AssignNode(IdentifierNode('foo'), LiteralNode('foo'))
+    first_assign = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode('foo'))
     function_node.append(first_assign)
-    second_assign = AssignNode(IdentifierNode('foo'), LiteralNode('bar'))
+    second_assign = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode('bar'))
     function_node.append(second_assign)
-    first_use = FilterNode(IdentifierNode('foo'))
+    first_use = ast.FilterNode(ast.IdentifierNode('foo'))
     function_node.append(first_use)
 
     optimization_analyzer = optimizer.OptimizationAnalyzer(
@@ -156,7 +156,7 @@ class TestAssignAfterFilterWarning(unittest.TestCase):
 
     try:
       optimization_analyzer.visit_ast(ast_root)
-    except sptcompiler.Warning:
+    except compiler.Warning:
       self.fail('visit_ast raised WarningError unexpectedly.')
 
 
@@ -164,11 +164,11 @@ class TestPartialLocalIdentifiers(BaseTest):
 
   def setUp(self):
     # TODO: Use BaseTest.setUp()?
-    options = sptoptions.default_options
-    options.update(static_analysis=True,
+    analyzer_options = options.default_options
+    analyzer_options.update(static_analysis=True,
                    directly_access_defined_variables=True)
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
 
@@ -183,9 +183,9 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(1))
+    assign_node = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1))
     if_node.append(assign_node)
-    function_node.append(PlaceholderNode('foo'))
+    function_node.append(ast.PlaceholderNode('foo'))
 
     optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
@@ -205,9 +205,9 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
-    if_node.else_.append(AssignNode(IdentifierNode('bar'), LiteralNode(1)))
-    function_node.append(PlaceholderNode('foo'))
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
+    if_node.else_.append(ast.AssignNode(ast.IdentifierNode('bar'), ast.LiteralNode(1)))
+    function_node.append(ast.PlaceholderNode('foo'))
 
     optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
@@ -227,9 +227,9 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
-    if_node.else_.append(AssignNode(IdentifierNode('bar'), LiteralNode(1)))
-    function_node.append(PlaceholderNode('bar'))
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
+    if_node.else_.append(ast.AssignNode(ast.IdentifierNode('bar'), ast.LiteralNode(1)))
+    function_node.append(ast.PlaceholderNode('bar'))
 
     optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
@@ -251,13 +251,13 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
-    if_node_2 = IfNode(LiteralNode(True))
-    if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(2)))
-    if_node_2.else_.append(AssignNode(IdentifierNode('foo'), LiteralNode(3)))
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
+    if_node_2 = ast.IfNode(ast.LiteralNode(True))
+    if_node_2.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(2)))
+    if_node_2.else_.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(3)))
     if_node.else_.append(if_node_2)
 
-    function_node.append(PlaceholderNode('foo'))
+    function_node.append(ast.PlaceholderNode('foo'))
 
     optimization_analyzer = self._get_analyzer(ast_root)
 
@@ -283,12 +283,12 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    if_node_2 = IfNode(LiteralNode(True))
-    if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
-    if_node_2.else_.append(AssignNode(IdentifierNode('foo'), LiteralNode(2)))
+    if_node_2 = ast.IfNode(ast.LiteralNode(True))
+    if_node_2.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
+    if_node_2.else_.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(2)))
     if_node.append(if_node_2)
-    if_node.else_.append(AssignNode(IdentifierNode('foo'), LiteralNode(3)))
-    function_node.append(PlaceholderNode('foo'))
+    if_node.else_.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(3)))
+    function_node.append(ast.PlaceholderNode('foo'))
 
     optimization_analyzer = self._get_analyzer(ast_root)
 
@@ -314,12 +314,12 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    if_node_2 = IfNode(LiteralNode(True))
-    if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
-    if_node_2.else_.append(AssignNode(IdentifierNode('bar'), LiteralNode(2)))
+    if_node_2 = ast.IfNode(ast.LiteralNode(True))
+    if_node_2.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
+    if_node_2.else_.append(ast.AssignNode(ast.IdentifierNode('bar'), ast.LiteralNode(2)))
     if_node.append(if_node_2)
-    if_node.else_.append(AssignNode(IdentifierNode('foo'), LiteralNode(3)))
-    function_node.append(PlaceholderNode('foo'))
+    if_node.else_.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(3)))
+    function_node.append(ast.PlaceholderNode('foo'))
 
     optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
@@ -343,12 +343,12 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
-    if_node_2 = IfNode(LiteralNode(True))
-    if_node_2.append(AssignNode(IdentifierNode('bar'), LiteralNode(2)))
-    if_node_2.else_.append(AssignNode(IdentifierNode('baz'), LiteralNode(3)))
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
+    if_node_2 = ast.IfNode(ast.LiteralNode(True))
+    if_node_2.append(ast.AssignNode(ast.IdentifierNode('bar'), ast.LiteralNode(2)))
+    if_node_2.else_.append(ast.AssignNode(ast.IdentifierNode('baz'), ast.LiteralNode(3)))
     if_node.else_.append(if_node_2)
-    function_node.append(PlaceholderNode('baz'))
+    function_node.append(ast.PlaceholderNode('baz'))
 
     optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
@@ -370,11 +370,11 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
-    if_node_2 = IfNode(LiteralNode(True))
-    if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(2)))
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
+    if_node_2 = ast.IfNode(ast.LiteralNode(True))
+    if_node_2.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(2)))
     if_node.else_.append(if_node_2)
-    function_node.append(PlaceholderNode('foo'))
+    function_node.append(ast.PlaceholderNode('foo'))
 
     optimization_analyzer = self._get_analyzer(ast_root)
     self.assertRaises(analyzer.SemanticAnalyzerError,
@@ -398,12 +398,12 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
-    if_node_2 = IfNode(LiteralNode(True))
-    if_node_2.append(AssignNode(IdentifierNode('foo'), LiteralNode(2)))
-    if_node_2.else_.append(AssignNode(IdentifierNode('foo'), LiteralNode(3)))
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
+    if_node_2 = ast.IfNode(ast.LiteralNode(True))
+    if_node_2.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(2)))
+    if_node_2.else_.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(3)))
     if_node.else_.append(if_node_2)
-    function_node.append(PlaceholderNode('foo'))
+    function_node.append(ast.PlaceholderNode('foo'))
 
     optimization_analyzer = self._get_analyzer(ast_root)
 
@@ -425,9 +425,9 @@ class TestPartialLocalIdentifiers(BaseTest):
     #end def
     """
     ast_root, function_node, if_node = self._build_if_template()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
-    if_node_2 = IfNode(LiteralNode(True))
-    if_node_2.append(PlaceholderNode('foo'))
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
+    if_node_2 = ast.IfNode(ast.LiteralNode(True))
+    if_node_2.append(ast.PlaceholderNode('foo'))
     function_node.append(if_node_2)
 
     optimization_analyzer = self._get_analyzer(ast_root)
@@ -439,13 +439,13 @@ class TestPartialLocalIdentifiers(BaseTest):
 class TestFinalPassHoistConditional(BaseTest):
 
   def setUp(self):
-    options = sptoptions.default_options
-    options.update(static_analysis=True,
+    analyzer_options = options.default_options
+    analyzer_options.update(static_analysis=True,
                    directly_access_defined_variables=True,
                    hoist_conditional_aliases=True,
                    cache_filtered_placeholders=True)
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
 
@@ -463,30 +463,30 @@ class TestFinalPassHoistConditional(BaseTest):
     """
 
     def scope_setter(scope):
-      scope.local_identifiers.add(IdentifierNode('_rph_foo'))
-      scope.aliased_expression_map[PlaceholderNode('foo')] = (
-          IdentifierNode('_rph_foo'))
-      scope.aliased_expression_map[FilterNode(IdentifierNode('_rph_foo'))] = (
-          IdentifierNode('_fph123'))
+      scope.local_identifiers.add(ast.IdentifierNode('_rph_foo'))
+      scope.aliased_expression_map[ast.PlaceholderNode('foo')] = (
+          ast.IdentifierNode('_rph_foo'))
+      scope.aliased_expression_map[ast.FilterNode(ast.IdentifierNode('_rph_foo'))] = (
+          ast.IdentifierNode('_fph123'))
       scope.alias_name_set.add('_fph123')
       scope.alias_name_set.add('_rph_foo')
 
     def build_conditional_body(node):
       node.append(
-          AssignNode(
-              IdentifierNode('_rph_foo'),
-              PlaceholderNode('foo')))
+          ast.AssignNode(
+              ast.IdentifierNode('_rph_foo'),
+              ast.PlaceholderNode('foo')))
       node.append(
-          AssignNode(
-              IdentifierNode('_fph123'),
-              FilterNode(IdentifierNode('_rph_foo'))))
+          ast.AssignNode(
+              ast.IdentifierNode('_fph123'),
+              ast.FilterNode(ast.IdentifierNode('_rph_foo'))))
       node.append(
-          BufferWrite(IdentifierNode('_fph123')))
+          ast.BufferWrite(ast.IdentifierNode('_fph123')))
 
     ast_root, function_node, if_node = self._build_if_template()
     ast_root.global_placeholders.add('foo')
     scope_setter(function_node.scope)
-    function_node.scope.local_identifiers.add(IdentifierNode('self'))
+    function_node.scope.local_identifiers.add(ast.IdentifierNode('self'))
     scope_setter(if_node.scope)
     scope_setter(if_node.else_.scope)
     build_conditional_body(if_node)
@@ -510,19 +510,19 @@ class TestFinalPassHoistConditional(BaseTest):
 class TestHoistPlaceholders(BaseTest):
 
   def setUp(self):
-    options = sptoptions.default_options
-    options.update(cache_resolved_placeholders=True,
+    analyzer_options = options.default_options
+    analyzer_options.update(cache_resolved_placeholders=True,
                    enable_warnings=True, warnings_as_errors=True,
                    directly_access_defined_variables=True,
                    static_analysis=False)
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
 
   def fake_placeholdernode_replacement(self, placeholder, local_var,
                                        cached_placeholder, local_identifiers):
-    return self.options.cache_resolved_placeholders
+    return self.analyzer_options.cache_resolved_placeholders
 
   def _get_analyzer_and_visit(self, ast_root):
     analyzer = self._get_analyzer(ast_root)
@@ -541,8 +541,8 @@ class TestHoistPlaceholders(BaseTest):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    function_node.append(PlaceholderNode('foo'))
-    function_node.append(PlaceholderNode('foo'))
+    function_node.append(ast.PlaceholderNode('foo'))
+    function_node.append(ast.PlaceholderNode('foo'))
 
     optimization_analyzer = self._get_analyzer_and_visit(ast_root)
     self.assertEqual(
@@ -562,11 +562,11 @@ class TestHoistPlaceholders(BaseTest):
     ast_root, function_node = self._build_function_template()
     ast_root.global_placeholders.add('foo')
     function_node.append(
-        AssignNode(
-            IdentifierNode('bar'),
-            BinOpNode(
-                '+', PlaceholderNode('foo'),
-                PlaceholderNode('foo'))))
+        ast.AssignNode(
+            ast.IdentifierNode('bar'),
+            ast.BinOpNode(
+                '+', ast.PlaceholderNode('foo'),
+                ast.PlaceholderNode('foo'))))
 
     optimization_analyzer = self._get_analyzer_and_visit(ast_root)
     self.assertEqual(
@@ -582,9 +582,9 @@ class TestHoistPlaceholders(BaseTest):
       #end if
     #end def
     """
-    condition = BinOpNode('or',
-                          PlaceholderNode('foo'),
-                          PlaceholderNode('bar'))
+    condition = ast.BinOpNode('or',
+                          ast.PlaceholderNode('foo'),
+                          ast.PlaceholderNode('bar'))
     ast_root, function_node, if_node = self._build_if_template(condition)
 
     optimization_analyzer = self._get_analyzer_and_visit(ast_root)
@@ -603,9 +603,9 @@ class TestAssignSlice(BaseTest):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    assign_node = AssignNode(SliceNode(IdentifierNode('foo'),
-                                       LiteralNode(1)),
-                             LiteralNode(1))
+    assign_node = ast.AssignNode(ast.SliceNode(ast.IdentifierNode('foo'),
+                                       ast.LiteralNode(1)),
+                             ast.LiteralNode(1))
     function_node.append(assign_node)
 
     optimization_analyzer = self._get_analyzer(ast_root)
@@ -621,11 +621,11 @@ class TestAssignSlice(BaseTest):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    assign_node1 = AssignNode(IdentifierNode('foo'), DictLiteralNode())
+    assign_node1 = ast.AssignNode(ast.IdentifierNode('foo'), ast.DictLiteralNode())
     function_node.append(assign_node1)
-    assign_node2 = AssignNode(SliceNode(IdentifierNode('foo'),
-                                        LiteralNode(1)),
-                              LiteralNode(1))
+    assign_node2 = ast.AssignNode(ast.SliceNode(ast.IdentifierNode('foo'),
+                                        ast.LiteralNode(1)),
+                              ast.LiteralNode(1))
     function_node.append(assign_node2)
 
     optimization_analyzer = self._get_analyzer(ast_root)
@@ -646,12 +646,12 @@ class TestAssignSlice(BaseTest):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    assign_node1 = AssignNode(IdentifierNode('foo'), DictLiteralNode())
+    assign_node1 = ast.AssignNode(ast.IdentifierNode('foo'), ast.DictLiteralNode())
     function_node.append(assign_node1)
-    if_node = IfNode(LiteralNode(True))
-    assign_node2 = AssignNode(SliceNode(IdentifierNode('foo'),
-                                        LiteralNode(1)),
-                              LiteralNode(1))
+    if_node = ast.IfNode(ast.LiteralNode(True))
+    assign_node2 = ast.AssignNode(ast.SliceNode(ast.IdentifierNode('foo'),
+                                        ast.LiteralNode(1)),
+                              ast.LiteralNode(1))
     if_node.append(assign_node2)
     function_node.append(if_node)
 
@@ -666,13 +666,13 @@ class TestAssignSlice(BaseTest):
 class TestCollectWrites(BaseTest):
 
   def setUp(self):
-    options = sptoptions.default_options
-    options.update(cache_resolved_placeholders=True,
+    analyzer_options = options.default_options
+    analyzer_options.update(cache_resolved_placeholders=True,
                    enable_warnings=True, warnings_as_errors=True,
                    directly_access_defined_variables=True,
                    static_analysis=False, batch_buffer_writes=True)
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
 
@@ -694,7 +694,7 @@ class TestCollectWrites(BaseTest):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    function_node.append(BufferWrite(LiteralNode('foo')))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('foo')))
     expected_hash = hash(ast_root)
 
     optimization_analyzer = self._get_analyzer(ast_root)
@@ -711,15 +711,15 @@ class TestCollectWrites(BaseTest):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    function_node.append(BufferWrite(LiteralNode('foo')))
-    function_node.append(BufferWrite(LiteralNode('bar')))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('foo')))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('bar')))
     optimization_analyzer = self._get_analyzer(ast_root)
 
     ast_root, function_node = self._build_function_template()
-    tuple_node = TupleLiteralNode()
-    tuple_node.append(LiteralNode('foo'))
-    tuple_node.append(LiteralNode('bar'))
-    function_node.append(BufferExtend(tuple_node))
+    tuple_node = ast.TupleLiteralNode()
+    tuple_node.append(ast.LiteralNode('foo'))
+    tuple_node.append(ast.LiteralNode('bar'))
+    function_node.append(ast.BufferExtend(tuple_node))
     expected_hash = hash(ast_root)
 
     got_hash = hash(optimization_analyzer.optimize_ast())
@@ -740,27 +740,27 @@ class TestCollectWrites(BaseTest):
     #end def
     """
     ast_root, function_node = self._build_function_template()
-    function_node.append(BufferWrite(LiteralNode('foo')))
-    function_node.append(BufferWrite(LiteralNode('bar')))
-    if_node = IfNode()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('foo')))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('bar')))
+    if_node = ast.IfNode()
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
     function_node.append(if_node)
-    function_node.append(BufferWrite(LiteralNode('baz')))
-    function_node.append(BufferWrite(LiteralNode('boo')))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('baz')))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('boo')))
     optimization_analyzer = self._get_analyzer(ast_root)
 
     ast_root, function_node = self._build_function_template()
-    tuple_node = TupleLiteralNode()
-    tuple_node.append(LiteralNode('foo'))
-    tuple_node.append(LiteralNode('bar'))
-    function_node.append(BufferExtend(tuple_node))
-    if_node = IfNode()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    tuple_node = ast.TupleLiteralNode()
+    tuple_node.append(ast.LiteralNode('foo'))
+    tuple_node.append(ast.LiteralNode('bar'))
+    function_node.append(ast.BufferExtend(tuple_node))
+    if_node = ast.IfNode()
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
     function_node.append(if_node)
-    tuple_node = TupleLiteralNode()
-    tuple_node.append(LiteralNode('baz'))
-    tuple_node.append(LiteralNode('boo'))
-    function_node.append(BufferExtend(tuple_node))
+    tuple_node = ast.TupleLiteralNode()
+    tuple_node.append(ast.LiteralNode('baz'))
+    tuple_node.append(ast.LiteralNode('boo'))
+    function_node.append(ast.BufferExtend(tuple_node))
 
     expected_hash = hash(ast_root)
 
@@ -785,34 +785,34 @@ class TestCollectWrites(BaseTest):
     #end def
 
     NOTE: This test will break if collect_writes is written
-    using ASTNode.insert_before.
+    using ast.ASTNode.insert_before.
     """
     ast_root, function_node = self._build_function_template()
-    function_node.append(BufferWrite(LiteralNode('foo')))
-    function_node.append(BufferWrite(LiteralNode('bar')))
-    if_node = IfNode()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('foo')))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('bar')))
+    if_node = ast.IfNode()
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
     function_node.append(if_node)
-    function_node.append(BufferWrite(LiteralNode('baz')))
-    function_node.append(BufferWrite(LiteralNode('boo')))
-    if_node = IfNode()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('baz')))
+    function_node.append(ast.BufferWrite(ast.LiteralNode('boo')))
+    if_node = ast.IfNode()
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
     optimization_analyzer = self._get_analyzer(ast_root)
 
     ast_root, function_node = self._build_function_template()
-    tuple_node = TupleLiteralNode()
-    tuple_node.append(LiteralNode('foo'))
-    tuple_node.append(LiteralNode('bar'))
-    function_node.append(BufferExtend(tuple_node))
-    if_node = IfNode()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    tuple_node = ast.TupleLiteralNode()
+    tuple_node.append(ast.LiteralNode('foo'))
+    tuple_node.append(ast.LiteralNode('bar'))
+    function_node.append(ast.BufferExtend(tuple_node))
+    if_node = ast.IfNode()
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
     function_node.append(if_node)
-    tuple_node = TupleLiteralNode()
-    tuple_node.append(LiteralNode('baz'))
-    tuple_node.append(LiteralNode('boo'))
-    function_node.append(BufferExtend(tuple_node))
-    if_node = IfNode()
-    if_node.append(AssignNode(IdentifierNode('foo'), LiteralNode(1)))
+    tuple_node = ast.TupleLiteralNode()
+    tuple_node.append(ast.LiteralNode('baz'))
+    tuple_node.append(ast.LiteralNode('boo'))
+    function_node.append(ast.BufferExtend(tuple_node))
+    if_node = ast.IfNode()
+    if_node.append(ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)))
 
     expected_hash = hash(ast_root)
 
@@ -845,13 +845,13 @@ class TestDoNode(BaseTest):
 class TestCacheFilterArgs(BaseTest):
 
   def setUp(self):
-    options = sptoptions.default_options
-    options.update(cache_resolved_udn_expressions=True,
+    analyzer_options = options.default_options
+    analyzer_options.update(cache_resolved_udn_expressions=True,
                    enable_warnings=True, warnings_as_errors=True,
                    directly_access_defined_variables=True,
                    static_analysis=False)
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
 
@@ -875,10 +875,10 @@ class TestCacheFilterArgs(BaseTest):
     optimized_tree = optimization_analyzer.optimize_ast()
 
     def pred(node):
-      return type(node) == AssignNode
+      return type(node) == ast.AssignNode
     alias_assign = walker.find_node(optimized_tree, pred)
     if not alias_assign:
-      self.fail('There should be an AssignNode due to caching')
+      self.fail('There should be an ast.AssignNode due to caching')
 
   def test_cache_filter_args_identifier(self):
     code = """
@@ -901,10 +901,10 @@ class TestCacheFilterArgs(BaseTest):
     optimized_tree = optimization_analyzer.optimize_ast()
 
     def pred(node):
-      return type(node) == AssignNode
+      return type(node) == ast.AssignNode
       alias_assign = walker.find_node(optimized_tree, pred)
       if not alias_assign:
-        self.fail('There should be an AssignNode due to caching')
+        self.fail('There should be an ast.AssignNode due to caching')
 
 
 class TestFilterInMacro(BaseTest):
@@ -934,7 +934,7 @@ class TestFilterInMacro(BaseTest):
     optimized_tree = optimization_analyzer.optimize_ast()
 
     def pred(node):
-      return bool(type(node) == IdentifierNode and
+      return bool(type(node) == ast.IdentifierNode and
                   node.name == '_self_filter_function')
 
     filter_node = walker.find_node(optimized_tree, pred)
@@ -966,7 +966,7 @@ class TestFilterInMacro(BaseTest):
     optimized_tree = optimization_analyzer.optimize_ast()
 
     def pred(node):
-      return bool(type(node) == IdentifierNode and
+      return bool(type(node) == ast.IdentifierNode and
                   node.name == '_self_private_filter_function')
 
     filter_node = walker.find_node(optimized_tree, pred)
@@ -977,9 +977,9 @@ class TestFilterInMacro(BaseTest):
 class TestHoistOnlyClean(BaseTest):
 
   def setUp(self):
-    options = sptoptions.o3_options
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=options,
+    analyzer_options = options.o3_options
+    self.compiler = compiler.Compiler(
+        analyzer_options=analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
     self.compiler.new_registry_format = True
@@ -1015,10 +1015,10 @@ class TestHoistOnlyClean(BaseTest):
 
     final_tree = self._get_final_tree(code)
     def pred(node):
-      return type(node) == AssignNode and type(node.parent) == FunctionNode
+      return type(node) == ast.AssignNode and type(node.parent) == ast.FunctionNode
     alias = walker.find_node(final_tree, pred)
     if not alias:
-      self.fail('Expected to find AssignNode hoisted to function scope.')
+      self.fail('Expected to find ast.AssignNode hoisted to function scope.')
 
   def test_should_not_hoist_for(self):
     code = """
@@ -1032,10 +1032,10 @@ class TestHoistOnlyClean(BaseTest):
 
     final_tree = self._get_final_tree(code)
     def pred(node):
-      return type(node) == AssignNode and type(node.parent) == FunctionNode
+      return type(node) == ast.AssignNode and type(node.parent) == ast.FunctionNode
     alias = walker.find_node(final_tree, pred)
     if alias:
-      self.fail('AssignNode should not be hoisted to function scope.')
+      self.fail('ast.AssignNode should not be hoisted to function scope.')
 
   def test_should_hoist_if(self):
     code = """
@@ -1049,10 +1049,10 @@ class TestHoistOnlyClean(BaseTest):
     """
     final_tree = self._get_final_tree(code)
     def pred(node):
-      return type(node) == AssignNode and type(node.parent) == FunctionNode
+      return type(node) == ast.AssignNode and type(node.parent) == ast.FunctionNode
     alias = walker.find_node(final_tree, pred)
     if not alias:
-      self.fail('Expected to find AssignNode hoisted to function scope.')
+      self.fail('Expected to find ast.AssignNode hoisted to function scope.')
 
   def test_should_not_hoist_if_do(self):
     code = """
@@ -1070,16 +1070,16 @@ class TestHoistOnlyClean(BaseTest):
 
     final_tree = self._get_final_tree(code)
     def pred_if(node):
-      return type(node) == IfNode
+      return type(node) == ast.IfNode
 
     if_node = walker.find_node(final_tree, pred_if)
 
     def pred(node):
-      return type(node) == AssignNode
+      return type(node) == ast.AssignNode
 
     alias = walker.find_node(if_node, pred)
     if not alias:
-      self.fail('AssignNode should be present in the If block.')
+      self.fail('ast.AssignNode should be present in the If block.')
 
 
   def test_should_not_hoist_if_set(self):
@@ -1097,11 +1097,11 @@ class TestHoistOnlyClean(BaseTest):
     final_tree = self._get_final_tree(code)
 
     def pred(node):
-      return type(node) == AssignNode and type(node.parent) == FunctionNode
+      return type(node) == ast.AssignNode and type(node.parent) == ast.FunctionNode
 
     alias = walker.find_node(final_tree, pred)
     if alias:
-      self.fail('AssignNode should not be hoisted to the FunctionNode.')
+      self.fail('ast.AssignNode should not be hoisted to the ast.FunctionNode.')
 
   def test_should_not_hoist_if_set_output(self):
     code = """
@@ -1118,19 +1118,19 @@ class TestHoistOnlyClean(BaseTest):
     final_tree = self._get_final_tree(code)
 
     def pred(node):
-      return type(node) == AssignNode and type(node.parent) == FunctionNode
+      return type(node) == ast.AssignNode and type(node.parent) == ast.FunctionNode
 
     alias = walker.find_node(final_tree, pred)
     if alias:
-      self.fail('AssignNode should not be hoisted to the FunctionNode.')
+      self.fail('ast.AssignNode should not be hoisted to the ast.FunctionNode.')
 
 
 class TestSanitizationOptimizations(BaseTest):
 
   def setUp(self):
-    options = sptoptions.default_options
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=options,
+    analyzer_options = options.default_options
+    self.compiler = compiler.Compiler(
+        analyzer_options=analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True,
         baked_mode=True)
@@ -1159,12 +1159,12 @@ class TestSanitizationOptimizations(BaseTest):
     optimized_tree = self._get_optimized_tree(code)
 
     def pred(node):
-      return type(node) == CallFunctionNode
+      return type(node) == ast.CallFunctionNode
 
     call_node = walker.find_node(optimized_tree, pred)
     if not call_node:
-      self.fail('Expected to find a CallFunctionNode.')
-    if call_node.sanitization_state != SanitizedState.NOT_OUTPUTTED:
+      self.fail('Expected to find a ast.CallFunctionNode.')
+    if call_node.sanitization_state != ast.SanitizedState.NOT_OUTPUTTED:
       self.fail('Expected node in test expression to not need sanitization.')
 
   def test_should_not_need_sanitization_do(self):
@@ -1177,12 +1177,12 @@ class TestSanitizationOptimizations(BaseTest):
     optimized_tree = self._get_optimized_tree(code)
 
     def pred(node):
-      return type(node) == CallFunctionNode
+      return type(node) == ast.CallFunctionNode
 
     call_node = walker.find_node(optimized_tree, pred)
     if not call_node:
-      self.fail('Expected to find a CallFunctionNode.')
-    if call_node.sanitization_state != SanitizedState.NOT_OUTPUTTED:
+      self.fail('Expected to find a ast.CallFunctionNode.')
+    if call_node.sanitization_state != ast.SanitizedState.NOT_OUTPUTTED:
       self.fail('Expected node in #do to not need sanitization.')
 
   def test_should_not_need_sanitization_filter(self):
@@ -1195,14 +1195,14 @@ class TestSanitizationOptimizations(BaseTest):
     optimized_tree = self._get_optimized_tree(code)
 
     def pred(node):
-      return (type(node) == CallFunctionNode and
-              type(node.parent) == FilterNode)
+      return (type(node) == ast.CallFunctionNode and
+              type(node.parent) == ast.FilterNode)
 
     call_node = walker.find_node(optimized_tree, pred)
     if not call_node:
-      self.fail('Expected to find a CallFunctionNode.')
-    if call_node.sanitization_state != SanitizedState.OUTPUTTED_IMMEDIATELY:
-      self.fail('Expected node in FilterNode to not need sanitization.')
+      self.fail('Expected to find a ast.CallFunctionNode.')
+    if call_node.sanitization_state != ast.SanitizedState.OUTPUTTED_IMMEDIATELY:
+      self.fail('Expected node in ast.FilterNode to not need sanitization.')
 
 
 if __name__ == '__main__':

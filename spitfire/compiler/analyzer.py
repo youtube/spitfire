@@ -6,7 +6,7 @@
 import copy
 import os.path
 
-from spitfire.compiler.ast import *
+from spitfire.compiler import ast
 from spitfire.compiler import util
 from spitfire import text
 
@@ -34,20 +34,20 @@ i18n_function_name = 'i18n'
 
 # This is a whitelist of nodes that are allowed at the top level in
 # template libraries.
-# TODO: Remove TextNode once b/15314057 is fixed.
-_ALLOWED_LIBRARY_NODES = (TextNode,
-                         ImplementsNode,
-                         ImportNode,
-                         WhitespaceNode,
-                         LooseResolutionNode,
-                         AllowUndeclaredGlobalsNode,
-                         CommentNode,
-                         DefNode,
-                         GlobalNode)
+# TODO: Remove ast.TextNode once b/15314057 is fixed.
+_ALLOWED_LIBRARY_NODES = (ast.TextNode,
+                         ast.ImplementsNode,
+                         ast.ImportNode,
+                         ast.WhitespaceNode,
+                         ast.LooseResolutionNode,
+                         ast.AllowUndeclaredGlobalsNode,
+                         ast.CommentNode,
+                         ast.DefNode,
+                         ast.GlobalNode)
 
 # This is a list of nodes that cannot exclusively make up the body of
 # an if or for block.
-_BLANK_NODES = (WhitespaceNode, CommentNode)
+_BLANK_NODES = (ast.WhitespaceNode, ast.CommentNode)
 
 
 # convert the parse tree into something a bit more 'fat' and useful
@@ -81,7 +81,7 @@ class SemanticAnalyzer(object):
       # own package
       packages = self.compiler.base_extends_package.split('.')
       self.base_extends_identifiers = [
-          IdentifierNode(module_name) for module_name in packages]
+          ast.IdentifierNode(module_name) for module_name in packages]
 
   def get_ast(self):
     ast_node_list = self.build_ast(self.parse_root)
@@ -136,8 +136,8 @@ class SemanticAnalyzer(object):
     # Need to build a full list of template_methods before analyzing so we can
     # modify CallFunctionNodes as we walk the tree below.
     for child_node in tree_walker(pnode):
-      if (isinstance(child_node, DefNode) and
-          not isinstance(child_node, MacroNode)):
+      if (isinstance(child_node, ast.DefNode) and
+          not isinstance(child_node, ast.MacroNode)):
         if child_node.name in self.template.template_methods:
           self.compiler.error(
               SemanticAnalyzerError(
@@ -169,12 +169,12 @@ class SemanticAnalyzer(object):
 
     return [self.template]
 
-  # Recursively grabs identifiers from a TargetListNode, such as in a ForNode.
+  # Recursively grabs identifiers from a ast.TargetListNode, such as in a ast.ForNode.
   def _getIdentifiersFromListNode(self, identifier_set, target_list_node):
     for pn in target_list_node.child_nodes:
-      if isinstance(pn, TargetNode):
+      if isinstance(pn, ast.TargetNode):
         identifier_set.add(pn.name)
-      elif isinstance(pn, TargetListNode):
+      elif isinstance(pn, ast.TargetListNode):
         self._getIdentifiersFromListNode(identifier_set, pn)
 
   def analyzeForNode(self, pnode):
@@ -185,7 +185,7 @@ class SemanticAnalyzer(object):
           SemanticAnalyzerError("can't define an empty #for loop"),
           pos=pnode.pos)
 
-    for_node = ForNode(pos=pnode.pos)
+    for_node = ast.ForNode(pos=pnode.pos)
 
     # Backup original scope identifiers for analysis.
     template_local_scope_identifiers = set(
@@ -220,19 +220,19 @@ class SemanticAnalyzer(object):
 
   def analyzeGetUDNNode(self, pnode):
     children = pnode.getChildNodes()
-    if isinstance(children[0], PlaceholderNode):
+    if isinstance(children[0], ast.PlaceholderNode):
       identifier = '.'.join([node.name for node in children])
       # Some modules are trusted not to need UDN resolution.
       if self._identifier_can_skip_UDN_resolution(identifier):
         expr = '%s.%s' % (identifier, pnode.name)
-        return [IdentifierNode(expr, pos=pnode.pos)]
+        return [ast.IdentifierNode(expr, pos=pnode.pos)]
 
     expression = self.build_ast(pnode.expression)[0]
-    return [GetUDNNode(expression, pnode.name, pos=pnode.pos)]
+    return [ast.GetUDNNode(expression, pnode.name, pos=pnode.pos)]
 
   def analyzeGetAttrNode(self, pnode):
     expression = self.build_ast(pnode.expression)[0]
-    return [GetAttrNode(expression, pnode.name, pos=pnode.pos)]
+    return [ast.GetAttrNode(expression, pnode.name, pos=pnode.pos)]
 
   def analyzeIfNode(self, pnode):
     # If all of the children are nodes that get ignored or there are
@@ -242,7 +242,7 @@ class SemanticAnalyzer(object):
           SemanticAnalyzerError("can't define an empty #if block"),
           pos=pnode.pos)
 
-    if_node = IfNode(pos=pnode.pos)
+    if_node = ast.IfNode(pos=pnode.pos)
     if_node.else_.pos = pnode.else_.pos
     if_node.test_expression = self.build_ast(pnode.test_expression)[0]
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
@@ -261,19 +261,19 @@ class SemanticAnalyzer(object):
     return new_nodes
 
   def analyzeArgListNode(self, pnode):
-    list_node = ArgListNode(pos=pnode.pos)
+    list_node = ast.ArgListNode(pos=pnode.pos)
     for n in pnode:
       list_node.extend(self.build_ast(n))
     return [list_node]
 
   def analyzeTupleLiteralNode(self, pnode):
-    tuple_node = TupleLiteralNode(pos=pnode.pos)
+    tuple_node = ast.TupleLiteralNode(pos=pnode.pos)
     for n in pnode.child_nodes:
       tuple_node.extend(self.build_ast(n))
     return [tuple_node]
 
   def analyzeDictLiteralNode(self, pnode):
-    dict_node = DictLiteralNode(pos=pnode.pos)
+    dict_node = ast.DictLiteralNode(pos=pnode.pos)
     for key_node, value_node in pnode.child_nodes:
       key_value = (key_node, self.build_ast(value_node)[0])
       dict_node.child_nodes.extend([key_value])
@@ -312,7 +312,7 @@ class SemanticAnalyzer(object):
     return []
 
   def analyzeImportNode(self, pnode):
-    node = ImportNode([self.build_ast(n)[0] for n in pnode.module_name_list],
+    node = ast.ImportNode([self.build_ast(n)[0] for n in pnode.module_name_list],
                       library=pnode.library, pos=pnode.pos)
     if node.library:
       self.template.library_identifiers.add(
@@ -330,9 +330,9 @@ class SemanticAnalyzer(object):
     # an extends directive results in two fairly separate things happening
     # clone these nodes so we can modify the path struction without mangling
     # anything else
-    import_node = ImportNode(pnode.module_name_list[:])
-    extends_node = ExtendsNode(pnode.module_name_list[:])
-    if type(pnode) != AbsoluteExtendsNode:
+    import_node = ast.ImportNode(pnode.module_name_list[:])
+    extends_node = ast.ExtendsNode(pnode.module_name_list[:])
+    if type(pnode) != ast.AbsoluteExtendsNode:
       import_node.module_name_list[0:0] = self.base_extends_identifiers
       extends_node.module_name_list[0:0] = self.base_extends_identifiers
 
@@ -358,14 +358,14 @@ class SemanticAnalyzer(object):
 
   def analyzeTextNode(self, pnode):
     if pnode.child_nodes:
-      self.compiler.error(SemanticAnalyzerError("TextNode can't have children"),
+      self.compiler.error(SemanticAnalyzerError("ast.TextNode can't have children"),
                           pos=pnode.pos)
 
     value = pnode.value
     if self.options.normalize_whitespace:
       value = text.normalize_whitespace(value)
-    literal_node = LiteralNode(value, pos=pnode.pos)
-    buffer_write = BufferWrite(literal_node, pos=pnode.pos)
+    literal_node = ast.LiteralNode(value, pos=pnode.pos)
+    buffer_write = ast.BufferWrite(literal_node, pos=pnode.pos)
     return [buffer_write]
 
   analyzeOptionalWhitespaceNode = analyzeTextNode
@@ -378,12 +378,12 @@ class SemanticAnalyzer(object):
 
   def analyzeDefNode(self, pnode, allow_nesting=False):
     if (self.options.fail_nested_defs and not allow_nesting
-        and not isinstance(pnode.parent, TemplateNode)):
+        and not isinstance(pnode.parent, ast.TemplateNode)):
       self.compiler.error(
           SemanticAnalyzerError('nested #def directives are not allowed'),
           pos=pnode.pos)
 
-    function = FunctionNode(pnode.name, pos=pnode.pos)
+    function = ast.FunctionNode(pnode.name, pos=pnode.pos)
     # Backup original scope identifiers for analysis.
     template_local_scope_identifiers = set(
         self.template.local_scope_identifiers)
@@ -396,7 +396,7 @@ class SemanticAnalyzer(object):
       function.parameter_list = self.build_ast(pnode.parameter_list)[0]
 
     function.parameter_list.child_nodes.insert(0,
-                                               ParameterNode(name='self'))
+                                               ast.ParameterNode(name='self'))
 
     for pn in self.optimize_parsed_nodes(pnode.child_nodes):
       function.extend(self.build_ast(pn))
@@ -410,16 +410,16 @@ class SemanticAnalyzer(object):
 
   def analyzeBlockNode(self, pnode):
     self.analyzeDefNode(pnode, allow_nesting=True)
-    function_node = CallFunctionNode(pos=pnode.pos)
-    function_node.expression = self.build_ast(PlaceholderNode(pnode.name))[0]
-    p = PlaceholderSubstitutionNode(function_node, pos=pnode.pos)
+    function_node = ast.CallFunctionNode(pos=pnode.pos)
+    function_node.expression = self.build_ast(ast.PlaceholderNode(pnode.name))[0]
+    p = ast.PlaceholderSubstitutionNode(function_node, pos=pnode.pos)
     call_block = self.build_ast(p)
     return call_block
 
   def handleMacro(self, pnode, macro_function, parse_rule):
-    if isinstance(pnode, MacroNode):
+    if isinstance(pnode, ast.MacroNode):
       kargs_map = pnode.parameter_list.get_arg_map()
-    elif isinstance(pnode, CallFunctionNode):
+    elif isinstance(pnode, ast.CallFunctionNode):
       kargs_map = pnode.arg_list.get_arg_map()
     else:
       self.compiler.error(
@@ -433,9 +433,9 @@ class SemanticAnalyzer(object):
     try:
       if parse_rule:
         fragment_ast = util.parse(macro_output, parse_rule)
-      elif isinstance(pnode, MacroNode):
+      elif isinstance(pnode, ast.MacroNode):
         fragment_ast = util.parse(macro_output, 'fragment_goal')
-      elif isinstance(pnode, CallFunctionNode):
+      elif isinstance(pnode, ast.CallFunctionNode):
         fragment_ast = util.parse(macro_output, 'rhs_expression')
     except Exception, e:
       self.compiler.error(MacroParseError(e), pos=pnode.pos)
@@ -459,7 +459,7 @@ class SemanticAnalyzer(object):
 
     if not self.uses_raw:
       for child_node in tree_walker(temp_fragment):
-        if (isinstance(child_node, PlaceholderSubstitutionNode) and
+        if (isinstance(child_node, ast.PlaceholderSubstitutionNode) and
             'raw' in child_node.parameter_list.get_arg_map()):
           self.uses_raw = True
           break
@@ -467,7 +467,7 @@ class SemanticAnalyzer(object):
     return self.handleMacro(pnode, macro_function, macro_parse_rule)
 
   def analyzeGlobalNode(self, pnode):
-    if not isinstance(pnode.parent, TemplateNode):
+    if not isinstance(pnode.parent, ast.TemplateNode):
       self.compiler.error(
           SemanticAnalyzerError('#global must be a top-level directive.'),
           pos=pnode.pos)
@@ -507,13 +507,13 @@ class SemanticAnalyzer(object):
     ph_expression = self.build_ast(pnode.expression)[0]
     # If the expression contained a macro that was parsed as a
     # fragment, the expression is now a statement and can be moved
-    # outside of the PlaceholderSubstitutionNode.
+    # outside of the ast.PlaceholderSubstitutionNode.
     #
     # This is a hack to get around design decisions that were made
     # early on. It is up to the macro authors to correctly decide how
     # the macro should be parsed and the compiler should throw errors
     # if there is an odd state where nodes are somewhere unexpected.
-    if isinstance(ph_expression, statement_nodes):
+    if isinstance(ph_expression, ast.statement_nodes):
       return [ph_expression]
 
     arg_map = pnode.parameter_list.get_arg_map()
@@ -525,13 +525,13 @@ class SemanticAnalyzer(object):
     registered_function = False
     function_has_only_literal_args = False
     never_cache = False
-    if isinstance(ph_expression, CallFunctionNode):
+    if isinstance(ph_expression, ast.CallFunctionNode):
       fname = ph_expression.expression.name
       if self.compiler.registry_contains(fname):
         function_has_only_literal_args = (
             ph_expression.arg_list and
             not [_arg for _arg in ph_expression.arg_list
-                 if not isinstance(_arg, LiteralNode)])
+                 if not isinstance(_arg, ast.LiteralNode)])
         skip_filter = self.compiler.get_registry_value(fname, 'skip_filter')
         skip_unless_baked = self.compiler.get_registry_value(
             fname, 'skip_filter_unless_baked')
@@ -546,7 +546,7 @@ class SemanticAnalyzer(object):
 
     if (self.compiler.enable_filters and
         format_string == default_format_string and
-        not isinstance(ph_expression, LiteralNode)):
+        not isinstance(ph_expression, ast.LiteralNode)):
       arg_node_map = pnode.parameter_list.get_arg_node_map()
       if 'raw' in arg_map:
         # If this is a |raw usage and the template does not allow raw, raise an
@@ -564,10 +564,10 @@ class SemanticAnalyzer(object):
         if skip_filter:
           # explicitly set the filter to none here - this means we will cache
           # expensive pseudo-filtered nodes
-          ph_expression = FilterNode(ph_expression, None, pos=pnode.pos)
+          ph_expression = ast.FilterNode(ph_expression, None, pos=pnode.pos)
         else:
-          ph_expression = FilterNode(
-              ph_expression, arg_node_map.get('filter', DefaultFilterFunction),
+          ph_expression = ast.FilterNode(
+              ph_expression, arg_node_map.get('filter', ast.DefaultFilterFunction),
               pos=pnode.pos)
 
         # if this is a literal node, we still might want to filter it
@@ -576,21 +576,21 @@ class SemanticAnalyzer(object):
         if (not never_cache and
             (registered_function and function_has_only_literal_args) or
             cache_forever or 'cache' in arg_map):
-          cache_expression = CacheNode(ph_expression, pos=pnode.pos)
+          cache_expression = ast.CacheNode(ph_expression, pos=pnode.pos)
           self.template.cached_identifiers.add(cache_expression)
           node_list.append(cache_expression)
-          ph_expression = IdentifierNode(cache_expression.name, pos=pnode.pos)
+          ph_expression = ast.IdentifierNode(cache_expression.name, pos=pnode.pos)
 
-    if isinstance(ph_expression, LiteralNode):
-      buffer_write = BufferWrite(ph_expression, pos=pnode.pos)
+    if isinstance(ph_expression, ast.LiteralNode):
+      buffer_write = ast.BufferWrite(ph_expression, pos=pnode.pos)
       node_list.append(buffer_write)
     elif self.compiler.enable_filters and format_string == default_format_string:
       # we are already filtering, don't bother creating a new string
-      buffer_write = BufferWrite(ph_expression, pos=pnode.pos)
+      buffer_write = ast.BufferWrite(ph_expression, pos=pnode.pos)
       node_list.append(buffer_write)
     else:
-      buffer_write = BufferWrite(
-          BinOpNode('%', LiteralNode(format_string, pos=pnode.pos),
+      buffer_write = ast.BufferWrite(
+          ast.BinOpNode('%', ast.LiteralNode(format_string, pos=pnode.pos),
                     ph_expression),
           pos=pnode.pos)
       node_list.append(buffer_write)
@@ -613,7 +613,7 @@ class SemanticAnalyzer(object):
       elif self.template.library:
         # Only do placeholder resolutions for placeholders declared with #global
         # in library templates.
-        identifier_node = IdentifierNode(pnode.name, pos=pnode.pos)
+        identifier_node = ast.IdentifierNode(pnode.name, pos=pnode.pos)
         return [identifier_node]
     return [pnode]
 
@@ -629,12 +629,12 @@ class SemanticAnalyzer(object):
 
   def analyzeAssignNode(self, pnode):
     # Add to template's scope, which will be removed after stepping out of
-    # a DefNode or ForNode.
-    # If the left side is a SliceNode, make sure the expression is an
-    # IdentifierNode and add the expression's name.
-    if isinstance(pnode.left, SliceNode):
+    # a ast.DefNode or ast.ForNode.
+    # If the left side is a ast.SliceNode, make sure the expression is an
+    # ast.IdentifierNode and add the expression's name.
+    if isinstance(pnode.left, ast.SliceNode):
       exp = pnode.left.expression
-      if not isinstance(exp, IdentifierNode):
+      if not isinstance(exp, ast.IdentifierNode):
         self.compiler.error(
             SemanticAnalyzerError(
                 'Slice expression %s in an assign must be an identifier' %
@@ -664,26 +664,26 @@ class SemanticAnalyzer(object):
     library_function = None
     skip_filter = self.compiler.get_registry_value(fn.expression.name,
                                                    'skip_filter')
-    if isinstance(fn.expression, PlaceholderNode):
+    if isinstance(fn.expression, ast.PlaceholderNode):
       macro_handler_name = 'macro_function_%s' % fn.expression.name
       macro_data = self.compiler.macro_registry.get(macro_handler_name)
       if macro_data:
         macro_function, macro_parse_rule = macro_data
         return self.handleMacro(fn, macro_function, macro_parse_rule)
       elif fn.expression.name in self.template.template_methods:
-        fn.sanitization_state = SanitizedState.SANITIZED_STRING
+        fn.sanitization_state = ast.SanitizedState.SANITIZED_STRING
         if self.template.library:
           # Calling another library function from this library function.
           library_function = fn.expression.name
       elif skip_filter:
         # If the function is marked as skip_filter in the registry, we
         # know it is sanitized.
-        fn.sanitization_state = SanitizedState.SANITIZED
+        fn.sanitization_state = ast.SanitizedState.SANITIZED
       elif skip_filter is False:
         # If the function is marked as skip_filter=False in the registry, we
         # know it is not sanitized.
-        fn.sanitization_state = SanitizedState.UNSANITIZED
-    elif isinstance(fn.expression, GetUDNNode):
+        fn.sanitization_state = ast.SanitizedState.UNSANITIZED
+    elif isinstance(fn.expression, ast.GetUDNNode):
       identifier = [node.name for node in fn.expression.getChildNodes()]
       identifier = '.'.join(identifier)
       if identifier in self.template.library_identifiers:
@@ -693,11 +693,11 @@ class SemanticAnalyzer(object):
     if library_function:
       # Replace the placeholder node or UDN resolution with a direct reference
       # to the library function, either in another imported module or here.
-      fn.expression = IdentifierNode(library_function, pos=pnode.pos)
+      fn.expression = ast.IdentifierNode(library_function, pos=pnode.pos)
       # Pass the current template instance into the library function.
-      fn.arg_list.child_nodes.insert(0, IdentifierNode('self'))
+      fn.arg_list.child_nodes.insert(0, ast.IdentifierNode('self'))
       # Library functions are spitfire functions so their output is sanitized.
-      fn.sanitization_state = SanitizedState.SANITIZED_STRING
+      fn.sanitization_state = ast.SanitizedState.SANITIZED_STRING
       fn.library_function = True
 
     fn.expression = self.build_ast(fn.expression)[0]
@@ -718,15 +718,15 @@ class SemanticAnalyzer(object):
     for n in node_list:
       # strip optional whitespace by removing the nodes
       if (self.options.ignore_optional_whitespace and
-          isinstance(n, OptionalWhitespaceNode)):
+          isinstance(n, ast.OptionalWhitespaceNode)):
         continue
       # collapse adjacent TextNodes so we are calling these buffer writes
       elif (self.options.collapse_adjacent_text and
-            isinstance(n, TextNode) and
+            isinstance(n, ast.TextNode) and
             len(optimized_nodes) and
-            isinstance(optimized_nodes[-1], TextNode)):
+            isinstance(optimized_nodes[-1], ast.TextNode)):
         # recreate this object so it doesn't show up as whitespace
-        temp_text = TextNode(optimized_nodes[-1].value, pos=n.pos)
+        temp_text = ast.TextNode(optimized_nodes[-1].value, pos=n.pos)
         temp_text.parent = optimized_nodes[-1].parent
         temp_text.append_text_node(n)
         optimized_nodes[-1] = temp_text
@@ -736,9 +736,9 @@ class SemanticAnalyzer(object):
     return optimized_nodes
 
   # go over the parsed nodes and weed out the parts we don't need
-  # do this after analysis as well, in case a macro generates more BufferWrite
+  # do this after analysis as well, in case a macro generates more ast.BufferWrite
   def optimize_buffer_writes(self, node_list):
-    optimized_nodes = NodeList()
+    optimized_nodes = ast.NodeList()
     for n in node_list:
       if (self.options.collapse_adjacent_text and
           is_text_write(n) and
@@ -757,5 +757,5 @@ class SemanticAnalyzer(object):
 
 
 def is_text_write(node):
-  return (isinstance(node, BufferWrite) and
-          isinstance(node.expression, LiteralNode))
+  return (isinstance(node, ast.BufferWrite) and
+          isinstance(node.expression, ast.LiteralNode))

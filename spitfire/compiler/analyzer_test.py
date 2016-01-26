@@ -5,26 +5,26 @@
 
 import unittest
 
-from spitfire import test_util
-from spitfire.compiler.ast import *
 from spitfire.compiler import analyzer
-from spitfire.compiler import options as sptoptions
-from spitfire.compiler import compiler as sptcompiler
+from spitfire.compiler import ast
+from spitfire.compiler import compiler
+from spitfire.compiler import options
 from spitfire.compiler import util
 from spitfire.compiler import walker
+from spitfire import test_util
 
 
 class BaseTest(unittest.TestCase):
 
   def __init__(self, *args):
     unittest.TestCase.__init__(self, *args)
-    self.options = sptoptions.default_options
-    self.options.update(cache_resolved_placeholders=True,
+    self.analyzer_options = options.default_options
+    self.analyzer_options.update(cache_resolved_placeholders=True,
                         enable_warnings=True, warnings_as_errors=True)
 
   def setUp(self):
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=self.options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=self.analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
 
@@ -45,8 +45,8 @@ class BaseTest(unittest.TestCase):
     #def test_function
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    def_node = DefNode('test_function')
+    ast_root = ast.TemplateNode('TestTemplate')
+    def_node = ast.DefNode('test_function')
     ast_root.append(def_node)
     return (ast_root, def_node)
 
@@ -60,8 +60,8 @@ class BaseTest(unittest.TestCase):
     #end def
     """
     ast_root, def_node = self._build_function_template()
-    condition_node = condition or LiteralNode(True)
-    if_node = IfNode(condition_node)
+    condition_node = condition or ast.LiteralNode(True)
+    if_node = ast.IfNode(condition_node)
     def_node.append(if_node)
     return (ast_root, def_node, if_node)
 
@@ -98,7 +98,7 @@ class TestEmptyIfBlockError(BaseTest):
     #end def
     """
     ast_root, def_node, if_node = self._build_if_template()
-    if_node.append(OptionalWhitespaceNode(' '))
+    if_node.append(ast.OptionalWhitespaceNode(' '))
 
     semantic_analyzer = self._get_analyzer(ast_root)
 
@@ -115,7 +115,7 @@ class TestEmptyIfBlockError(BaseTest):
     #end def
     """
     ast_root, def_node, if_node = self._build_if_template()
-    if_node.append(CommentNode(' This is a comment.'))
+    if_node.append(ast.CommentNode(' This is a comment.'))
 
     semantic_analyzer = self._get_analyzer(ast_root)
 
@@ -133,7 +133,7 @@ class TestEmptyIfBlockError(BaseTest):
     #end def
     """
     ast_root, def_node, if_node = self._build_if_template()
-    assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(True))
+    assign_node = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(True))
     if_node.else_.append(assign_node)
 
     semantic_analyzer = self._get_analyzer(ast_root)
@@ -152,9 +152,9 @@ class TestEmptyIfBlockError(BaseTest):
     #end def
     """
     ast_root, def_node, if_node = self._build_if_template()
-    assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(True))
+    assign_node = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(True))
     if_node.append(assign_node)
-    elif_node = IfNode(LiteralNode(False))
+    elif_node = ast.IfNode(ast.LiteralNode(False))
     if_node.else_.append(elif_node)
     semantic_analyzer = self._get_analyzer(ast_root)
 
@@ -171,7 +171,7 @@ class TestEmptyIfBlockError(BaseTest):
     #end def
     """
     ast_root, def_node, if_node = self._build_if_template()
-    assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(True))
+    assign_node = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(True))
     if_node.append(assign_node)
 
     semantic_analyzer = self._get_analyzer(ast_root)
@@ -194,11 +194,11 @@ class TestEmptyForBlockError(BaseTest):
     #end def
     """
     ast_root, def_node = self._build_function_template()
-    target_list = TargetListNode()
-    target_list.append(PlaceholderNode('foo'))
-    expression_list = ExpressionListNode()
-    expression_list.append(LiteralNode([]))
-    for_node = ForNode(target_list=target_list, expression_list=expression_list)
+    target_list = ast.TargetListNode()
+    target_list.append(ast.PlaceholderNode('foo'))
+    expression_list = ast.ExpressionListNode()
+    expression_list.append(ast.LiteralNode([]))
+    for_node = ast.ForNode(target_list=target_list, expression_list=expression_list)
     def_node.append(for_node)
     return (ast_root, def_node, for_node)
 
@@ -227,7 +227,7 @@ class TestEmptyForBlockError(BaseTest):
     #end def
     """
     ast_root, def_node, for_node = self._build_for_template()
-    for_node.append(OptionalWhitespaceNode(' '))
+    for_node.append(ast.OptionalWhitespaceNode(' '))
 
     semantic_analyzer = self._get_analyzer(ast_root)
 
@@ -244,7 +244,7 @@ class TestEmptyForBlockError(BaseTest):
     #end def
     """
     ast_root, def_node, for_node = self._build_for_template()
-    for_node.append(CommentNode(' This is a comment.'))
+    for_node.append(ast.CommentNode(' This is a comment.'))
 
     semantic_analyzer = self._get_analyzer(ast_root)
 
@@ -261,7 +261,7 @@ class TestEmptyForBlockError(BaseTest):
     #end def
     """
     ast_root, def_node, for_node = self._build_for_template()
-    assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(True))
+    assign_node = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(True))
     for_node.append(assign_node)
 
     semantic_analyzer = self._get_analyzer(ast_root)
@@ -282,10 +282,10 @@ class TestGlobalScopeLibraryError(BaseTest):
     #def test_function
     #end def
     """
-    ast_root = TemplateNode('TestTemplate')
-    implements_node = ImplementsNode('library')
+    ast_root = ast.TemplateNode('TestTemplate')
+    implements_node = ast.ImplementsNode('library')
     ast_root.append(implements_node)
-    def_node = DefNode('test_function')
+    def_node = ast.DefNode('test_function')
     ast_root.append(def_node)
     return (ast_root, def_node)
 
@@ -314,7 +314,7 @@ class TestGlobalScopeLibraryError(BaseTest):
     #end def
     """
     ast_root, def_node = self._build_function_template_library()
-    assign_node = AssignNode(IdentifierNode('foo'), LiteralNode(True))
+    assign_node = ast.AssignNode(ast.IdentifierNode('foo'), ast.LiteralNode(True))
     ast_root.insert_before(def_node, assign_node)
 
     semantic_analyzer = self._get_analyzer(ast_root)
@@ -331,7 +331,7 @@ class TestGlobalScopeLibraryError(BaseTest):
     #end def
     """
     ast_root, def_node = self._build_function_template_library()
-    attr_node = AttributeNode('foo', default=LiteralNode(True))
+    attr_node = ast.AttributeNode('foo', default=ast.LiteralNode(True))
     ast_root.insert_before(def_node, attr_node)
 
     semantic_analyzer = self._get_analyzer(ast_root)
@@ -348,7 +348,7 @@ class TestGlobalScopeLibraryError(BaseTest):
     #end def
     """
     ast_root, def_node = self._build_function_template_library()
-    global_node = GlobalNode('foo')
+    global_node = ast.GlobalNode('foo')
     ast_root.insert_before(def_node, global_node)
 
     semantic_analyzer = self._get_analyzer(ast_root)
@@ -369,8 +369,8 @@ class TestAssignSlice(BaseTest):
     #end def
     """
     ast_root, def_node = self._build_function_template()
-    assign_node = AssignNode(SliceNode(LiteralNode(1), LiteralNode(1)),
-                             LiteralNode(1))
+    assign_node = ast.AssignNode(ast.SliceNode(ast.LiteralNode(1), ast.LiteralNode(1)),
+                             ast.LiteralNode(1))
     def_node.append(assign_node)
 
     semantic_analyzer = self._get_analyzer(ast_root)
@@ -386,8 +386,8 @@ class TestAssignSlice(BaseTest):
     #end def
     """
     ast_root, def_node = self._build_function_template()
-    assign_node = AssignNode(SliceNode(IdentifierNode('foo'), LiteralNode(1)),
-                             LiteralNode(1))
+    assign_node = ast.AssignNode(ast.SliceNode(ast.IdentifierNode('foo'), ast.LiteralNode(1)),
+                             ast.LiteralNode(1))
     def_node.append(assign_node)
 
     semantic_analyzer = self._get_analyzer(ast_root)
@@ -401,12 +401,12 @@ class TestAssignSlice(BaseTest):
 class TestSanitizedFunction(BaseTest):
 
   def setUp(self):
-    self.options = sptoptions.default_options
-    self.options.update(cache_resolved_placeholders=True,
+    self.analyzer_options = options.default_options
+    self.analyzer_options.update(cache_resolved_placeholders=True,
                         enable_warnings=True, warnings_as_errors=True,
                         baked_mode=True, generate_unicode=False)
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=self.options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=self.analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
     self.compiler.new_registry_format = True
@@ -426,15 +426,15 @@ class TestSanitizedFunction(BaseTest):
     semantic_analyzer = self._get_analyzer(template)
     analyzed_ast = semantic_analyzer.get_ast()
     def pred(node):
-      return (type(node) == CallFunctionNode and
-              type(node.expression) == PlaceholderNode and
+      return (type(node) == ast.CallFunctionNode and
+              type(node.expression) == ast.PlaceholderNode and
               node.expression.name == 'foo')
 
     foo_call = walker.find_node(analyzed_ast, pred)
     if not foo_call:
       self.fail('Expected foo() in ast')
     self.assertEqual(foo_call.sanitization_state,
-                     SanitizedState.SANITIZED_STRING)
+                     ast.SanitizedState.SANITIZED_STRING)
 
   def test_library_function_direct(self):
     code = """
@@ -448,15 +448,15 @@ class TestSanitizedFunction(BaseTest):
     semantic_analyzer = self._get_analyzer(template)
     analyzed_ast = semantic_analyzer.get_ast()
     def pred(node):
-      return (type(node) == CallFunctionNode and
-              type(node.expression) == IdentifierNode and
+      return (type(node) == ast.CallFunctionNode and
+              type(node.expression) == ast.IdentifierNode and
               node.expression.name == 'my_lib.foo')
 
     foo_call = walker.find_node(analyzed_ast, pred)
     if not foo_call:
       self.fail('Expected my_lib.foo() in ast')
     self.assertEqual(foo_call.sanitization_state,
-                     SanitizedState.SANITIZED_STRING)
+                     ast.SanitizedState.SANITIZED_STRING)
 
   def test_library_function_registry_yes(self):
     code = """
@@ -468,15 +468,15 @@ class TestSanitizedFunction(BaseTest):
     semantic_analyzer = self._get_analyzer(template)
     analyzed_ast = semantic_analyzer.get_ast()
     def pred(node):
-      return (type(node) == CallFunctionNode and
-              type(node.expression) == PlaceholderNode and
+      return (type(node) == ast.CallFunctionNode and
+              type(node.expression) == ast.PlaceholderNode and
               node.expression.name == 'reg_f')
 
     foo_call = walker.find_node(analyzed_ast, pred)
     if not foo_call:
       self.fail('Expected reg_f() in ast')
     self.assertEqual(foo_call.sanitization_state,
-                     SanitizedState.SANITIZED)
+                     ast.SanitizedState.SANITIZED)
 
   def test_external_function_maybe(self):
     code = """
@@ -490,9 +490,9 @@ class TestSanitizedFunction(BaseTest):
     semantic_analyzer = self._get_analyzer(template)
     analyzed_ast = semantic_analyzer.get_ast()
     def pred(node):
-      return (type(node) == CallFunctionNode and
-              type(node.expression) == GetUDNNode and
-              type(node.expression.expression) == PlaceholderNode and
+      return (type(node) == ast.CallFunctionNode and
+              type(node.expression) == ast.GetUDNNode and
+              type(node.expression.expression) == ast.PlaceholderNode and
               node.expression.expression.name == 'my_lib' and
               node.expression.name == 'foo')
 
@@ -500,17 +500,17 @@ class TestSanitizedFunction(BaseTest):
     if not foo_call:
       self.fail('Expected my_libfoo() in ast')
     self.assertEqual(foo_call.sanitization_state,
-                     SanitizedState.UNKNOWN)
+                     ast.SanitizedState.UNKNOWN)
 
 
 class TestNoRaw(BaseTest):
 
   def setUp(self):
-    self.options = sptoptions.default_options
-    self.options.update(enable_warnings=True, warnings_as_errors=True,
+    self.analyzer_options = options.default_options
+    self.analyzer_options.update(enable_warnings=True, warnings_as_errors=True,
                         no_raw=True)
-    self.compiler = sptcompiler.Compiler(
-        analyzer_options=self.options,
+    self.compiler = compiler.Compiler(
+        analyzer_options=self.analyzer_options,
         xspt_mode=False,
         compiler_stack_traces=True)
 
