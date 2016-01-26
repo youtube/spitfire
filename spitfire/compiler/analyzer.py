@@ -8,7 +8,7 @@ import os.path
 
 from spitfire.compiler.ast import *
 from spitfire.compiler import util
-from spitfire.util import normalize_whitespace
+from spitfire import text
 
 
 def tree_walker(node):
@@ -361,10 +361,10 @@ class SemanticAnalyzer(object):
       self.compiler.error(SemanticAnalyzerError("TextNode can't have children"),
                           pos=pnode.pos)
 
-    text = pnode.value
+    value = pnode.value
     if self.options.normalize_whitespace:
-      text = normalize_whitespace(text)
-    literal_node = LiteralNode(text, pos=pnode.pos)
+      value = text.normalize_whitespace(value)
+    literal_node = LiteralNode(value, pos=pnode.pos)
     buffer_write = BufferWrite(literal_node, pos=pnode.pos)
     return [buffer_write]
 
