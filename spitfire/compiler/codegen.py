@@ -558,6 +558,7 @@ class CodeGenerator(object):
     return [code_node]
 
   def codegenASTEchoNode(self, node):
+    self.function_stack[-1].uses_buffer_write = True
     node_list = []
 
     true_expression = self.generate_python(
