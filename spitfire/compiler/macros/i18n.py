@@ -10,8 +10,7 @@ import cStringIO as StringIO
 from spitfire.compiler import analyzer
 from spitfire.compiler.ast import *
 from spitfire.compiler.visitor import print_tree
-
-import spitfire.util
+from spitfire import text
 
 
 # generate a reasonable substitute name from a raw placeholder node
@@ -28,7 +27,7 @@ def make_placeholder_name(placeholder_node):
   placeholder_name = placeholder_name.upper()
   return placeholder_name
 
-  
+
 # create a translated version of the raw_msg while allowing placeholder
 # expressions to pass through correctly
 def make_i18n_message(raw_msg, macro_ast):
@@ -38,13 +37,13 @@ def make_i18n_message(raw_msg, macro_ast):
   for i, n in enumerate(macro_ast.child_nodes):
     #print i, type(n), "start", n.start, "end", n.end
     #print "raw:", "'%s'" % raw_msg[n.start:n.end]
-    
+
     if isinstance(n, PlaceholderSubstitutionNode):
       raw_placeholder_expression = raw_msg[n.start:n.end]
       #output.write(make_placeholder_name(n))
       output.write(raw_placeholder_expression)
     else:
-      output.write(spitfire.util.i18n_mangled_message(n.value))
+      output.write(text.i18n_mangled_message(n.value))
   return output.getvalue()
 
 
@@ -74,7 +73,7 @@ def macro_function_i18n(call_node, arg_map, compiler):
   if not isinstance(msg_arg_node, LiteralNode):
     raise analyzer.SemanticAnalyzerError(
       '$i18n argument "%s" must be a string literal' % msg_arg_node)
-  i18n_msg = spitfire.util.i18n_mangled_message(msg_arg_node.value)
+  i18n_msg = text.i18n_mangled_message(msg_arg_node.value)
   i18n_msg_utf8 = i18n_msg.encode(sys.getdefaultencoding())
   return u"'%s'" % i18n_msg.replace("'", "\\'")
-  
+
