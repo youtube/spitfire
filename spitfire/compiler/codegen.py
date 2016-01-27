@@ -191,11 +191,6 @@ class CodeGenerator(object):
     #   logging.warning("throwing away defined main function because it is not a base class %s %s", self.ast_root.source_path)
     #   logging.warning("%s", flatten_tree(node.main_function))
 
-    # Don't enable psyco for libraries since there is no class. We might want
-    # to iterate over the library functions and enable it for them instead.
-    if not node.library and self.options and self.options.enable_psyco:
-      module_code.append_line('spitfire.runtime.template.enable_psyco(%(classname)s)' % vars())
-
     module_code.append_line(run_tmpl % vars(node))
 
     return [module_code]

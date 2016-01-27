@@ -1,5 +1,4 @@
 # Quick Installation Notes #
-You may need to install psyco. Run 'sudo apt-get install psyco' or the equivalent if needed.
 
 Copy this code into an file called example.spt:
 ```
