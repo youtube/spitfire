@@ -19,6 +19,13 @@ PYTHON ?= python
 PIP ?= pip
 YAPF ?= yapf
 
+VIRTUALENV = $(shell $(PYTHON) -c "import sys; print(hasattr(sys, 'real_prefix') or hasattr(sys, 'base_prefix'))")
+ifeq ($(VIRTUALENV),True)
+  PIP_INSTALL_FLAGS=
+else
+  PIP_INSTALL_FLAGS=--user
+endif
+
 COMPILER = $(PYTHON) scripts/spitfire-compile
 CRUNNER = $(PYTHON) scripts/crunner.py
 UNITTEST = $(PYTHON) -m unittest
@@ -38,7 +45,7 @@ spitfire/compiler/parser.py: spitfire/compiler/parser.g third_party/yapps2/yapps
 extensions: spitfire/runtime/_baked.so spitfire/runtime/_template.so spitfire/runtime/_udn.so
 
 spitfire/runtime/_baked.so spitfire/runtime/_template.so spitfire/runtime/_udn.so: spitfire/runtime/_baked.c spitfire/runtime/_template.c spitfire/runtime/_udn.c
-	$(PIP) install --user --editable .
+	$(PIP) install $(PIP_INSTALL_FLAGS) --editable .
 
 
 fix:
