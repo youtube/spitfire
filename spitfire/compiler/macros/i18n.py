@@ -11,6 +11,7 @@ from spitfire.compiler import analyzer
 from spitfire.compiler.ast import *
 from spitfire.compiler.visitor import print_tree
 from spitfire import text
+from spitfire.compiler import util
 
 
 # generate a reasonable substitute name from a raw placeholder node
@@ -53,7 +54,7 @@ def macro_i18n(macro_node, arg_map, compiler):
 
   # generate a fake translation for now to verify this is working
   # most apps will have to stub this part out somehow i think
-  macro_content_ast = spitfire.compiler.util.parse(macro_node.value,
+  macro_content_ast = util.parse(macro_node.value,
                                                    'i18n_goal')
   i18n_msg = make_i18n_message(macro_node.value, macro_content_ast)
   i18n_msg_utf8 = i18n_msg.encode(sys.getdefaultencoding())
