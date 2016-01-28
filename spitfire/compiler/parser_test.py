@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import logging
 import unittest
 
 from spitfire.compiler.ast import *
@@ -86,7 +87,11 @@ class TestDo(BaseTest):
 #do #do $bar()
 #end def
     """
+    # Temporarily disable logging to avoid spurious exception output.
+    logging.disable(logging.ERROR)
     self.assertRaises(yappsrt.FatalParseError, self._compile, code)
+    # Re-enable logging.
+    logging.disable(logging.NOTSET)
 
   def test_do_expression(self):
     code = """
