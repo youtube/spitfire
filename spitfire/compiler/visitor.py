@@ -35,8 +35,11 @@ class VisitNode(object):
 def flatten_tree(root):
   return TreeVisitor(root).get_text()
 
-def print_tree(root):
-  print flatten_tree(root)
+def print_tree(root, output=None):
+  if output:
+    print >> output, flatten_tree(root)
+  else:
+    print flatten_tree(root)
 
 # perform an in-order traversal of the AST and call the generate methods
 # in this case, we are generating python source code that should be somewhat
