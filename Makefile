@@ -8,7 +8,7 @@
 # Build
 .PHONY: build parser extensions
 # Test
-.PHONY: test tests unit_tests no_whitespace_tests whitespace_tests test_function_registry test_opt
+.PHONY: test tests unit_tests no_whitespace_tests whitespace_tests function_registry_tests optimizer_tests
 # Clean up
 .PHONY: clean clean_build clean_tests
 # Format code
@@ -59,41 +59,45 @@ lint:
 
 test: tests
 
-tests: unit_tests no_whitespace_tests whitespace_tests test_function_registry test_opt
+tests: unit_tests no_whitespace_tests whitespace_tests function_registry_tests optimizer_tests
 
 unit_tests: build
 	$(UNITTEST) discover -s spitfire -p '*_test.py'
 
 test_function_registry: build
 	$(call _clean_tests)
-	$(CRUNNER) -O3 --compile --test-input tests/input/search_list_data.pye -qt tests/test-function-registry.txtx tests/i18n-7.txtx --function-registry-file tests/test-function-registry.cnf
+	$(CRUNNER) -O3 --compile --function-registry-file tests/test-function-registry.cnf tests/*.txtx
 
 no_whitespace_tests: build
 	$(call _clean_tests)
 	$(COMPILER) tests/*.txt tests/*.tmpl
-	$(CRUNNER) --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
+	$(CRUNNER) tests/*.txt tests/*.tmpl
 	$(COMPILER) -O1 tests/*.txt tests/*.tmpl
-	$(CRUNNER) -O1 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O1 tests/*.txt tests/*.tmpl
 	$(COMPILER) -O2 tests/*.txt tests/*.tmpl
-	$(CRUNNER) -O2 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O2 tests/*.txt tests/*.tmpl
 	$(COMPILER) -O3 tests/*.txt tests/*.tmpl
-	$(CRUNNER) -O3 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O3 tests/*.txt tests/*.tmpl
 
 whitespace_tests: build
 	$(call _clean_tests)
 	$(COMPILER) --preserve-optional-whitespace tests/*.txt tests/*.tmpl
-	$(CRUNNER) --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
+	$(CRUNNER) --preserve-optional-whitespace --test-output tests/output-preserve-whitespace tests/*.txt tests/*.tmpl
 	$(COMPILER) -O1 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
-	$(CRUNNER) -O1 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O1 --preserve-optional-whitespace --test-output tests/output-preserve-whitespace tests/*.txt tests/*.tmpl
 	$(COMPILER) -O2 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
-	$(CRUNNER) -O2 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O2 --preserve-optional-whitespace --test-output tests/output-preserve-whitespace tests/*.txt tests/*.tmpl
 	$(COMPILER) -O3 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
-	$(CRUNNER) -O3 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
+	$(CRUNNER) -O3 --preserve-optional-whitespace --test-output tests/output-preserve-whitespace tests/*.txt tests/*.tmpl
+
+optimizer_tests: clean_tests build
+	$(COMPILER) -O3 tests/*.o4txt
+	$(CRUNNER) -O3 tests/*.o4txt
 
 xhtml_tests: build
 	$(call _clean_tests)
 	$(COMPILER) --xspt-mode tests/*.xhtml
-	$(CRUNNER) --xspt-mode --test-input tests/input/search_list_data.pye --test-output output-xhtml -qt tests/*.xhtml
+	$(CRUNNER) --xspt-mode --test-output tests/output-xhtml tests/*.xhtml
 
 
 clean: clean_build clean_tests
