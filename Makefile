@@ -64,10 +64,12 @@ tests: unit_tests no_whitespace_tests whitespace_tests test_function_registry te
 unit_tests: build
 	$(UNITTEST) discover -s spitfire -p '*_test.py'
 
-test_function_registry: clean_tests build
+test_function_registry: build
+	$(call _clean_tests)
 	$(CRUNNER) -O3 --compile --test-input tests/input/search_list_data.pye -qt tests/test-function-registry.txtx tests/i18n-7.txtx --function-registry-file tests/test-function-registry.cnf
 
-no_whitespace_tests: clean_tests build
+no_whitespace_tests: build
+	$(call _clean_tests)
 	$(COMPILER) tests/*.txt tests/*.tmpl
 	$(CRUNNER) --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
 	$(COMPILER) -O1 tests/*.txt tests/*.tmpl
@@ -77,7 +79,8 @@ no_whitespace_tests: clean_tests build
 	$(COMPILER) -O3 tests/*.txt tests/*.tmpl
 	$(CRUNNER) -O3 --test-input tests/input/search_list_data.pye -qt tests/*.txt tests/*.tmpl
 
-whitespace_tests: clean_tests build
+whitespace_tests: build
+	$(call _clean_tests)
 	$(COMPILER) --preserve-optional-whitespace tests/*.txt tests/*.tmpl
 	$(CRUNNER) --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
 	$(COMPILER) -O1 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
@@ -87,7 +90,8 @@ whitespace_tests: clean_tests build
 	$(COMPILER) -O3 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
 	$(CRUNNER) -O3 --preserve-optional-whitespace --test-input tests/input/search_list_data.pye --test-output output-preserve-whitespace -qt tests/*.txt tests/*.tmpl
 
-xhtml_tests: clean_tests build
+xhtml_tests: build
+	$(call _clean_tests)
 	$(COMPILER) --xspt-mode tests/*.xhtml
 	$(CRUNNER) --xspt-mode --test-input tests/input/search_list_data.pye --test-output output-xhtml -qt tests/*.xhtml
 
@@ -107,7 +111,14 @@ clean_build:
 	@rm -rf spitfire.egg-info
 
 clean_tests:
+	$(call _clean_tests)
+
+# Note: The define + call for clean_tests is required to force the target to
+# be called before every test execution instead of once before all of them.
+# The other way to do this is with recursive make calls.
+define _clean_tests
 	@rm -f tests/*.py
 	@rm -f tests/*.pyc
 	@find tests -name '*.failed' -exec rm {} \;
 	@touch tests/__init__.py
+endef
