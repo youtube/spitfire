@@ -5,7 +5,6 @@ python:
 
 install:
   - make
-  - make clean_tests
 
 script:
-  - make tests
+  - make test

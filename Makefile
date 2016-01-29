@@ -8,7 +8,7 @@
 # Build
 .PHONY: build parser extensions
 # Test
-.PHONY: tests unit_tests no_whitespace_tests whitespace_tests test_function_registry test_opt
+.PHONY: test tests unit_tests no_whitespace_tests whitespace_tests test_function_registry test_opt
 # Clean up
 .PHONY: clean clean_build clean_tests
 # Format code
@@ -56,6 +56,8 @@ lint:
 	@echo; echo 'Checking code format...'
 	@$(YAPF) --diff --recursive spitfire scripts || (st=$$?; echo 'Please run "make fix" to correct the formatting errors.'; exit $$st)
 
+
+test: tests
 
 tests: unit_tests no_whitespace_tests whitespace_tests test_function_registry test_opt
 
