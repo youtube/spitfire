@@ -114,6 +114,9 @@ class AnalyzerOptions(object):
     # Disallow the use of raw in a template.
     self.no_raw = False
 
+    # Generate line number comments in compiler output.
+    self.include_sourcemap = False
+
     self.__dict__.update(kargs)
 
   def update(self, **kargs):
