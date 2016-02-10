@@ -3,12 +3,12 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-import cStringIO as StringIO
 import logging
 
+import cStringIO as StringIO
 
-# yes, i know this is evil
-from spitfire.compiler.ast import *
+from spitfire.compiler import ast
+
 
 class CodegenError(Exception):
   pass
@@ -248,14 +248,14 @@ class CodeGenerator(object):
       sanitization_state = node.sanitization_state
       # For SANITIZED_STRING we could use SanitizedPlaceholder(), but the
       # mark_as_sanitized() function is faster so we use that instead.
-      if (sanitization_state == SanitizedState.SANITIZED_STRING or
-          sanitization_state == SanitizedState.SANITIZED):
+      if (sanitization_state == ast.SanitizedState.SANITIZED_STRING or
+          sanitization_state == ast.SanitizedState.SANITIZED):
         return [CodeNode('mark_as_sanitized(%s)' % call, input_pos=node.pos)]
-      elif (sanitization_state == SanitizedState.UNSANITIZED or
-            sanitization_state == SanitizedState.NOT_OUTPUTTED or
-            sanitization_state == SanitizedState.OUTPUTTED_IMMEDIATELY):
+      elif (sanitization_state == ast.SanitizedState.UNSANITIZED or
+            sanitization_state == ast.SanitizedState.NOT_OUTPUTTED or
+            sanitization_state == ast.SanitizedState.OUTPUTTED_IMMEDIATELY):
         return [CodeNode(call, input_pos=node.pos)]
-      elif sanitization_state == SanitizedState.UNKNOWN:
+      elif sanitization_state == ast.SanitizedState.UNKNOWN:
         return [CodeNode(
             'runtime_mark_as_sanitized(%(call)s, %(expression)s)' % vars(),
             input_pos=node.pos)]
@@ -481,13 +481,13 @@ class CodeGenerator(object):
       # test_expression. Then we can remove this baked_mode check.
       if child_nodes and len(child_nodes) == 1 and not self.baked_mode:
         if_node = child_nodes[0]
-        if isinstance(if_node, IfNode) and not if_node.else_.child_nodes:
+        if isinstance(if_node, ast.IfNode) and not if_node.else_.child_nodes:
           child_nodes = if_node.child_nodes
           # Insert code that does:
           #   if not ($test_expression):
           #     return ''
-          new_if_condition = IfNode(UnaryOpNode('not', if_node.test_expression))
-          new_if_condition.append(ReturnNode(LiteralNode('')))
+          new_if_condition = ast.IfNode(ast.UnaryOpNode('not', if_node.test_expression))
+          new_if_condition.append(ast.ReturnNode(ast.LiteralNode('')))
           new_code = self.build_code(new_if_condition)
           if node.uses_globals:
             needs_globals_added = False
@@ -498,7 +498,7 @@ class CodeGenerator(object):
 
     # Save the point where _globals and self_filter_funtion will go if
     # used. We don't append these here because we have to determine if
-    # these two functions are used in the scope of the current FunctionNode.
+    # these two functions are used in the scope of the current ast.FunctionNode.
     insertion_point = len(code_node.child_nodes)
 
     if self.options and self.options.cheetah_cheats:
@@ -591,11 +591,11 @@ class CodeGenerator(object):
 
   def codegenASTFilterNode(self, node):
     expression = self.generate_python(self.build_code(node.expression)[0])
-    if node.filter_function_node == DefaultFilterFunction:
+    if node.filter_function_node == ast.DefaultFilterFunction:
       # In baked mode, we must always call into _self_filter_function.
       # This is because this is the function that will contain the
       # logic for deciding whether or not to filter a SanitizedPlaceholder.
-      if isinstance(node.expression, CallFunctionNode) or self.baked_mode:
+      if isinstance(node.expression, ast.CallFunctionNode) or self.baked_mode:
         self.function_stack[-1].uses_filter_function = True
         filter_expression = '_self_filter_function'
       else:
@@ -610,14 +610,14 @@ class CodeGenerator(object):
     else:
       filter_expression = None
 
-    if isinstance(node.expression, CallFunctionNode):
+    if isinstance(node.expression, ast.CallFunctionNode):
       # need the placeholder function expression to make sure that we don't
       # double escape the output of template functions
       # fixme: this is suboptimal if this expression is expensive - should the
       # optimizer fix this, or should we generate speedy code?
       placeholder_function_expression = self.generate_python(
         self.build_code(node.expression.expression)[0])
-      if node.filter_function_node == DefaultFilterFunction:
+      if node.filter_function_node == ast.DefaultFilterFunction:
         code_node = CodeNode(
           '%(filter_expression)s(%(expression)s, %(placeholder_function_expression)s)'
           % vars(), input_pos=node.pos)
@@ -629,7 +629,7 @@ class CodeGenerator(object):
         code_node = CodeNode('%(expression)s' % vars(),
                              input_pos=node.pos)
     else:
-      if node.filter_function_node == DefaultFilterFunction:
+      if node.filter_function_node == ast.DefaultFilterFunction:
         code_node = CodeNode(
             '%(filter_expression)s(%(expression)s)' % vars(),
             input_pos=node.pos)

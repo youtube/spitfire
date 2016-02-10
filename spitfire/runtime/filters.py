@@ -5,7 +5,8 @@
 
 # a few helpful filter functions
 
-from spitfire.runtime.udn import UndefinedPlaceholder
+from spitfire import runtime
+from spitfire.runtime import udn
 
 # decorate a function object so the default filter will not be applied to the
 # value of a placeholder. this is handy when building functions that will
@@ -33,14 +34,14 @@ def escape_html(value, quote=True):
 # deprecated
 def safe_values(value):
   """Deprecated - use simple_str_filter instead."""
-  if isinstance(value, (str, unicode, int, long, float, UndefinedPlaceholder)):
+  if isinstance(value, (str, unicode, int, long, float, runtime.UndefinedPlaceholder)):
     return value
   else:
     return ''
 
 def simple_str_filter(value):
   """Return a string if the input type is something primitive."""
-  if isinstance(value, (str, unicode, int, long, float, UndefinedPlaceholder)):
+  if isinstance(value, (str, unicode, int, long, float, runtime.UndefinedPlaceholder)):
     # fixme: why do force this conversion here?
     # do we want to be unicode or str?
     return str(value)

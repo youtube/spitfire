@@ -9,11 +9,10 @@ import os.path
 import re
 import sys
 
-from spitfire import runtime
-from spitfire.compiler import options as sptoptions
-from spitfire.compiler import parser as sptparser
+from spitfire.compiler import options
+from spitfire.compiler import parser
 from spitfire.compiler import scanner
-from spitfire.compiler import xhtml2ast
+from spitfire import runtime
 
 
 valid_identfier = re.compile('[_a-z]\w*', re.IGNORECASE)
@@ -33,10 +32,10 @@ def filename2modulename(filename):
   return '.'.join(names)
 
 
-# @return abstract syntax tree rooted on a TemplateNode
+# @return abstract syntax tree rooted on a ast.TemplateNode
 def parse(src_text, rule='goal'):
-  parser = sptparser.SpitfireParser(scanner.SpitfireScanner(src_text))
-  return sptparser.wrap_error_reporter(parser, rule)
+  spt_parser = parser.SpitfireParser(scanner.SpitfireScanner(src_text))
+  return parser.wrap_error_reporter(spt_parser, rule)
 
 
 def parse_file(filename, xspt_mode=False):
@@ -47,8 +46,10 @@ def parse_file(filename, xspt_mode=False):
 
 def parse_template(src_text, xspt_mode=False):
   if xspt_mode:
-    parser = xhtml2ast.XHTML2AST()
-    return parser.parse(src_text)
+    # Note: The compiler module is imported here to avoid a circular dependency.
+    from spitfire.compiler import xhtml2ast
+    xspt_parser = xhtml2ast.XHTML2AST()
+    return xspt_parser.parse(src_text)
   else:
     return parse(src_text)
 
@@ -94,33 +95,38 @@ def read_function_registry(filename):
 # this won't recursively import templates, it's just a convenience in the case
 # where you need to create a fresh object directly from raw template file
 def load_template_file(filename, module_name=None,
-                       options=sptoptions.default_options,
-                       xspt_mode=False,
-                       compiler_options=None):
-  c = Compiler(analyzer_options=options, xspt_mode=xspt_mode)
+                       analyzer_options=options.default_options,
+                       compiler_options=None,
+                       xspt_mode=False):
+  # Note: The compiler module is imported here to avoid a circular dependency.
+  from spitfire.compiler import compiler
+  spt_compiler = compiler.Compiler(analyzer_options=analyzer_options,
+                                   xspt_mode=xspt_mode)
   if compiler_options:
     for k, v in compiler_options.iteritems():
-      setattr(c, k, v)
+      setattr(spt_compiler, k, v)
   class_name = filename2classname(filename)
   if not module_name:
     module_name = class_name
 
-  src_code = c.compile_file(filename)
+  src_code = spt_compiler.compile_file(filename)
   module = load_module_from_src(src_code, filename, module_name)
   return getattr(module, class_name)
 
 
 def load_template(template_src, template_name,
-                  options=sptoptions.default_options,
+                  analyzer_options=options.default_options,
                   compiler_options=None):
   class_name = filename2classname(template_name)
   filename = '<%s>' % class_name
   module_name = class_name
-  c = Compiler(analyzer_options=options)
+  # Note: The compiler module is imported here to avoid a circular dependency
+  from spitfire.compiler import compiler
+  spt_compiler = compiler.Compiler(analyzer_options=analyzer_options)
   if compiler_options:
     for k, v in compiler_options.iteritems():
-      setattr(c, k, v)
-  src_code = c.compile_template(template_src, class_name)
+      setattr(spt_compiler, k, v)
+  src_code = spt_compiler.compile_template(template_src, class_name)
   module = load_module_from_src(src_code, filename, module_name)
   return getattr(module, class_name)
 

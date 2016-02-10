@@ -7,30 +7,31 @@
 
 
 import logging
+import optparse
 import os
 import os.path
 import sys
 
 import spitfire
-from spitfire.compiler import compiler as sptcompiler
-from spitfire.compiler import options as sptoptions
+from spitfire.compiler import compiler
+from spitfire.compiler import options
 
 
-def process_file(compiler, filename, options):
+def process_file(spt_compiler, filename, options):
   def print_output(*args):
     if options.verbose:
       print >> sys.stderr, ' '.join(args)
 
   try:
     if options.output_file:
-      compiler.write_file = False
+      spt_compiler.write_file = False
       if options.output_file == '-':
         f = sys.stdout
       else:
         f = open(options.output_file, 'w')
     else:
-      compiler.write_file = True
-    src_code = compiler.compile_file(filename)
+      spt_compiler.write_file = True
+    src_code = spt_compiler.compile_file(filename)
     if options.output_file:
       f.write(src_code)
       f.close()
@@ -48,17 +49,16 @@ if __name__ == '__main__':
   reload(sys)
   sys.setdefaultencoding('utf8')
 
-  from optparse import OptionParser
-  op = OptionParser()
-  sptoptions.add_common_options(op)
-  (options, args) = op.parse_args()
+  option_parser = optparse.OptionParser()
+  options.add_common_options(option_parser)
+  (spt_options, spt_args) = option_parser.parse_args()
 
-  if options.version:
+  if spt_options.version:
     print >> sys.stderr, 'spitfire %s' % spitfire.__version__
     sys.exit(0)
 
-  compiler_args = sptcompiler.Compiler.args_from_optparse(options)
-  compiler = sptcompiler.Compiler(**compiler_args)
+  spt_compiler_args = compiler.Compiler.args_from_optparse(spt_options)
+  spt_compiler = compiler.Compiler(**spt_compiler_args)
 
-  for filename in args:
-    process_file(compiler, filename, options)
+  for filename in spt_args:
+    process_file(spt_compiler, filename, spt_options)

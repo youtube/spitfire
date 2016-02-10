@@ -4,28 +4,27 @@
 # license that can be found in the LICENSE file.
 
 import logging
+import optparse
 import os.path
 import sys
 
 import cPickle as pickle
 
-from optparse import OptionParser
-
 
 def run_template(class_object):
-  parser = OptionParser()
-  parser.add_option('-f', dest='filename',
+  option_parser = optparse.OptionParser()
+  option_parser.add_option('-f', dest='filename',
                     help='data file for template search list')
-  (options, args) = parser.parse_args()
+  (tmpl_options, tmpl_args) = option_parser.parse_args()
 
-  if options.filename:
-    data = [load_search_list(options.filename)]
+  if tmpl_options.filename:
+    data = [load_search_list(tmpl_options.filename)]
   else:
     data = []
   template = class_object(search_list=data)
   sys.stdout.write(template.main())
-  
-  
+
+
 def load_search_list(filename):
   f = open(filename)
   raw_data = f.read()

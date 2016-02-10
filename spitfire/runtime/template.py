@@ -5,15 +5,13 @@
 
 # an 'abstract' base class for a template, seems like a good idea for now
 
-#import StringIO
 import cStringIO as StringIO
-from spitfire.runtime import baked
-import spitfire.runtime.filters
-import spitfire.runtime.repeater
-from spitfire.runtime import _template
 
-from spitfire.runtime.udn import (
-  _resolve_from_search_list, UnresolvedPlaceholder)
+from spitfire import runtime
+from spitfire.runtime import _template
+from spitfire.runtime import baked
+from spitfire.runtime import filters
+from spitfire.runtime import udn
 
 # NOTE: in some instances, this is faster than using cStringIO
 # this is slightly counter intuitive and probably means there is more here than
@@ -33,7 +31,7 @@ class SpitfireTemplate(_template.BaseSpitfiretemplate):
   # when this is assigned to a template instance, accessing this name binds the
   # function to the current instance. using the name 'template_instance' to
   # indicate that these functions aren't really related to the template.
-  _filter_function = staticmethod(spitfire.runtime.filters.simple_str_filter)
+  _filter_function = staticmethod(filters.simple_str_filter)
   repeat = None
   placeholder_cache = None
 
@@ -52,11 +50,11 @@ class SpitfireTemplate(_template.BaseSpitfiretemplate):
     # self.repeat = spitfire.runtime.repeater.RepeatTracker()
 
   def get_var(self, name, default=None):
-    return _resolve_from_search_list(self.search_list, name, default)
+    return udn._resolve_from_search_list(self.search_list, name, default)
 
   def has_var(self, name):
-    var = self.get_var(name, default=UnresolvedPlaceholder)
-    return var is not UnresolvedPlaceholder
+    var = self.get_var(name, default=runtime.UnresolvedPlaceholder)
+    return var is not runtime.UnresolvedPlaceholder
 
   # wrap the underlying filter call so that items don't get filtered multiple
   # times (avoids double escaping)

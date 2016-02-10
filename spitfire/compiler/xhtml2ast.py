@@ -3,12 +3,12 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import sys
 import traceback
 import xml.dom.minidom
 
-from spitfire.compiler.ast import *
-
-import spitfire.compiler.util
+from spitfire.compiler import ast
+from spitfire.compiler import util
 
 enable_debug = False
 def debug(func_name, dom_node):
@@ -18,11 +18,11 @@ def debug(func_name, dom_node):
     print func_name, dom_node.nodeName, dom_node.attributes.keys()
   else:
     print func_name, dom_node.nodeName
-  
+
 class XHTML2AST(object):
   namespace = 'py'
   attr_op_namespace = 'pyattr'
-  
+
   def build_template(self, filename):
     f = open(filename)
     data = f.read().decode('utf8')
@@ -31,15 +31,15 @@ class XHTML2AST(object):
 
   def parse(self, src_text):
     dom = xml.dom.minidom.parseString(src_text)
-    template = TemplateNode()
+    template = ast.TemplateNode()
     template.extend(self.build_ast(dom))
     return template
-  
+
   def build_ast(self, dom_node):
     debug('build_ast', dom_node)
 
     node_list = []
-    
+
     if dom_node.attributes:
       # the key types have a precedence that needs to be preserved
       # www.zope.org/Documentation/Books/ZopeBook/2_6Edition/AppendixC.stx
@@ -121,16 +121,16 @@ class XHTML2AST(object):
         node_list.extend(self.build_ast(child))
       node_list.extend(self.make_tag_node(dom_node, close=True))
     elif dom_node.nodeType == xml.dom.minidom.Node.TEXT_NODE:
-      node_list.append(TextNode(dom_node.nodeValue))
+      node_list.append(ast.TextNode(dom_node.nodeValue))
     elif dom_node.nodeType == xml.dom.minidom.Node.COMMENT_NODE:
-      # node_list.append(TextNode(dom_node.nodeValue))
+      # node_list.append(ast.TextNode(dom_node.nodeValue))
       pass
     elif dom_node.nodeType == xml.dom.minidom.Node.DOCUMENT_NODE:
       for child in dom_node.childNodes:
         node_list.extend(self.build_ast(child))
     elif dom_node.nodeType == xml.dom.minidom.Node.PROCESSING_INSTRUCTION_NODE:
       if dom_node.nodeName == 'py-doctype':
-        node_list.append(TextNode(dom_node.nodeValue))
+        node_list.append(ast.TextNode(dom_node.nodeValue))
       else:
         raise Exception("unexepected processing instruction: %s" % dom_node)
     else:
@@ -143,7 +143,7 @@ class XHTML2AST(object):
     node_name = dom_node.nodeName
     if close:
       if self.has_child_stuff(dom_node):
-        node_list.append(TextNode(u'</%(node_name)s>' % vars()))
+        node_list.append(ast.TextNode(u'</%(node_name)s>' % vars()))
     else:
       attr_text = ' '.join(['%s="%s"' % (key, value)
                             for key, value in dom_node.attributes.items()
@@ -152,55 +152,55 @@ class XHTML2AST(object):
       if self.has_child_stuff(dom_node):
         if attr_text:
           if attr_ast:
-            node_list.append(TextNode(u'<%(node_name)s %(attr_text)s' % vars()))
+            node_list.append(ast.TextNode(u'<%(node_name)s %(attr_text)s' % vars()))
             node_list.extend(attr_ast)
-            node_list.append(TextNode(u'>'))
+            node_list.append(ast.TextNode(u'>'))
           else:
-            node_list.append(TextNode(u'<%(node_name)s %(attr_text)s>' % vars()))
+            node_list.append(ast.TextNode(u'<%(node_name)s %(attr_text)s>' % vars()))
         else:
           if attr_ast:
-            node_list.append(TextNode(u'<%(node_name)s' % vars()))
+            node_list.append(ast.TextNode(u'<%(node_name)s' % vars()))
             node_list.extend(attr_ast)
-            node_list.append(TextNode(u'>'))
+            node_list.append(ast.TextNode(u'>'))
           else:
-            node_list.append(TextNode(u'<%(node_name)s>' % vars()))
+            node_list.append(ast.TextNode(u'<%(node_name)s>' % vars()))
       else:
         if attr_text:
           if attr_ast:
             # print "XXX make_tag_node", dom_node.nodeName, attr_ast
-            node_list.append(TextNode(u'<%(node_name)s %(attr_text)s' % vars()))
+            node_list.append(ast.TextNode(u'<%(node_name)s %(attr_text)s' % vars()))
             node_list.extend(attr_ast)
-            node_list.append(TextNode(u' />'))
+            node_list.append(ast.TextNode(u' />'))
           else:
-            node_list.append(TextNode(u'<%(node_name)s %(attr_text)s />' % vars()))
+            node_list.append(ast.TextNode(u'<%(node_name)s %(attr_text)s />' % vars()))
         else:
           if attr_ast:
-            node_list.append(TextNode(u'<%(node_name)s' % vars()))
+            node_list.append(ast.TextNode(u'<%(node_name)s' % vars()))
             node_list.extend(attr_ast)
-            node_list.append(TextNode(u' />'))
+            node_list.append(ast.TextNode(u' />'))
           else:
-            node_list.append(TextNode(u'<%(node_name)s />' % vars()))
+            node_list.append(ast.TextNode(u'<%(node_name)s />' % vars()))
 
     omit_tag = getattr(dom_node, 'omit_tag', False)
     omit_tag_ast = getattr(dom_node, 'omit_tag_ast', None)
     if omit_tag:
       if omit_tag_ast:
-        if_node = IfNode(omit_tag_ast)
+        if_node = ast.IfNode(omit_tag_ast)
         if_node.extend(node_list)
         return [if_node]
       else:
         return []
-      
+
     return node_list
 
   def make_attr_node(self, attr):
     node_list = []
     new_attr_name = attr.localName
-    attr_ast = spitfire.compiler.util.parse(attr.nodeValue, 'rhs_expression')
-    node_list.append(TextNode(u' %(new_attr_name)s="' % vars()))
+    attr_ast = util.parse(attr.nodeValue, 'rhs_expression')
+    node_list.append(ast.TextNode(u' %(new_attr_name)s="' % vars()))
     # fixme: need to guarantee good output - escape sequences etc
-    node_list.append(PlaceholderSubstitutionNode(attr_ast))
-    node_list.append(TextNode('"'))
+    node_list.append(ast.PlaceholderSubstitutionNode(attr_ast))
+    node_list.append(ast.TextNode('"'))
     return node_list
 
   def handle_define(self, dom_node, attr_name):
@@ -209,28 +209,28 @@ class XHTML2AST(object):
     # print "handle_define", node_name
     # fixme: this is a nasty temp hack, it will generate the correct code
     # for 1 define, but multiple expressions won't work
-    ast = spitfire.compiler.util.parse(dom_node.getAttribute(attr_name),
+    expr_ast = util.parse(dom_node.getAttribute(attr_name),
                                       'argument_list')
     dom_node.removeAttribute(attr_name)
-    node_list.extend(ast)
+    node_list.extend(expr_ast)
     node_list.extend(self.build_ast(dom_node))
     return node_list
-  
-  
+
+
   def handle_content(self, dom_node, attr_name):
     debug("handle_content", dom_node)
     #traceback.print_stack()
-    expr_ast = spitfire.compiler.util.parse(
+    expr_ast = util.parse(
       dom_node.getAttribute(attr_name), 'rhs_expression')
     dom_node.removeAttribute(attr_name)
     setattr(dom_node, 'has_child_stuff', True)
     node_list = []
     debug("handle_content start", dom_node)
     node_list.extend(self.make_tag_node(dom_node))
-    node_list.append(PlaceholderSubstitutionNode(expr_ast))
+    node_list.append(ast.PlaceholderSubstitutionNode(expr_ast))
     debug("handle_content end", dom_node)
     node_list.extend(self.make_tag_node(dom_node, close=True))
-    debug("handle_content return", dom_node)    
+    debug("handle_content return", dom_node)
     return node_list
 
   def handle_omit_tag(self, dom_node, attr_name):
@@ -239,21 +239,21 @@ class XHTML2AST(object):
     node_name = dom_node.nodeName
     raw_expression = dom_node.getAttribute(attr_name)
     if raw_expression:
-      ast = spitfire.compiler.util.parse(raw_expression, 'argument_list')
+      expr_ast = util.parse(raw_expression, 'argument_list')
     else:
-      ast = None
-    
+      expr_ast = None
+
     dom_node.removeAttribute(attr_name)
     setattr(dom_node, 'omit_tag', True)
-    setattr(dom_node, 'omit_tag_ast', ast)
+    setattr(dom_node, 'omit_tag_ast', expr_ast)
     return node_list
 
-  
+
   def handle_replace(self, dom_node, attr_name):
-    expr_ast = spitfire.compiler.util.parse(
+    expr_ast = util.parse(
       dom_node.getAttribute(attr_name), 'rhs_expression')
     dom_node.removeAttribute(attr_name)
-    return [PlaceholderSubstitutionNode(expr_ast)]
+    return [ast.PlaceholderSubstitutionNode(expr_ast)]
 
 
   def has_child_stuff(self, dom_node):
@@ -268,21 +268,21 @@ class XHTML2AST(object):
       has_child_stuff = bool(dom_node.childNodes)
     setattr(dom_node, 'has_child_stuff', has_child_stuff)
     return has_child_stuff
-  
+
   def handle_repeat(self, dom_node, attr_name):
     debug("handle_repeat", dom_node)
     expr_pieces = dom_node.getAttribute(attr_name).split()
     dom_node.removeAttribute(attr_name)
     target = expr_pieces[0]
-    expr_ast = spitfire.compiler.util.parse(
+    expr_ast = util.parse(
       ' '.join(expr_pieces[1:]), 'rhs_expression')
     node_list = []
     # hack - assumes python syntax
-    fn = ForNode(
-      TargetListNode([IdentifierNode("self.repeat['%s']" % target),
-                      IdentifierNode(target)]),
-      ExpressionListNode([CallFunctionNode(IdentifierNode('enumerate'),
-                                           ArgListNode([expr_ast]))]))
+    fn = ast.ForNode(
+      ast.TargetListNode([ast.IdentifierNode("self.repeat['%s']" % target),
+                      ast.IdentifierNode(target)]),
+      ast.ExpressionListNode([ast.CallFunctionNode(ast.IdentifierNode('enumerate'),
+                                           ast.ArgListNode([expr_ast]))]))
 
     if self.has_child_stuff(dom_node):
       debug("has_child_stuff:", dom_node)
@@ -308,18 +308,18 @@ class XHTML2AST(object):
       #print "previous", dom_node.previousSibling, id(dom_node.previousSibling)
       #print "next", dom_node.nextSibling, id(dom_node.nextSibling)
       #dom_node.parentNode.removeChild(dom_node.previousSibling)
-      node_list.append(EatPrevious())
-        
+      node_list.append(ast.EatPrevious())
+
     node_list.append(fn)
     #fn.extend(self.make_tag_node(dom_node, close=True))
     return node_list
 
 
   def handle_condition(self, dom_node, attr_name):
-    expr_ast = spitfire.compiler.util.parse(
+    expr_ast = util.parse(
       dom_node.getAttribute(attr_name), 'rhs_expression')
     node_list = []
-    if_node = IfNode(expr_ast)
+    if_node = ast.IfNode(expr_ast)
     node_list.append(if_node)
     if_node.append(self.make_tag_node(dom_node))
     for n in dom_node.childNodes:
@@ -330,14 +330,12 @@ class XHTML2AST(object):
 
   def build_udn_path_ast(self, path):
     pieces = path.split('.')
-    node = PlaceholderNode(pieces[0])
+    node = ast.PlaceholderNode(pieces[0])
     for piece in pieces[1:]:
-      node = GetUDNNode(node, piece)
+      node = ast.GetUDNNode(node, piece)
     return node
-      
+
 if __name__ == '__main__':
-  import sys
-  import spitfire.compiler.util
   x2a = XHTML2AST()
   filename = sys.argv[1]
   tnode = x2a.build_template(filename)

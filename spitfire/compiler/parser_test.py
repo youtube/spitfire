@@ -6,7 +6,7 @@
 import logging
 import unittest
 
-from spitfire.compiler.ast import *
+from spitfire.compiler import ast
 from spitfire.compiler import util
 from spitfire.compiler import walker
 from third_party.yapps2 import yappsrt
@@ -24,7 +24,7 @@ class TestEscapeHash(BaseTest):
 
   @staticmethod
   def _def_foo_pred(node):
-      return type(node) == DefNode and node.name == 'foo'
+      return type(node) == ast.DefNode and node.name == 'foo'
 
   def test_escape_simple(self):
     code = """
@@ -35,7 +35,7 @@ class TestEscapeHash(BaseTest):
     template = self._compile(code)
 
     def_node = walker.find_node(template, TestEscapeHash._def_foo_pred)
-    text = ''.join([node.value for node in def_node.child_nodes if type(node) == TextNode])
+    text = ''.join([node.value for node in def_node.child_nodes if type(node) == ast.TextNode])
     self.assertEqual(text, '#test')
 
 
@@ -48,7 +48,7 @@ class TestEscapeHash(BaseTest):
     template = self._compile(code)
 
     def_node = walker.find_node(template, TestEscapeHash._def_foo_pred)
-    text = ''.join([node.value for node in def_node.child_nodes if type(node) == TextNode])
+    text = ''.join([node.value for node in def_node.child_nodes if type(node) == ast.TextNode])
     self.assertEqual(text, '\\#test')
 
   def test_escape_needed(self):
@@ -60,7 +60,7 @@ class TestEscapeHash(BaseTest):
     template = self._compile(code)
 
     def_node = walker.find_node(template, TestEscapeHash._def_foo_pred)
-    text = ''.join([node.value for node in def_node.child_nodes if type(node) == TextNode])
+    text = ''.join([node.value for node in def_node.child_nodes if type(node) == ast.TextNode])
     self.assertEqual(text, '#if')
 
 
@@ -68,7 +68,7 @@ class TestDo(BaseTest):
 
   @staticmethod
   def _do_pred(node):
-    return type(node) == DoNode
+    return type(node) == ast.DoNode
 
   def test_do_syntax(self):
     code = """
@@ -109,7 +109,7 @@ class TestAllowRaw(BaseTest):
 
   @staticmethod
   def _allow_raw_pred(node):
-    return type(node) == AllowRawNode
+    return type(node) == ast.AllowRawNode
 
   def test_allow_raw(self):
     code = """
@@ -122,7 +122,7 @@ class TestAllowRaw(BaseTest):
 
     allow_raw_node = walker.find_node(template, TestAllowRaw._allow_raw_pred)
     if not allow_raw_node:
-      self.fail('AllowRawNode should be present in AST')
+      self.fail('ast.AllowRawNode should be present in AST')
 
 
 if __name__ == '__main__':

@@ -3,9 +3,8 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+from spitfire.compiler import parser
 from third_party.yapps2 import yappsrt
-
-import spitfire.compiler.parser
 
 # SpitfireScanner uses the order of the match, not the length of the match to
 # determine what token to return. I'm not sure how fragille this is long-term,
@@ -14,7 +13,7 @@ import spitfire.compiler.parser
 _restrict_cache = {}
 
 
-class SpitfireScanner(spitfire.compiler.parser._SpitfireParserScanner):
+class SpitfireScanner(parser._SpitfireParserScanner):
   def token(self, i, restrict=0):
     """Get the i'th token, and if i is one past the end, then scan
     for another token; restrict is a list of tokens that
