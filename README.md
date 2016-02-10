@@ -1,4 +1,4 @@
-![](https://gitcdn.xyz/repo/nicksay/spitfire/master/doc/spitfire.png)
+![](https://gitcdn.xyz/repo/spt/spitfire/master/doc/spitfire.png)
 
 
 ## Introduction
