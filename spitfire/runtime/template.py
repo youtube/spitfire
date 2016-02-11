@@ -50,7 +50,7 @@ class SpitfireTemplate(_template.BaseSpitfiretemplate):
     # self.repeat = spitfire.runtime.repeater.RepeatTracker()
 
   def get_var(self, name, default=None):
-    return udn._resolve_from_search_list(self.search_list, name, default)
+    return udn.resolve_from_search_list(self.search_list, name, default)
 
   def has_var(self, name):
     var = self.get_var(name, default=runtime.UnresolvedPlaceholder)
