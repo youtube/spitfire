@@ -106,19 +106,19 @@ class TestUdnC(_UdnTest, unittest.TestCase):
 
 
 class TestUdnPyAttr3(_UdnTest, unittest.TestCase):
-  resolve_udn = staticmethod(udn.resolve_udn_prefer_attr3)
+  resolve_udn = staticmethod(udn._resolve_udn_prefer_attr3)
 
 
 class TestUdnPyAttr2(_UdnTest, unittest.TestCase):
-  resolve_udn = staticmethod(udn.resolve_udn_prefer_attr2)
+  resolve_udn = staticmethod(udn._resolve_udn_prefer_attr2)
 
 
 class TestUdnPyAttr(_UdnTest, unittest.TestCase):
-  resolve_udn = staticmethod(udn.resolve_udn_prefer_attr)
+  resolve_udn = staticmethod(udn._resolve_udn_prefer_attr)
 
 
 class TestUdnPyDict(_UdnTest, unittest.TestCase):
-  resolve_udn = staticmethod(udn.resolve_udn_prefer_dict)
+  resolve_udn = staticmethod(udn._resolve_udn_prefer_dict)
 
 
 if __name__ == '__main__':
