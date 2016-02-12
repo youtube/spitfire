@@ -5,8 +5,11 @@
 
 import unittest
 
-from spitfire.runtime import _baked
 from spitfire.runtime import baked
+try:
+  from spitfire.runtime import _baked  # pylint: disable=g-import-not-at-top
+except ImportError:
+  _baked = None
 
 
 def is_skip():
@@ -106,8 +109,10 @@ class TestBakedPy(_BakedTest, unittest.TestCase):
   module = baked
 
 
-class TestBakedC(_BakedTest, unittest.TestCase):
-  module = _baked
+if _baked is not None:
+
+  class TestBakedC(_BakedTest, unittest.TestCase):
+    module = _baked
 
 
 if __name__ == '__main__':

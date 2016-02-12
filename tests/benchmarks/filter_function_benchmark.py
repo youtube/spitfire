@@ -6,7 +6,6 @@
 import timeit
 
 from spitfire.runtime import template
-from spitfire.runtime import _template
 from spitfire.runtime import baked
 
 def skip():
@@ -14,14 +13,6 @@ def skip():
 skip.skip_filter = True
 
 def no_skip():
-  pass
-
-
-class PySpitfireTemplate(template.SpitfireTemplate):
-  filter_function = template.SpitfireTemplate.py_filter_function
-
-
-class CSpitfireTemplate(template.SpitfireTemplate):
   pass
 
 
@@ -50,9 +41,9 @@ def time_fn(label, fn, arg):
   print 'best run: %.1f msec per loop [%s]' % (msec, all)
 
 
-def main(argv):
-  c_tmpl = CSpitfireTemplate()
-  py_tmpl = PySpitfireTemplate()
+def main():
+  c_tmpl = template.get_spitfire_template_class(prefer_c_extension=True)()
+  py_tmpl = template.get_spitfire_template_class(prefer_c_extension=False)()
 
   print '*** filter_function with SanitizedPlaceholder'
   for v in sp_creation:
