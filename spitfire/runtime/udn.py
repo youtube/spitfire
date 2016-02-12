@@ -13,19 +13,18 @@ import __builtin__
 import inspect
 import logging
 
-# Avoid extra lookups on critical paths by importing directly.
-from spitfire.runtime import PlaceholderError
-from spitfire.runtime import UDNResolveError
-from spitfire.runtime import UndefinedAttribute
-from spitfire.runtime import UndefinedPlaceholder
-from spitfire.runtime import UnresolvedPlaceholder
-
+from spitfire import runtime
 # Import the accelerated C module if available.
 try:
   from spitfire.runtime import _udn
-except ImportError, e:
+except ImportError:
   _udn = None
 
+
+# Avoid extra lookups on critical paths by aliasing imports directly.
+UndefinedAttribute = runtime.UndefinedAttribute
+UndefinedPlaceholder = runtime.UndefinedPlaceholder
+UnresolvedPlaceholder = runtime.UnresolvedPlaceholder
 
 # create a sentinel value for missing attributes
 class __MissingAttr(object):
@@ -56,10 +55,10 @@ class CallOnlyPlaceholder(object):
     return getattr(self.function, 'skip_filter')
 
   def __cmp__(self, unused_other):
-    raise PlaceholderError(self.name, 'function placeholder was not called')
+    raise runtime.PlaceholderError(self.name, 'function placeholder was not called')
 
   def __nonzero__(self):
-    raise PlaceholderError(self.name, 'function placeholder was not called')
+    raise runtime.PlaceholderError(self.name, 'function placeholder was not called')
 
 
 # TODO - optimize performance
@@ -71,7 +70,7 @@ def _resolve_udn_prefer_attr(_object, name, raise_exception=False):
       return _object[name]
     except (KeyError, TypeError):
       if raise_exception:
-        raise UDNResolveError(name, dir(_object))
+        raise runtime.UDNResolveError(name, dir(_object))
       else:
         return UndefinedAttribute(name, dir(_object))
 
@@ -83,7 +82,7 @@ def _resolve_udn_prefer_dict(_object, name, raise_exception=False):
       return getattr(_object, name)
     except AttributeError:
       if raise_exception:
-        raise UDNResolveError(name, dir(_object))
+        raise runtime.UDNResolveError(name, dir(_object))
       else:
         return UndefinedAttribute(name, dir(_object))
 
@@ -100,7 +99,7 @@ def _resolve_udn_prefer_attr2(_object, name, raise_exception=False):
     return _object[name]
   except (KeyError, TypeError):
     if raise_exception:
-      raise UDNResolveError(name, dir(_object))
+      raise runtime.UDNResolveError(name, dir(_object))
     else:
       return UndefinedAttribute(name, dir(_object))
 
@@ -112,7 +111,7 @@ def _resolve_udn_prefer_attr3(_object, name, raise_exception=False):
     return _object[name]
   except (KeyError, TypeError):
     if raise_exception:
-      raise UDNResolveError(name, dir(_object))
+      raise runtime.UDNResolveError(name, dir(_object))
     else:
       return UndefinedAttribute(name, dir(_object))
 
@@ -152,7 +151,7 @@ def _resolve_placeholder(name, template, global_vars):
     except KeyError:
       pass
     except TypeError:
-      raise PlaceholderError('unexpected type for global_vars: %s' %
+      raise runtime.PlaceholderError('unexpected type for global_vars: %s' %
                              type(global_vars))
 
   # fixme: finally try to resolve builtins - this should be configurable
@@ -173,7 +172,7 @@ def _resolve_placeholder_with_locals(name, template, local_vars, global_vars):
     except KeyError:
       pass
     except TypeError:
-      raise PlaceholderError('unexpected type for local_vars: %s' %
+      raise runtime.PlaceholderError('unexpected type for local_vars: %s' %
                              type(local_vars))
 
   return _resolve_placeholder(name, template, global_vars)
