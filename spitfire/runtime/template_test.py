@@ -6,8 +6,11 @@
 import unittest
 
 from spitfire.runtime import template
-from spitfire.runtime import _template
 from spitfire.runtime import baked
+try:
+  from spitfire.runtime import _template  # pylint: disable=g-import-not-at-top
+except ImportError:
+  _template = None
 
 
 def is_skip():
@@ -17,13 +20,6 @@ is_skip.skip_filter = True
 
 def no_skip():
   pass
-
-
-class PySpitfireTemplate(template.SpitfireTemplate):
-
-  def __init__(self, *args, **kwargs):
-    super(PySpitfireTemplate, self).__init__(*args, **kwargs)
-    self.filter_function = self.py_filter_function
 
 
 # Do not inherit from unittest.TestCase to ensure that these tests don't run.
@@ -53,13 +49,14 @@ class _TestTemplate(object):
     self.assertEqual(type(got), type(want))
 
 
-class TestTemplateC(_TestTemplate, unittest.TestCase):
-  template_cls = template.SpitfireTemplate
-
-
 class TestTemplatePy(_TestTemplate, unittest.TestCase):
-  template_cls = PySpitfireTemplate
+  template_cls = template.get_spitfire_template_class(prefer_c_extension=False)
 
+
+if _template is not None:
+
+  class TestTemplateC(_TestTemplate, unittest.TestCase):
+    template_cls = template.get_spitfire_template_class(prefer_c_extension=True)
 
 
 if __name__ == '__main__':

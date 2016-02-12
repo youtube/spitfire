@@ -6,8 +6,11 @@
 import unittest
 
 from spitfire import runtime
-from spitfire.runtime import _udn
 from spitfire.runtime import udn
+try:
+  from spitfire.runtime import _udn  # pylint: disable=g-import-not-at-top
+except ImportError:
+  _udn = None
 
 
 class Scope(object):
@@ -101,8 +104,10 @@ class _UdnTest(object):
                       raise_exception=True)
 
 
-class TestUdnC(_UdnTest, unittest.TestCase):
-  resolve_udn = staticmethod(_udn._resolve_udn)
+if _udn is not None:
+
+  class TestUdnC(_UdnTest, unittest.TestCase):
+    resolve_udn = staticmethod(_udn._resolve_udn)
 
 
 class TestUdnPyAttr3(_UdnTest, unittest.TestCase):
