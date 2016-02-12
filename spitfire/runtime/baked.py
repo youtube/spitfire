@@ -4,7 +4,10 @@
 # license that can be found in the LICENSE file.
 
 """Module for baked spitfire utility functions."""
-from spitfire.runtime import _baked
+try:
+  from spitfire.runtime import _baked  # pylint: disable=g-import-not-at-top
+except ImportError:
+  _baked = None
 
 
 class _SanitizedPlaceholder(str):
@@ -64,7 +67,12 @@ def _mark_as_sanitized(value):
   return value
 
 
-# Use C
-SanitizedPlaceholder = _baked._SanitizedPlaceholder
-runtime_mark_as_sanitized = _baked._runtime_mark_as_sanitized
-mark_as_sanitized = _baked._mark_as_sanitized
+if _baked is None:
+  SanitizedPlaceholder = _SanitizedPlaceholder
+  runtime_mark_as_sanitized = _runtime_mark_as_sanitized
+  mark_as_sanitized = _mark_as_sanitized
+else:
+  # Use C.
+  SanitizedPlaceholder = _baked._SanitizedPlaceholder
+  runtime_mark_as_sanitized = _baked._runtime_mark_as_sanitized
+  mark_as_sanitized = _baked._mark_as_sanitized

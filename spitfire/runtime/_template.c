@@ -151,6 +151,6 @@ init_template(void)
     return;
 
   Py_INCREF(&BaseSpitfireTemplateType);
-  PyModule_AddObject(m, "BaseSpitfiretemplate",
+  PyModule_AddObject(m, "BaseSpitfireTemplate",
                      (PyObject *)&BaseSpitfireTemplateType);
 }
