@@ -5,7 +5,6 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-
 import logging
 import optparse
 import os
@@ -18,47 +17,48 @@ from spitfire.compiler import options
 
 
 def process_file(spt_compiler, filename, options):
-  def print_output(*args):
-    if options.verbose:
-      print >> sys.stderr, ' '.join(args)
 
-  try:
-    if options.output_file:
-      spt_compiler.write_file = False
-      if options.output_file == '-':
-        f = sys.stdout
-      else:
-        f = open(options.output_file, 'w')
-    else:
-      spt_compiler.write_file = True
-    src_code = spt_compiler.compile_file(filename)
-    if options.output_file:
-      f.write(src_code)
-      f.close()
-  except Exception, e:
-    error_msg = 'Failed processing file: %s' % filename
-    if options.verbose:
-      logging.exception(error_msg)
-    else:
-      print >> sys.stderr, error_msg
-      print >> sys.stderr, e
-    sys.exit(1)
+    def print_output(*args):
+        if options.verbose:
+            print >> sys.stderr, ' '.join(args)
+
+    try:
+        if options.output_file:
+            spt_compiler.write_file = False
+            if options.output_file == '-':
+                f = sys.stdout
+            else:
+                f = open(options.output_file, 'w')
+        else:
+            spt_compiler.write_file = True
+        src_code = spt_compiler.compile_file(filename)
+        if options.output_file:
+            f.write(src_code)
+            f.close()
+    except Exception, e:
+        error_msg = 'Failed processing file: %s' % filename
+        if options.verbose:
+            logging.exception(error_msg)
+        else:
+            print >> sys.stderr, error_msg
+            print >> sys.stderr, e
+        sys.exit(1)
 
 
 if __name__ == '__main__':
-  reload(sys)
-  sys.setdefaultencoding('utf8')
+    reload(sys)
+    sys.setdefaultencoding('utf8')
 
-  option_parser = optparse.OptionParser()
-  options.add_common_options(option_parser)
-  (spt_options, spt_args) = option_parser.parse_args()
+    option_parser = optparse.OptionParser()
+    options.add_common_options(option_parser)
+    (spt_options, spt_args) = option_parser.parse_args()
 
-  if spt_options.version:
-    print >> sys.stderr, 'spitfire %s' % spitfire.__version__
-    sys.exit(0)
+    if spt_options.version:
+        print >> sys.stderr, 'spitfire %s' % spitfire.__version__
+        sys.exit(0)
 
-  spt_compiler_args = compiler.Compiler.args_from_optparse(spt_options)
-  spt_compiler = compiler.Compiler(**spt_compiler_args)
+    spt_compiler_args = compiler.Compiler.args_from_optparse(spt_options)
+    spt_compiler = compiler.Compiler(**spt_compiler_args)
 
-  for filename in spt_args:
-    process_file(spt_compiler, filename, spt_options)
+    for filename in spt_args:
+        process_file(spt_compiler, filename, spt_options)

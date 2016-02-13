@@ -14,10 +14,17 @@ try:
 except ImportError:
     spitfire = None
 
-
 TABLE_DATA = [
-    dict(a=1, b=2, c=3, d=4, e=5, f=6, g=7, h=8, i=9, j=10)
-    for x in range(1000)
+    dict(a=1,
+         b=2,
+         c=3,
+         d=4,
+         e=5,
+         f=6,
+         g=7,
+         h=8,
+         i=9,
+         j=10) for x in range(1000)
 ]
 
 
@@ -36,7 +43,8 @@ def get_spitfire_tests():
             #end for
         </table>
     """
-    tmpl_search_list=[{'table': TABLE_DATA}]
+
+    tmpl_search_list = [{'table': TABLE_DATA}]
 
     default_opts = spitfire.compiler.options.default_options
     o1_opts = spitfire.compiler.options.o1_options
@@ -54,55 +62,63 @@ def get_spitfire_tests():
     baked_o2_opts = _spitfire_baked_opts(o2_opts)
     baked_o3_opts = _spitfire_baked_opts(o3_opts)
 
-    tmpl = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl',
-        analyzer_options=default_opts)
+    tmpl = spitfire.compiler.util.load_template(tmpl_src,
+                                                'tmpl',
+                                                analyzer_options=default_opts)
 
-    tmpl_o1 = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_o1',
-        analyzer_options=o1_opts)
+    tmpl_o1 = spitfire.compiler.util.load_template(tmpl_src,
+                                                   'tmpl_o1',
+                                                   analyzer_options=o1_opts)
 
-    tmpl_o2 = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_o2',
-        analyzer_options=o2_opts)
+    tmpl_o2 = spitfire.compiler.util.load_template(tmpl_src,
+                                                   'tmpl_o2',
+                                                   analyzer_options=o2_opts)
 
-    tmpl_o3 = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_o3',
-        analyzer_options=o3_opts)
+    tmpl_o3 = spitfire.compiler.util.load_template(tmpl_src,
+                                                   'tmpl_o3',
+                                                   analyzer_options=o3_opts)
 
     tmpl_baked = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_baked',
+        tmpl_src,
+        'tmpl_baked',
         analyzer_options=baked_opts)
 
     tmpl_baked_o1 = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_baked_o1',
+        tmpl_src,
+        'tmpl_baked_o1',
         analyzer_options=baked_o1_opts)
 
     tmpl_baked_o2 = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_baked_o2',
+        tmpl_src,
+        'tmpl_baked_o2',
         analyzer_options=baked_o2_opts)
 
     tmpl_baked_o3 = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_baked_o3',
+        tmpl_src,
+        'tmpl_baked_o3',
         analyzer_options=baked_o3_opts)
 
     tmpl_unfiltered = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_unfiltered',
+        tmpl_src,
+        'tmpl_unfiltered',
         analyzer_options=default_opts,
         compiler_options={'enable_filters': False})
 
     tmpl_unfiltered_o1 = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_unfiltered_o1',
+        tmpl_src,
+        'tmpl_unfiltered_o1',
         analyzer_options=o1_opts,
         compiler_options={'enable_filters': False})
 
     tmpl_unfiltered_o2 = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_unfiltered_o2',
+        tmpl_src,
+        'tmpl_unfiltered_o2',
         analyzer_options=o2_opts,
         compiler_options={'enable_filters': False})
 
     tmpl_unfiltered_o3 = spitfire.compiler.util.load_template(
-        tmpl_src, 'tmpl_unfiltered_o3',
+        tmpl_src,
+        'tmpl_unfiltered_o3',
         analyzer_options=o3_opts,
         compiler_options={'enable_filters': False})
 
@@ -192,9 +208,7 @@ def run_tests(which=None, number=100):
     if number > 100:
         print 'Running benchmarks %d times each...' % number
         print
-    groups = [
-        'spitfire',
-    ]
+    groups = ['spitfire',]
     # Built the full list of eligible tests.
     tests = []
     for g in groups:
@@ -230,7 +244,10 @@ def profile_tests(which=None):
 
 def main():
     option_parser = optparse.OptionParser()
-    option_parser.add_option('-p', '--profile', action='store_true', default=False)
+    option_parser.add_option('-p',
+                             '--profile',
+                             action='store_true',
+                             default=False)
     option_parser.add_option('-n', '--number', type='int', default=100)
     (options, args) = option_parser.parse_args()
 
