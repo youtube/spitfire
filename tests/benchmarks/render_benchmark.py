@@ -17,6 +17,18 @@ try:
 except ImportError:
     spitfire = None
 
+try:
+    import Cheetah
+    import Cheetah.Template
+except ImportError:
+    Cheetah = None
+
+try:
+    import jinja2
+except ImportError:
+    jinja2 = None
+
+
 TABLE_DATA = [
     dict(a=1,
          b=2,
@@ -241,6 +253,67 @@ def get_python_tests():
     ]
 
 
+def get_cheetah_tests():
+    if not Cheetah:
+        return []
+
+    tmpl_src = """
+        <table>
+            #for $row in $table
+                <tr>
+                    #for $column in $row.values()
+                        <td>$column</td>
+                    #end for
+                </tr>
+            #end for
+        </table>
+    """
+
+    tmpl_search_list = [{'table': TABLE_DATA}]
+
+    tmpl = Cheetah.Template.Template(tmpl_src, searchList=tmpl_search_list)
+
+    def test_cheetah():
+        """Cheetah template"""
+        tmpl.respond()
+
+    return [
+        test_cheetah,
+    ]
+
+def get_jinja2_tests():
+    if not jinja2:
+        return []
+
+    tmpl_src = """
+        <table>
+            {% for row in table %}
+                <tr>
+                    {% for column in row.values() %}
+                        <td>{{ column }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    """
+
+    tmpl = jinja2.Template(tmpl_src)
+    tmpl_autoescaped = jinja2.Template(tmpl_src, autoescape=True)
+
+    def test_jinja2():
+        """Jinja2 template"""
+        tmpl.render(table=TABLE_DATA)
+
+    def test_jinja2_autoescaped():
+        """Jinja2 template autoescaped"""
+        tmpl_autoescaped.render(table=TABLE_DATA)
+
+    return [
+        test_jinja2,
+        test_jinja2_autoescaped,
+    ]
+
+
 def time_test(test, number):
     # Put the test in the global scope for timeit.
     name = 'timeit_%s' % test.__name__
@@ -261,7 +334,7 @@ def run_tests(which=None, number=100, compare=False):
         print 'Running benchmarks %d times each...' % number
         print
     if compare:
-        groups = ['python', 'spitfire']
+        groups = ['cheetah', 'jinja2', 'python', 'spitfire']
     else:
         groups = ['spitfire']
     # Built the full list of eligible tests.
