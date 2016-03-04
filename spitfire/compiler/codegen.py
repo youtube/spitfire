@@ -401,9 +401,9 @@ class CodeGenerator(object):
         if name in ('has_var', 'get_var'):
             return [CodeNode("self.%(name)s" % vars())]
         elif self.options and self.options.cheetah_cheats:
-            return [CodeNode(
-                "resolve_placeholder(_self_search_list, '%(name)s')" % vars(),
-                input_pos=node.pos)]
+            return [CodeNode("resolve_placeholder([locals()] + "
+                             "_self_search_list, '%(name)s')" % vars(),
+                             input_pos=node.pos)]
         elif self.options and self.options.omit_local_scope_search:
             self.function_stack[-1].uses_globals = True
             return [CodeNode("resolve_placeholder('%(name)s', self, _globals)" %
@@ -534,8 +534,13 @@ class CodeGenerator(object):
 
         if self.options and self.options.cheetah_cheats:
             node.uses_globals = True
-            code_node.append(CodeNode(
+            if_cheetah = CodeNode('if self.search_list:')
+            if_cheetah.append(CodeNode(
                 '_self_search_list = self.search_list + [_globals]'))
+            else_cheetah = CodeNode('else:')
+            else_cheetah.append(CodeNode('_self_search_list = [_globals]'))
+            code_node.append(if_cheetah)
+            code_node.append(else_cheetah)
 
         for n in child_nodes:
             code_child_nodes = self.build_code(n)
