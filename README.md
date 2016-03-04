@@ -1,86 +1,89 @@
-![](https://raw.githubusercontent.com/spt/spitfire/master/doc/spitfire.png)
+# ![Spitfire][]
+
+[![Version][]](https://badge.fury.io/py/spitfire)
+[![Status][]](https://travis-ci.org/spt/spitfire)
 
 
 ## Introduction
 
-Spitfire is a template language heavily inspired by Cheetah. It started out as an experiment to see if techniques from the compiler world were applicable to the mundane details of templates.
-
-At this point, Spitfire works - at least in theory. There are basic tests cases that assure templates parse, compile, generate and execute correctly. Most language features are covered with a high-level test, though it is possible that there are some bugs or shortcomings in the syntax.
-
-
-## Details
-
-The syntax itself is extremely similar to Cheetah, however there are some directives and language features that have been omitted (usually on purpose).  Trivial Cheetah templates will probably compile in Spitfire, so that's probably a good place to start.
-
-The change log and `parser.g` file are currently the primary source of information on this, which is not the best. I've started documenting the differences in SpitfireVsCheetah.
-
-There's also work being done on an attribute (i.e. XML namespace) variant of the syntax, similar to the TAL and Kid syntaxes, for those of you who like templates that are valid XML/XHTML. We'll add more info on this when it's ready for testing.
-
-There are also some vague notes on the internal CompilerDesign that are probably not useful to the majority of people.
+Spitfire is a high-performance Python template language inspired
+by [Cheetah][].  It originally started out as an experiment to
+see if techniques used in compilers were applicable to
+templates.  Spitfire has been the primary template language for
+[youtube.com][] since 2008 and is used to generate
+[billions of views a day][].
 
 
-## Examples
+## Example
 
-Sometimes a good example is the best way to jump in.
-  * SpitfireSearchResultsExample
+```html
+<html>
+<head><title>$title</title></head>
+<body>
+  <ul>
+    #for $user in $users
+      <li><a href="$user.url">$user.name</a></li>
+    #end for
+  </ul>
+</body>
+</html>
+```
 
 
-# Current Release
+## Getting Started
 
-[spitfire-0.6.17](http://spitfire.googlecode.com/svn/tags/spitfire-0.6.17)
-  * fixes a couple of bugs in optimized output (-O2 or above)
-
-Trunk is semi-stable as there are reasonable regression tests. Go ahead, be brave.
-
-  * [spitfire trunk](http://spitfire.googlecode.com/svn/trunk)
-
-
-## Release Notes
-
-I note most of the progress in the [change log](http://spitfire.googlecode.com/svn/trunk/CHANGES). The biggest addition is the alternate front end to support an attribute language (think TAL or Kid).
+Spitfire's syntax is extremely similar to Cheetah, however some
+directives and language features have been omitted.  If you're
+already using Cheetah, simple templates will likely compile in
+Spitfire, and there are a couple compatibility modes to ease
+transition.
 
 
 ## Performance
 
-Spitfire has a basic optimizer that can make certain operations much faster. I found a basic 10x1000 table generation benchmark written by the Genshi team. I modified it to add Cheetah (my baseline performance target) and Spitfire. This is by no means exhaustive proof that Spitfire is always fast, just that in a simple case of burning through a loop of generating text, it's not too shabby.
+Spitfire has a basic optimizer that can make certain operations
+much faster.  Using a basic 10x1000 table generation benchmark,
+Spitfire can be faster than other template systems and compares
+very favorably to hand-coded Python (the upper limit of
+performance achievable by compiling to Python bytecode).
+This is by no means exhaustive proof that Spitfire is always
+fast, just that it can provide very high performance.
 
 ```
-hannosch:spitfire hannosch$ python tests/perf/bigtable.py
-Genshi tag builder                            671.49 ms
-Genshi template                               493.39 ms
-Genshi template + tag builder                 714.04 ms
-Mako Template                                  74.78 ms
-ElementTree                                   299.03 ms
-cElementTree                                  179.47 ms
-Cheetah template                               58.67 ms
-Spitfire template                              65.32 ms
-Spitfire template -O1                          40.19 ms
-Spitfire template -O2                          15.99 ms
-Spitfire template -O3                          16.02 ms
-StringIO                                       80.85 ms
-cStringIO                                      16.52 ms
-list concat                                    12.93 ms
+# Python 2.7.6 [GCC 4.8.2] on linux, 6-core Intel Xeon E5-1650 V3 @ 3.50GHz
+$ python tests/benchmarks/render_benchmark.py  --compare --number 1000
+Running benchmarks 1000 times each...
 
-hannosch:spitfire hannosch$ python
-Python 2.4.5 (#1, Jul 20 2008, 12:34:19)
-[GCC 4.0.1 (Apple Inc. build 5465)] on darwin
->>>
+Cheetah template                               18.76 ms
+Django template                               263.94 ms
+Django template autoescaped                   262.89 ms
+Jinja2 template                                 8.52 ms
+Jinja2 template autoescaped                    18.22 ms
+Mako template                                   3.25 ms
+Mako template autoescaped                      11.45 ms
+Python string template                         29.78 ms
+Python StringIO buffer                         20.92 ms
+Python cStringIO buffer                         5.93 ms
+Python list concatenation                       2.30 ms
+Spitfire template                              11.44 ms
+Spitfire template -O1                           9.89 ms
+Spitfire template -O2                           7.11 ms
+Spitfire template -O3                           6.60 ms
+Spitfire template baked                        13.54 ms
+Spitfire template baked -O1                     8.60 ms
+Spitfire template baked -O2                     8.46 ms
+Spitfire template baked -O3                     8.15 ms
+Spitfire template unfiltered                    6.36 ms
+Spitfire template unfiltered -O1                2.76 ms
+Spitfire template unfiltered -O2                2.77 ms
+Spitfire template unfiltered -O3                2.17 ms
 ```
 
-Two more examples from the Zope / TAL world:
-```
-hannosch:z3c.pt hannosch$ bin/py benchmark/benchmark/bigtable.py
-z3c.pt template                                25.43 ms
-zope.pagetemplate template                    564.55 ms
-```
 
-For comparison, here are two samples from PHP.
-```
-hannosch:spitfire/tests/perf> php4 bigtable.php
-Smarty template:    21.04 ms
-PHP:                12.01 ms
+[Cheetah]: http://www.cheetahtemplate.org/
+[youtube.com]: https://www.youtube.com/
+[billions of views a day]: https://www.youtube.com/yt/press/statistics.html
 
-hannosch:spitfire/tests/perf> php5 bigtable.php
-Smarty template:    13.16 ms
-PHP:                 6.24 ms
-```
+[Spitfire]: https://raw.githubusercontent.com/spt/spitfire/master/doc/spitfire.png
+[Version]: https://badge.fury.io/py/spitfire.svg
+[Status]: https://secure.travis-ci.org/spt/spitfire.svg?branch=master
