@@ -5,6 +5,9 @@
 
 import copy
 import optparse
+import string
+import cStringIO
+import StringIO
 import timeit
 
 try:
@@ -186,7 +189,56 @@ def get_spitfire_tests():
     ]
 
 
-spitfire_tests = get_spitfire_tests()
+def get_python_tests():
+    tmpl_table = string.Template('<table>\n$table\n</table>\n')
+    tmpl_row = string.Template('<tr>\n$row\n</tr>\n')
+    tmpl_column = string.Template('<td>$column</td>\n')
+
+    def _buffer_fn(write, table):
+        write('<table>\n')
+        for row in table:
+            write('<tr>\n')
+            for column in row.itervalues():
+                write('<td>')
+                write('%s' % column)
+                write('</td>\n')
+            write('</tr>\n')
+        write('</table>\n')
+
+    def test_python_template():
+        """Python string template"""
+        rows = ''
+        for row in TABLE_DATA:
+            columns = ''
+            for column in row.itervalues():
+                columns = columns + tmpl_column.substitute(column=column)
+            rows = rows + tmpl_row.substitute(row=columns)
+        return tmpl_table.substitute(table=rows)
+
+    def test_python_stringio():
+        """Python StringIO buffer"""
+        buffer = StringIO.StringIO()
+        _buffer_fn(buffer.write, TABLE_DATA)
+        return buffer.getvalue()
+
+    def test_python_cstringio():
+        """Python cStringIO buffer"""
+        buffer = cStringIO.StringIO()
+        _buffer_fn(buffer.write, TABLE_DATA)
+        return buffer.getvalue()
+
+    def test_python_list():
+        """Python list concatenation"""
+        buffer = []
+        _buffer_fn(buffer.append, TABLE_DATA)
+        return ''.join(buffer)
+
+    return [
+        test_python_template,
+        test_python_stringio,
+        test_python_cstringio,
+        test_python_list,
+    ]
 
 
 def time_test(test, number):
@@ -204,16 +256,19 @@ def time_test(test, number):
     print '%-35s %s' % (test.__doc__, result)
 
 
-def run_tests(which=None, number=100):
+def run_tests(which=None, number=100, compare=False):
     if number > 100:
         print 'Running benchmarks %d times each...' % number
         print
-    groups = ['spitfire',]
+    if compare:
+        groups = ['python', 'spitfire']
+    else:
+        groups = ['spitfire']
     # Built the full list of eligible tests.
     tests = []
     for g in groups:
-        test_list = '%s_tests' % g
-        tests.extend(globals()[test_list])
+        test_list_fn = 'get_%s_tests' % g
+        tests.extend(globals()[test_list_fn]())
     # Optionally filter by a set of matching test name (sub)strings.
     if which:
         which_tests = []
@@ -233,7 +288,7 @@ def profile_tests(which=None):
     import hotshot, hotshot.stats
     profile_data = 'template.prof'
     profile = hotshot.Profile(profile_data)
-    profile.runcall(run_tests, which=which, number=1)
+    profile.runcall(run_tests, which=which, number=1, compare=False)
     stats = hotshot.stats.load(profile_data)
     stats.strip_dirs()
     stats.sort_stats('time', 'calls')
@@ -244,17 +299,21 @@ def profile_tests(which=None):
 
 def main():
     option_parser = optparse.OptionParser()
+    option_parser.add_option('-n', '--number', type='int', default=100)
+    option_parser.add_option('-c',
+                             '--compare',
+                             action='store_true',
+                             default=False)
     option_parser.add_option('-p',
                              '--profile',
                              action='store_true',
                              default=False)
-    option_parser.add_option('-n', '--number', type='int', default=100)
     (options, args) = option_parser.parse_args()
 
     if options.profile:
         profile_tests(which=args)
     else:
-        run_tests(which=args, number=options.number)
+        run_tests(which=args, number=options.number, compare=options.compare)
 
 
 if __name__ == '__main__':
