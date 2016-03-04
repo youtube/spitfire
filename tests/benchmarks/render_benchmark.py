@@ -24,9 +24,22 @@ except ImportError:
     Cheetah = None
 
 try:
+    import django
+    import django.conf
+    import django.template
+except ImportError:
+    django = None
+
+try:
     import jinja2
 except ImportError:
     jinja2 = None
+
+try:
+    import mako
+    import mako.template
+except ImportError:
+    mako = None
 
 
 TABLE_DATA = [
@@ -281,6 +294,48 @@ def get_cheetah_tests():
         test_cheetah,
     ]
 
+
+def get_django_tests():
+    if not django:
+        return []
+
+    django.conf.settings.configure()
+    django.setup()
+
+    tmpl_src = """
+        <table>
+            {% for row in table %}
+                <tr>
+                    {% for column in row.values %}
+                        <td>{{ column }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    """
+    tmpl_autoescaped_src = ('{% autoescape on %}' +
+                            tmpl_src +
+                            '{% endautoescape %}')
+
+    tmpl = django.template.Template(tmpl_src)
+    tmpl_autoescaped = django.template.Template(tmpl_autoescaped_src)
+
+    tmpl_context = django.template.Context({'table': TABLE_DATA})
+
+    def test_django():
+        """Django template"""
+        tmpl.render(tmpl_context)
+
+    def test_django_autoescaped():
+        """Django template autoescaped"""
+        tmpl_autoescaped.render(tmpl_context)
+
+    return [
+        test_django,
+        test_django_autoescaped,
+    ]
+
+
 def get_jinja2_tests():
     if not jinja2:
         return []
@@ -314,6 +369,39 @@ def get_jinja2_tests():
     ]
 
 
+def get_mako_tests():
+    if not mako:
+        return []
+
+    tmpl_src = """
+        <table>
+            % for row in table:
+                <tr>
+                    % for column in row.values():
+                        <td>${column}</td>
+                    % endfor
+                </tr>
+            % endfor
+        </table>
+    """
+
+    tmpl = mako.template.Template(tmpl_src)
+    tmpl_autoescaped = mako.template.Template(tmpl_src, default_filters=['h'])
+
+    def test_mako():
+        """Mako template"""
+        tmpl.render(table=TABLE_DATA)
+
+    def test_mako_autoescaped():
+        """Mako template autoescaped"""
+        tmpl_autoescaped.render(table=TABLE_DATA)
+
+    return [
+        test_mako,
+        test_mako_autoescaped,
+    ]
+
+
 def time_test(test, number):
     # Put the test in the global scope for timeit.
     name = 'timeit_%s' % test.__name__
@@ -334,7 +422,7 @@ def run_tests(which=None, number=100, compare=False):
         print 'Running benchmarks %d times each...' % number
         print
     if compare:
-        groups = ['cheetah', 'jinja2', 'python', 'spitfire']
+        groups = ['cheetah', 'django', 'jinja2', 'mako', 'python', 'spitfire']
     else:
         groups = ['spitfire']
     # Built the full list of eligible tests.
