@@ -1,0 +1,6 @@
+# Build output
+*.pyc
+*.so
+/build
+/spitfire.egg-info
+/spitfire/compiler/parser.py
