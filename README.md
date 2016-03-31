@@ -65,17 +65,8 @@ Python string template                         29.78 ms
 Python StringIO buffer                         20.92 ms
 Python cStringIO buffer                         5.93 ms
 Python list concatenation                       2.30 ms
-Spitfire template                              11.44 ms
-Spitfire template -O1                           9.89 ms
-Spitfire template -O2                           7.11 ms
 Spitfire template -O3                           6.60 ms
-Spitfire template baked                        13.54 ms
-Spitfire template baked -O1                     8.60 ms
-Spitfire template baked -O2                     8.46 ms
 Spitfire template baked -O3                     8.15 ms
-Spitfire template unfiltered                    6.36 ms
-Spitfire template unfiltered -O1                2.76 ms
-Spitfire template unfiltered -O2                2.77 ms
 Spitfire template unfiltered -O3                2.17 ms
 ```
 
