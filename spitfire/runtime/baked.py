@@ -10,7 +10,7 @@ except ImportError:
 
 
 class _SanitizedPlaceholder(str):
-    """Class the represesnts an already sanitized string.
+    """Class that represents an already sanitized string.
 
     SanitizedPlaceholder wraps another value to let the runtime know that this
     does not need to filtered again.
