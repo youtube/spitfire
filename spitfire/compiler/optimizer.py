@@ -378,9 +378,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
         return
 
     def analyzeTemplateNode(self, template):
-        # at this point, if we have a function registry, add in the nodes before
-        # we begin optimizing
+        # If we have a function registry, add in the nodes that we determined
+        # are used from the analyzer stage before we begin optimizing.
         for alias in sorted(self.compiler.function_name_registry):
+            if alias not in template.used_function_registry_identifiers:
+                continue
             fq_name, method = self.compiler.function_name_registry[alias]
             fq_name_parts = fq_name.split('.')
             self.ast_root.from_nodes.append(ast.FromNode(

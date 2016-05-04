@@ -537,6 +537,10 @@ class SemanticAnalyzer(object):
         function_has_only_literal_args = False
         never_cache = False
         if isinstance(ph_expression, ast.CallFunctionNode):
+            # If this is a placeholder that is in the function registry,
+            # mark it as used so that in the optimizer stage, we can avoid
+            # importing unused registry values.
+            self.template.used_function_registry_identifiers.add(fname)
             fname = ph_expression.expression.name
             if self.compiler.registry_contains(fname):
                 function_has_only_literal_args = (
