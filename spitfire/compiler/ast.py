@@ -926,6 +926,7 @@ class TemplateNode(ASTNode):
         self.library_identifiers = set()
         self.trusted_module_identifiers = set()
         self.local_scope_identifiers = set()
+        self.used_function_registry_identifiers = set()
 
     def __str__(self):
         return '%s\nimport:%s\nfrom:%s\nextends:%s\nmain:%s' % (
