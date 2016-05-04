@@ -689,11 +689,16 @@ class SemanticAnalyzer(object):
     def analyzeCallFunctionNode(self, pnode):
         fn = pnode
 
+        fname = fn.expression.name
+        if self.compiler.registry_contains(fname):
+            self.template.used_function_registry_identifiers.add(fname)
+
         # The fully qualified library function name iff we figure out
         # that this is calling into a library.
         library_function = None
-        skip_filter = self.compiler.get_registry_value(fn.expression.name,
+        skip_filter = self.compiler.get_registry_value(fname,
                                                        'skip_filter')
+
         if isinstance(fn.expression, ast.PlaceholderNode):
             macro_handler_name = 'macro_function_%s' % fn.expression.name
             macro_data = self.compiler.macro_registry.get(macro_handler_name)
