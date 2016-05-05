@@ -75,6 +75,6 @@ Spitfire template unfiltered -O3                2.17 ms
 [youtube.com]: https://www.youtube.com/
 [billions of views a day]: https://www.youtube.com/yt/press/statistics.html
 
-[Spitfire]: https://raw.githubusercontent.com/spt/spitfire/master/doc/spitfire.png
+[Spitfire]: https://raw.githubusercontent.com/youtube/spitfire/master/doc/spitfire.png
 [Version]: https://badge.fury.io/py/spitfire.svg
-[Status]: https://secure.travis-ci.org/spt/spitfire.svg?branch=master
+[Status]: https://secure.travis-ci.org/youtube/spitfire.svg?branch=master
