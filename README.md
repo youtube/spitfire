@@ -1,7 +1,7 @@
 # ![Spitfire][]
 
 [![Version][]](https://badge.fury.io/py/spitfire)
-[![Status][]](https://travis-ci.org/spt/spitfire)
+[![Status][]](https://travis-ci.org/youtube/spitfire)
 
 
 ## Introduction
