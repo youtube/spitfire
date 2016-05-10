@@ -8,6 +8,7 @@ import optparse
 import string
 import cStringIO
 import StringIO
+import sys
 import timeit
 
 try:
@@ -427,9 +428,14 @@ def run_tests(which=None, number=100, compare=False):
         groups = ['spitfire']
     # Built the full list of eligible tests.
     tests = []
+    missing_engines = []
     for g in groups:
         test_list_fn = 'get_%s_tests' % g
-        tests.extend(globals()[test_list_fn]())
+        test = globals()[test_list_fn]()
+        if test:
+          tests.extend(test)
+        else:
+          missing_engines.append(g)
     # Optionally filter by a set of matching test name (sub)strings.
     if which:
         which_tests = []
@@ -438,6 +444,11 @@ def run_tests(which=None, number=100, compare=False):
                 if w.lower() in t.__name__.lower():
                     which_tests.append(t)
         tests = which_tests
+    # Report any missing template engines.
+    if missing_engines:
+        sys.stderr.write(
+            'The following template engines are not installed and will be '
+            'skipped in the benchmark: %r\n' % missing_engines)
     # Run the tests.
     for t in tests:
         time_test(t, number)
