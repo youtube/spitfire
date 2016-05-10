@@ -8,6 +8,7 @@ import optparse
 import string
 import cStringIO
 import StringIO
+import sys
 import timeit
 
 try:
@@ -458,6 +459,17 @@ def profile_tests(which=None):
     print 'Profile data written to %s' % profile_data
 
 
+def _get_missing_template_engines():
+    engines = [
+        ('Cheetah', Cheetah),
+        ('django', django),
+        ('jinja2', jinja2),
+        ('mako', mako),
+        ('spitfire', spitfire),
+    ]
+    return [engine[0] for engine in engines if not engine[1]]
+
+
 def main():
     option_parser = optparse.OptionParser()
     option_parser.add_option('-n', '--number', type='int', default=100)
@@ -470,6 +482,13 @@ def main():
                              action='store_true',
                              default=False)
     (options, args) = option_parser.parse_args()
+
+    missing_engines = _get_missing_template_engines()
+    if missing_engines:
+      sys.stderr.write(
+          'The following template engines are not installed and will be '
+          'skipped in the benchmark: %r\n' % missing_engines)
+
 
     if options.profile:
         profile_tests(which=args)
