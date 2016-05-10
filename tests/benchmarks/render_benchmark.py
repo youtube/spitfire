@@ -428,9 +428,16 @@ def run_tests(which=None, number=100, compare=False):
         groups = ['spitfire']
     # Built the full list of eligible tests.
     tests = []
+
+    missing_engines = []
+
     for g in groups:
         test_list_fn = 'get_%s_tests' % g
-        tests.extend(globals()[test_list_fn]())
+        test = globals()[test_list_fn]()
+        if test:
+          tests.extend(test)
+        else:
+          missing_engines.append(g)
     # Optionally filter by a set of matching test name (sub)strings.
     if which:
         which_tests = []
@@ -439,6 +446,11 @@ def run_tests(which=None, number=100, compare=False):
                 if w.lower() in t.__name__.lower():
                     which_tests.append(t)
         tests = which_tests
+    # Report any missing template engines.
+    if missing_engines:
+        sys.stderr.write(
+            'The following template engines are not installed and will be '
+            'skipped in the benchmark: %r\n' % missing_engines)
     # Run the tests.
     for t in tests:
         time_test(t, number)
@@ -459,17 +471,6 @@ def profile_tests(which=None):
     print 'Profile data written to %s' % profile_data
 
 
-def _get_missing_template_engines():
-    engines = [
-        ('Cheetah', Cheetah),
-        ('django', django),
-        ('jinja2', jinja2),
-        ('mako', mako),
-        ('spitfire', spitfire),
-    ]
-    return [engine[0] for engine in engines if not engine[1]]
-
-
 def main():
     option_parser = optparse.OptionParser()
     option_parser.add_option('-n', '--number', type='int', default=100)
@@ -482,12 +483,6 @@ def main():
                              action='store_true',
                              default=False)
     (options, args) = option_parser.parse_args()
-
-    missing_engines = _get_missing_template_engines()
-    if missing_engines:
-      sys.stderr.write(
-          'The following template engines are not installed and will be '
-          'skipped in the benchmark: %r\n' % missing_engines)
 
 
     if options.profile:
