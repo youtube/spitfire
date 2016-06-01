@@ -83,6 +83,18 @@ parser _SpitfireParser:
   rule CLOSE_DIRECTIVE:
     [ SPACE ] CLOSE_DIRECTIVE_TOKEN {{ return CLOSE_DIRECTIVE_TOKEN }}
 
+  rule CLOSE_END_DIRECTIVE:
+    [ SPACE ]
+    (
+      CLOSE_DIRECTIVE_TOKEN {{ return CLOSE_DIRECTIVE_TOKEN }}
+      |
+      # To accommodate the file ending directly after closing directive,
+      # don't actually scan END, since that will happen when "goal" is complete.
+      # Instead, peek to see if END is next and return an empty value.
+      {{ _token_ = self._peek('END') }}
+      {{ if _token_ == 'END': return '' }}
+    )
+
   rule goal:
     {{ template = ast.TemplateNode() }}
     ( block<<start=True>> {{ template.append(block) }} ) *
@@ -180,13 +192,13 @@ parser _SpitfireParser:
     (
       SINGLE_LINE_COMMENT {{ return ast.CommentNode(START_DIRECTIVE + SINGLE_LINE_COMMENT) }}
       |
-      MULTI_LINE_COMMENT {{ return ast.CommentNode(START_DIRECTIVE +MULTI_LINE_COMMENT) }}
+      MULTI_LINE_COMMENT {{ return ast.CommentNode(START_DIRECTIVE + MULTI_LINE_COMMENT) }}
       |
       'block' SPACE ID CLOSE_DIRECTIVE {{ _block = ast.BlockNode(ID) }}
       {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
       ( block<<start>> {{ _block.append(block) }} ) *
       {{ self.make_optional(_block.child_nodes, start) }}
-      END_DIRECTIVE SPACE 'block' CLOSE_DIRECTIVE {{ return _block }}
+      END_DIRECTIVE SPACE 'block' CLOSE_END_DIRECTIVE {{ return _block }}
       |
       'i18n' {{ _macro = ast.MacroNode('i18n') }}
       [ OPEN_PAREN
@@ -198,10 +210,9 @@ parser _SpitfireParser:
       {{ _macro.value = '' }}
       (
         i18n_body {{ _macro.value += i18n_body }}
-        [ START_DIRECTIVE {{ _macro.value += START_DIRECTIVE }}
-        ]
+        [ START_DIRECTIVE {{ _macro.value += START_DIRECTIVE }} ]
       )*
-      END_DIRECTIVE SPACE 'i18n' CLOSE_DIRECTIVE {{ return _macro }}
+      END_DIRECTIVE SPACE 'i18n' CLOSE_END_DIRECTIVE {{ return _macro }}
       |
       'def' SPACE ID {{ _def = ast.DefNode(ID) }}
       [ OPEN_PAREN
@@ -211,14 +222,14 @@ parser _SpitfireParser:
       {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
       ( block<<start>> {{ _def.append(block) }} ) *
       {{ self.make_optional(_def.child_nodes, start) }}
-      END_DIRECTIVE SPACE 'def' CLOSE_DIRECTIVE {{ return _def }}
+      END_DIRECTIVE SPACE 'def' CLOSE_END_DIRECTIVE {{ return _def }}
       |
       'for[ \t]*' target_list '[ \t]*in[ \t]*' expression_list CLOSE_DIRECTIVE
       {{ _for_loop = ast.ForNode(target_list, expression_list) }}
       {{ start = CLOSE_DIRECTIVE.endswith('\n') }}
       ( block<<start>> {{ _for_loop.append(block) }} ) *
       {{ self.make_optional(_for_loop.child_nodes, start) }}
-      END_DIRECTIVE SPACE 'for' CLOSE_DIRECTIVE {{ return _for_loop }}
+      END_DIRECTIVE SPACE 'for' CLOSE_END_DIRECTIVE {{ return _for_loop }}
       |
       'strip_lines'
       # Switch the close directive call to actively clean up whitespace
@@ -230,7 +241,7 @@ parser _SpitfireParser:
       ( block<<start>> {{ _strip_lines_node.append(block) }} ) *
       {{ self.make_optional(_strip_lines_node.child_nodes, start) }}
       {{ self.strip_whitespace = False }}
-      END_DIRECTIVE SPACE 'strip_lines' CLOSE_DIRECTIVE {{ return _strip_lines_node }}
+      END_DIRECTIVE SPACE 'strip_lines' CLOSE_END_DIRECTIVE {{ return _strip_lines_node }}
       |
       'if' SPACE expression CLOSE_DIRECTIVE {{ _if_node = ast.IfNode(expression) }}
       {{ _last_condition_node = _if_node }}
@@ -250,7 +261,7 @@ parser _SpitfireParser:
         ( block<<start>> {{ _last_condition_node.else_.append(block) }} ) *
         {{ self.make_optional(_last_condition_node.else_.child_nodes, start) }}
       ]
-      END_DIRECTIVE SPACE 'if' CLOSE_DIRECTIVE {{ return _if_node }}
+      END_DIRECTIVE SPACE 'if' CLOSE_END_DIRECTIVE {{ return _if_node }}
       |
       statement {{ statement.statement = True }}
       {{ return statement }}
