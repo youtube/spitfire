@@ -59,7 +59,7 @@ lint:
 
 test: tests
 
-tests: unit_tests no_whitespace_tests whitespace_tests function_registry_tests optimizer_tests
+tests: unit_tests no_whitespace_tests whitespace_tests function_registry_tests optimizer_tests clean_tests
 
 unit_tests: build
 	$(UNITTEST) discover -s spitfire -p '*_test.py'
@@ -90,7 +90,8 @@ whitespace_tests: build
 	$(COMPILER) -O3 --preserve-optional-whitespace tests/*.txt tests/*.tmpl
 	$(CRUNNER) -O3 --preserve-optional-whitespace --test-output tests/output-preserve-whitespace tests/*.txt tests/*.tmpl
 
-optimizer_tests: clean_tests build
+optimizer_tests: build
+	$(call _clean_tests)
 	$(COMPILER) -O3 tests/*.o4txt
 	$(CRUNNER) -O3 tests/*.o4txt
 
