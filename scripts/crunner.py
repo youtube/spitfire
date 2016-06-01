@@ -236,8 +236,8 @@ class TestRunner(object):
                 print >> buffer, 'FAIL:', modulename, '(' + filename + ')'
                 print >> buffer, '-' * 70
                 print >> buffer, 'Compare expected and actual output with:'
-                print >> buffer, ' '.join('    diff -u', test_output_path,
-                                          current_output_path)
+                print >> buffer, ' '.join(['    diff -u', test_output_path,
+                                           current_output_path])
                 print >> buffer, 'Show debug information for the test with:'
                 test_cmd = [arg for arg in sys.argv if arg not in self.files]
                 if '--debug' not in test_cmd:
@@ -286,8 +286,7 @@ if __name__ == '__main__':
         '--debug-flags',
         action='store',
         default='hoisted_tree,source_code',
-        help=
-        'parse_tree, analyzed_tree, optimized_tree, hoisted_tree, source_code')
+        help='parse_tree, analyzed_tree, optimized_tree, hoisted_tree, source_code')
     option_parser.add_option('--enable-c-accelerator',
                              action='store_true',
                              default=False)
