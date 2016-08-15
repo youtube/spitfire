@@ -1,0 +1,10 @@
+#extends tests.base
+
+#def body
+    <ul>
+        #for $num in $test_number_list
+            <li>$num</li>
+        #end for
+    </ul>
+    <ul>#for $num in $test_number_list#<li>$num</li>#end for#</ul>
+#end def
