@@ -136,9 +136,11 @@ def _resolve_placeholder(name, template, global_vars):
     placeholder_cache = template.placeholder_cache
     if placeholder_cache and name in placeholder_cache:
         ph = placeholder_cache[name]
-        if isinstance(ph, weakref.ReferenceType) and ph() is not None:
-            return ph()
-        elif not isinstance(ph, weakref.ReferenceType):
+        if isinstance(ph, weakref.ReferenceType):
+            v = ph()
+            if ph is not None:
+                return ph
+        else:
             return ph
 
     # Note: getattr with 3 args is somewhat slower if the attribute
