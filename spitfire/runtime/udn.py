@@ -147,6 +147,7 @@ def _resolve_placeholder(name, template, global_vars):
     result = getattr(template, name, udn_ph)
     if result is not udn_ph:
         if placeholder_cache is not None:
+            # Use a weakref for methods to prevent memory cycles.
             placeholder_cache[name] = weakref.ref(result) if inspect.ismethod(
                 result) else result
         return result
@@ -156,6 +157,7 @@ def _resolve_placeholder(name, template, global_vars):
         ph = resolve_from_search_list(search_list, name)
         if ph is not UnresolvedPlaceholder:
             if placeholder_cache is not None:
+                # Use a weakref for methods to prevent memory cycles.
                 placeholder_cache[name] = weakref.ref(ph) if inspect.ismethod(
                     ph) else ph
             return ph
