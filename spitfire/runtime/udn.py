@@ -12,6 +12,7 @@
 import __builtin__
 import inspect
 import logging
+import weakref
 
 from spitfire import runtime
 # Import the accelerated C module if available.
@@ -134,7 +135,11 @@ _resolve_udn = _resolve_udn_prefer_attr3
 def _resolve_placeholder(name, template, global_vars):
     placeholder_cache = template.placeholder_cache
     if placeholder_cache and name in placeholder_cache:
-        return placeholder_cache[name]
+        ph = placeholder_cache[name]
+        if isinstance(ph, weakref.ReferenceType) and ph() is not None:
+          return ph()
+        elif not isinstance(ph, weakref.ReferenceType):
+          return ph
 
     # Note: getattr with 3 args is somewhat slower if the attribute
     # is found, but much faster if the attribute is not found.
@@ -142,7 +147,8 @@ def _resolve_placeholder(name, template, global_vars):
     result = getattr(template, name, udn_ph)
     if result is not udn_ph:
         if placeholder_cache is not None:
-            placeholder_cache[name] = result
+            placeholder_cache[name] = weakref.ref(result) if inspect.ismethod(
+                result) else result
         return result
 
     search_list = template.search_list
@@ -150,7 +156,8 @@ def _resolve_placeholder(name, template, global_vars):
         ph = resolve_from_search_list(search_list, name)
         if ph is not UnresolvedPlaceholder:
             if placeholder_cache is not None:
-                placeholder_cache[name] = ph
+                placeholder_cache[name] = weakref.ref(ph) if inspect.ismethod(
+                    ph) else ph
             return ph
 
     # TODO: Cache negative results in placedholder_cache?
