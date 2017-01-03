@@ -138,8 +138,8 @@ def _resolve_placeholder(name, template, global_vars):
         ph = placeholder_cache[name]
         if isinstance(ph, weakref.ReferenceType):
             v = ph()
-            if ph is not None:
-                return ph
+            if v is not None:
+                return v
         else:
             return ph
 
