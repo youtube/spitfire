@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file.
 
 import unittest
+import weakref
 
 from spitfire import runtime
 from spitfire.runtime import udn
@@ -21,6 +22,9 @@ class Foo(object):
     bar = 'baz'
     search_list = [{'win': 'boo'}, Scope(),]
     placeholder_cache = None
+
+    def foo_method(self):
+      pass
 
 
 class TestResolvePlaceholder(unittest.TestCase):
@@ -62,6 +66,14 @@ class TestResolvePlaceholderWithCache(unittest.TestCase):
         self.assertEqual(udn.resolve_placeholder('boom', template, None), 'bam')
         self.assertIn('boom', template.placeholder_cache)
         self.assertEqual(udn.resolve_placeholder('boom', template, None), 'bam')
+
+    def test_method_cycle_elimination(self):
+        template = Foo()
+        template.placeholder_cache = {}
+        self.assertEqual(udn.resolve_placeholder('foo_method', template, None), template.foo_method)
+        self.assertIn('foo_method', template.placeholder_cache)
+        self.assertIsInstance(template.placeholder_cache['foo_method'], weakref.ReferenceType)
+        self.assertEqual(udn.resolve_placeholder('foo_method', template, None), template.foo_method)
 
 
 class TestResolvePlaceholderWithLocals(unittest.TestCase):
