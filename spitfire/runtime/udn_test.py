@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file.
 
 import unittest
+import weakref
 
 from spitfire import runtime
 from spitfire.runtime import udn
@@ -71,6 +72,7 @@ class TestResolvePlaceholderWithCache(unittest.TestCase):
         template.placeholder_cache = {}
         self.assertEqual(udn.resolve_placeholder('foo_method', template, None), template.foo_method)
         self.assertIn('foo_method', template.placeholder_cache)
+        self.assertIsInstance(template.placeholder_cache['foo_method'], weakref.ReferenceType)
         self.assertEqual(udn.resolve_placeholder('foo_method', template, None), template.foo_method)
 
 
