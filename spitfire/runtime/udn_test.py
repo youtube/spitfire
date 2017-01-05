@@ -70,10 +70,13 @@ class TestResolvePlaceholderWithCache(unittest.TestCase):
     def test_method_cycle_elimination(self):
         template = Foo()
         template.placeholder_cache = {}
-        self.assertEqual(udn.resolve_placeholder('foo_method', template, None), template.foo_method)
+        self.assertEqual(udn.resolve_placeholder('foo_method', template, None),
+                         template.foo_method)
         self.assertIn('foo_method', template.placeholder_cache)
-        self.assertIsInstance(template.placeholder_cache['foo_method'], weakref.ReferenceType)
-        self.assertEqual(udn.resolve_placeholder('foo_method', template, None), template.foo_method)
+        self.assertIsInstance(template.placeholder_cache['foo_method'],
+                              weakref.ReferenceType)
+        self.assertEqual(udn.resolve_placeholder('foo_method', template, None),
+                         template.foo_method)
 
 
 class TestResolvePlaceholderWithLocals(unittest.TestCase):
