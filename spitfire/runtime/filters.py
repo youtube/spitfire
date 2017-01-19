@@ -5,6 +5,8 @@
 
 # a few helpful filter functions
 
+import functools
+import types
 from spitfire import runtime
 from spitfire.runtime import udn
 
@@ -14,6 +16,15 @@ from spitfire.runtime import udn
 # create data that could be double-escaped and you don't wnat to constantly
 # inform spitfire to us raw mode.
 def skip_filter(function):
+    if isinstance(function, types.BuiltinFunctionType):
+        # Built-in functions don't allow abitrary attributes, so we use a
+        # wrapper function that just passes through
+        @functools.wraps(function)
+        def skip_filter_wrapper(*args, **kwargs):
+            return function(*args, **kwargs)
+        skip_filter_wrapper.skip_filter = True
+        return skip_filter_wrapper
+
     function.skip_filter = True
     return function
 
