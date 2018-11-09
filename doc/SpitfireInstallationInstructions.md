@@ -12,7 +12,7 @@ Copy this code into an file called example.spt:
 
 Download spitfire into some convenient directory, then build and install it:
 ```
-$ svn checkout http://spitfire.googlecode.com/svn/trunk/ spitfire-read-only
+$ git clone https://github.com/youtube/spitfire.git spitfire-read-only
 $ cd spitfire-read-only
 $ python ./setup.py build
 $ python ./setup.py install
