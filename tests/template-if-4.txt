@@ -1,0 +1,5 @@
+#for $x in [" ", "", None]
+  #if $x
+  test $repr(x)
+  #end if
+#end for
