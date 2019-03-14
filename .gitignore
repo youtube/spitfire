@@ -4,3 +4,6 @@
 /build
 /spitfire.egg-info
 /spitfire/compiler/parser.py
+
+# Local pyenv version files
+.python-version
