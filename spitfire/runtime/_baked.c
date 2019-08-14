@@ -10,7 +10,12 @@ static PyObject *Skip_Filter_PyString = NULL;
 
 // SanitizedPlaceholder Object
 typedef struct {
+#if PY_MAJOR_VERSION >= 3
+
+  PyUnicodeObject str;
+#else
   PyStringObject str;
+#endif
 } SanitizedPlaceholderObject;
 
 // Forward declare the type object.
@@ -22,6 +27,17 @@ static PyTypeObject SanitizedPlaceholderType;
 static PyObject *
 mark_as_sanitized(PyObject *self, PyObject *value)
 {
+#if PY_MAJOR_VERSION >= 3
+  // If the value is not unicode, return it immediately.
+  if (!PyUnicode_CheckExact(value)) {
+    Py_INCREF(value);
+    return value;
+  }
+  PyObject *args = Py_BuildValue("(N)", value);
+  PyObject *obj = PyObject_CallObject((PyObject *) &SanitizedPlaceholderType, args);
+  Py_DECREF(args);
+  return obj;
+#else
   // If the value is not a string, return it immediately.
   if (!PyString_CheckExact(value)) {
     Py_INCREF(value);
@@ -31,6 +47,9 @@ mark_as_sanitized(PyObject *self, PyObject *value)
   Py_ssize_t size = PyString_GET_SIZE(value);
   // Allocate space for the SP object.
   PyObject *obj = PyType_GenericAlloc(&SanitizedPlaceholderType, size);
+  if (obj == NULL) {
+    return NULL;
+  }
   SanitizedPlaceholderObject *sp_ptr = (SanitizedPlaceholderObject *)obj;
   // Set the hash and state.
   sp_ptr->str.ob_shash = ((PyStringObject *)value)->ob_shash;
@@ -39,6 +58,7 @@ mark_as_sanitized(PyObject *self, PyObject *value)
   // instantiating a new string object.
   memcpy(sp_ptr->str.ob_sval, PyString_AS_STRING(value), size+1);
   return obj;
+#endif
 }
 
 // Python function that checks if skip_filter is present on the function passed
@@ -71,15 +91,21 @@ runtime_mark_as_sanitized(PyObject *self, PyObject *args)
 static PyObject *
 sp_concat(PyObject *self, PyObject *other)
 {
+  PyObject *tmpself;
+#if PY_MAJOR_VERSION >= 3
+  tmpself = PyUnicode_Concat(self, other);
+#else
   // PyString_Concat requires an INCREF on self.
   Py_INCREF(self);
   PyString_Concat(&self, other);
+  tmpself = self;
+#endif
   if (Py_TYPE(other) != &SanitizedPlaceholderType) {
-    return self;
+    return tmpself;
   }
   // PyString_Concat copies self turning it back into a string. Calling
   // mark_as_sanitized turns it back into a SanitizedPlaceholder.
-  return mark_as_sanitized(self, self);
+  return mark_as_sanitized(tmpself, tmpself);
 }
 
 // SanitizedPlaceholder method for mod (%). A SanitizedPlaceholder is returned
@@ -87,12 +113,16 @@ sp_concat(PyObject *self, PyObject *other)
 static PyObject *
 sp_mod(PyObject *self, PyObject *other)
 {
-  PyObject * val = PyString_Format(self, other);
+#if PY_MAJOR_VERSION >= 3
+  PyObject *val = PyUnicode_Format(self, other);
+#else
+  PyObject *val = PyString_Format(self, other);
+#endif
   if (Py_TYPE(other) != &SanitizedPlaceholderType) {
     return val;
   }
   // If the other value was a SanitizedPlaceholder, we want to turn the string
-  // result from PyString_Format into a SanitizedPlaceholder. This currently
+  // result from Py*_Format into a SanitizedPlaceholder. This currently
   // copies over the string which is not the most efficient way to do this.
   return mark_as_sanitized(self, val);
 }
@@ -112,14 +142,15 @@ static PyNumberMethods sp_as_number = {
   0,      /* nb_add */
   0,      /* nb_subtract */
   0,      /* nb_multiply */
+#if PY_MAJOR_VERSION < 3
   0,      /* nb_divide */
+#endif
   sp_mod, /* nb_remainder */
 };
 
 // SanitizedPlaceholder Type.
 static PyTypeObject SanitizedPlaceholderType = {
-  PyObject_HEAD_INIT(NULL)
-  0,                                        /* ob_size */
+  PyVarObject_HEAD_INIT(NULL,0 )
   "baked.SanitizedPlaceholder",             /* tp_name */
   sizeof(SanitizedPlaceholderObject),       /* tp_basicsize */
   0,                                        /* tp_itemsize */
@@ -139,8 +170,12 @@ static PyTypeObject SanitizedPlaceholderType = {
   0,                                        /* tp_setattro */
   0,                                        /* tp_as_buffer */
   Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE |
-      Py_TPFLAGS_CHECKTYPES |
-      Py_TPFLAGS_STRING_SUBCLASS,           /* tp_flags */
+#if PY_MAJOR_VERSION >= 3
+    Py_TPFLAGS_UNICODE_SUBCLASS,            /* tp_flags */
+#else
+    Py_TPFLAGS_CHECKTYPES |
+    Py_TPFLAGS_STRING_SUBCLASS,             /* tp_flags */
+#endif
   0,                                        /* tp_doc */
   0,                                        /* tp_traverse */
   0,                                        /* tp_clear */
@@ -151,7 +186,7 @@ static PyTypeObject SanitizedPlaceholderType = {
   0,                                        /* tp_methods */
   0,                                        /* tp_members */
   0,                                        /* tp_getset */
-  0,                                        /* tp_base */
+  &PyUnicode_Type,                          /* tp_base */
   0,                                        /* tp_dict */
   0,                                        /* tp_descr_get */
   0,                                        /* tp_descr_set */
@@ -169,25 +204,58 @@ static struct PyMethodDef baked_functions[] = {
   {NULL, NULL}
 };
 
-PyMODINIT_FUNC
-init_baked(void)
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "_baked",          /* m_name */
+    "Baked Module",    /* m_doc */
+    -1,                /* m_size */
+    baked_functions,   /* m_methods */
+    NULL,              /* m_reload */
+    NULL,              /* m_traverse */
+    NULL,              /* m_clear */
+    NULL,              /* m_free */
+};
+#endif
+
+PyObject* moduleinit(void)
 {
   PyObject *m;
 
+#if PY_MAJOR_VERSION >= 3
+  Skip_Filter_PyString = PyUnicode_InternFromString("skip_filter");
+  // Set the base type and the constructor.
+  SanitizedPlaceholderType.tp_base = &PyUnicode_Type;
+  SanitizedPlaceholderType.tp_init = PyUnicode_Type.tp_init;
+#else
   Skip_Filter_PyString = PyString_InternFromString("skip_filter");
-
   // Set the base type and the constructor.
   SanitizedPlaceholderType.tp_base = &PyString_Type;
   SanitizedPlaceholderType.tp_init = PyString_Type.tp_init;
-  if (PyType_Ready(&SanitizedPlaceholderType) < 0)
-    return;
+#endif
+
+  if (PyType_Ready(&SanitizedPlaceholderType) < 0) {
+    return NULL;
+  }
 
   // Add exported functions to the module.
+#if PY_MAJOR_VERSION >= 3
+  m = PyModule_Create(&moduledef);
+#else
   m = Py_InitModule3("_baked", baked_functions, "Baked Module");
-  if (m == NULL)
-    return;
+#endif
+  if (m == NULL) {
+    return NULL;
+  }
 
   Py_INCREF(&SanitizedPlaceholderType);
   PyModule_AddObject(m, "_SanitizedPlaceholder",
                      (PyObject *) &SanitizedPlaceholderType);
+  return m;
 }
+
+#if PY_MAJOR_VERSION < 3
+PyMODINIT_FUNC init_baked(void) { (void)moduleinit(); }
+#else
+PyMODINIT_FUNC PyInit__baked(void) { return moduleinit(); }
+#endif

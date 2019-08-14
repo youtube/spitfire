@@ -72,7 +72,7 @@ udn_resolve_udn(PyObject *self, PyObject *args, PyObject *kargs)
     return NULL;
   }
 
-  if (!(PyUnicode_Check(name) || PyString_Check(name))) {
+  if (!(PyUnicode_Check(name) || PyBytes_Check(name))) {
     PyErr_SetString(PyExc_ValueError, "name must be string");
     return NULL;
   }
@@ -110,7 +110,7 @@ udn_resolve_from_search_list(PyObject *self, PyObject *args, PyObject *keywds)
     return NULL;
   }
 
-  if (!(PyUnicode_Check(name) || PyString_Check(name))) {
+  if (!(PyUnicode_Check(name) || PyBytes_Check(name))) {
     PyErr_SetString(PyExc_ValueError, "name must be string");
     return NULL;
   }
@@ -155,15 +155,31 @@ static struct PyMethodDef udn_methods[] = {
   {NULL, NULL}
 };
 
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "_udn",           /* m_name */
+    "_udn module",    /* m_doc */
+    -1,               /* m_size */
+    udn_methods,      /* m_methods */
+    NULL,             /* m_reload */
+    NULL,             /* m_traverse */
+    NULL,             /* m_clear */
+    NULL,             /* m_free */
+};
+#endif
 
 /* Initialization function (import-time) */
 
-DL_EXPORT(void)
-init_udn(void)
+static PyObject* moduleinit(void)
 {
   PyObject *m, *runtime_module;
 
-  m = Py_InitModule("_udn", udn_methods);
+#if PY_MAJOR_VERSION >= 3
+  m = PyModule_Create(&moduledef);
+#else
+  m = Py_InitModule3("_udn", udn_methods, "_udn module");
+#endif
 
   runtime_module = PyImport_ImportModule("spitfire.runtime");
   PlaceholderError = PyObject_GetAttrString(
@@ -177,7 +193,14 @@ init_udn(void)
 
   if (PyErr_Occurred())
     Py_FatalError("Can't initialize module _udn");
+  return m;
 }
+
+#if PY_MAJOR_VERSION < 3
+PyMODINIT_FUNC init_udn(void) { (void)moduleinit(); }
+#else
+PyMODINIT_FUNC PyInit__udn(void) { return moduleinit(); }
+#endif
 
 #ifdef __cplusplus
 }

@@ -74,8 +74,7 @@ static struct PyMethodDef template_methods[] = {
 
 // BaseSpitfireTemplate Type.
 static PyTypeObject BaseSpitfireTemplateType = {
-  PyObject_HEAD_INIT(NULL)
-  0,                                        /* ob_size */
+  PyVarObject_HEAD_INIT(NULL, 0)
   "template.BaseSpitfireTemplate",          /* tp_name */
   sizeof(BaseSpitfireTemplateObject),       /* tp_basicsize */
   0,                                        /* tp_itemsize */
@@ -121,36 +120,68 @@ static struct PyMethodDef module_methods[] = {
   {NULL} // Sentinel
 };
 
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "_template",       /* m_name */
+    "Template Module", /* m_doc */
+    -1,                /* m_size */
+    module_methods,    /* m_methods */
+    NULL,              /* m_reload */
+    NULL,              /* m_traverse */
+    NULL,              /* m_clear */
+    NULL,              /* m_free */
+};
+#endif
 
-PyMODINIT_FUNC
-init_template(void)
+PyObject* moduleinit(void)
 {
   // Set interned strings.
+#if PY_MAJOR_VERSION >= 3
+  Skip_Filter_PyString = PyUnicode_InternFromString("skip_filter");
+  filter_function_name = PyUnicode_InternFromString("_filter_function");
+#else
   Skip_Filter_PyString = PyString_InternFromString("skip_filter");
   filter_function_name = PyString_InternFromString("_filter_function");
+#endif
 
   // Get SanitizedPlaceholder from the baked module.
   PyObject *baked_module = PyImport_ImportModule("spitfire.runtime.baked");
-  if (baked_module == NULL)
-    return;
+  if (baked_module == NULL) {
+    return NULL;
+  }
   baked_SanitizedPlaceholder = (struct _typeobject *)
       PyObject_GetAttrString(baked_module, "SanitizedPlaceholder");
   Py_DECREF(baked_module);
-  if (baked_SanitizedPlaceholder == NULL)
-    return;
+  if (baked_SanitizedPlaceholder == NULL) {
+    return NULL;
+  }
 
 
   // Setup module and class.
   PyObject *m;
   BaseSpitfireTemplateType.tp_new = PyType_GenericNew;
-  if (PyType_Ready(&BaseSpitfireTemplateType) < 0)
-    return;
+  if (PyType_Ready(&BaseSpitfireTemplateType) < 0) {
+    return NULL;
+  }
 
+#if PY_MAJOR_VERSION >= 3
+  m = PyModule_Create(&moduledef);
+#else
   m = Py_InitModule3("_template", module_methods, "Template Module");
-  if (m == NULL)
-    return;
+#endif
+  if (m == NULL) {
+    return NULL;
+  }
 
   Py_INCREF(&BaseSpitfireTemplateType);
   PyModule_AddObject(m, "BaseSpitfireTemplate",
                      (PyObject *)&BaseSpitfireTemplateType);
+  return m;
 }
+
+#if PY_MAJOR_VERSION < 3
+PyMODINIT_FUNC init_template(void) { (void)moduleinit(); }
+#else
+PyMODINIT_FUNC PyInit__template(void) { return moduleinit(); }
+#endif
