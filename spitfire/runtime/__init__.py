@@ -3,6 +3,10 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from third_party import six
 
 class __UnresolvedPlaceholder(object):
     pass
@@ -34,7 +38,7 @@ class UndefinedPlaceholder(object):
         self.__name = name
         self.__search_list = search_list
 
-    def __nonzero__(self):
+    def __bool__(self):
         return False
 
     def __str__(self):
@@ -54,7 +58,7 @@ class UndefinedAttribute(UndefinedPlaceholder):
 
 def _get_available_placeholders(scope):
     if isinstance(scope, dict):
-        return scope.keys()
+        return list(scope.keys())
     else:
         return [a
                 for a in dir(scope)
@@ -68,7 +72,7 @@ def import_module_symbol(name):
     module = __import__(module_name, globals(), locals(), [symbol_name])
     try:
         symbol = getattr(module, symbol_name)
-    except AttributeError, e:
+    except AttributeError as e:
         raise ImportError("can't import %s" % name)
     return symbol
 
@@ -76,7 +80,7 @@ def import_module_symbol(name):
 # map template function names to python function names
 # inject them into a module so they run as globals
 def register_functions(module, template_function_map):
-    for t_name, f_name in template_function_map.iteritems():
+    for t_name, f_name in six.iteritems(template_function_map):
         f_func = import_module_symbol(f_name)
         setattr(module, t_name, f_func)
 
