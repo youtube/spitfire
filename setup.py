@@ -37,7 +37,7 @@ PACKAGES = ['spitfire',
             'spitfire.compiler.macros',
             'spitfire.runtime']
 
-PY_MODULES = ['third_party.yapps2.yappsrt']
+PY_MODULES = ['third_party.yapps2.yappsrt', 'third_party.six']
 
 SCRIPTS = ['scripts/crunner.py', 'scripts/spitfire-compile']
 

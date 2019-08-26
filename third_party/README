@@ -13,3 +13,11 @@ Modifications:
   - Clarified copyright in LICENSE
   - Patched yappsrt.py to improve error handling and token position tracking
   - Patched yapps2.py to modify generated import paths
+
+
+Six
+URL: https://github.com/benjaminp/six
+Version: aa4e90b (commit)
+License: MIT
+Path: third_party/six.py
+Modifications: Only including the six file.
