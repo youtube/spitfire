@@ -9,11 +9,11 @@
 # syntactically, 'name' will always be a valid identifier - so you won't get
 # name='my attribute' - it must be a legal python identifier
 
-import __builtin__
 import inspect
 import logging
 import weakref
 
+from third_party.six.moves import builtins
 from spitfire import runtime
 # Import the accelerated C module if available.
 try:
@@ -180,7 +180,7 @@ def _resolve_placeholder(name, template, global_vars):
     # fixme: finally try to resolve builtins - this should be configurable
     # if you compile optimized modes, this isn't necessary
     try:
-        return getattr(__builtin__, name)
+        return getattr(builtins, name)
     except AttributeError:
         return UndefinedPlaceholder(name, search_list)
 
