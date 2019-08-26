@@ -1,3 +1,11 @@
+0.8 - 2019-08-26
+Changes since importing to github.
+Documentation fixes
+Fixed benchmarks
+Set up TravisCI
+Removed psyco and -O4 optimization level
+Fixed unit tests
+
 0.7.15 - 2012-02-09
 add ability to restrict searchlist access in library templates by adding
 #global declarations.
