@@ -11,7 +11,6 @@ static PyObject *Skip_Filter_PyString = NULL;
 // SanitizedPlaceholder Object
 typedef struct {
 #if PY_MAJOR_VERSION >= 3
-
   PyUnicodeObject str;
 #else
   PyStringObject str;
