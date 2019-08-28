@@ -1,5 +1,8 @@
 0.8 - 2019-08-26
-Changes since importing to github.
+Added "baked" mode for sanitization of filtered output and improved safety
+Added "strict" mode for compile-time analysis and improved compiler warnings/errors
+Improved performance of placeholder resolution
+Improved build consistency by removing non-determinism
 Documentation fixes
 Fixed benchmarks
 Set up TravisCI
