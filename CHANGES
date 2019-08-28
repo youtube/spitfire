@@ -1,3 +1,14 @@
+0.8 - 2019-08-26
+Added "baked" mode for sanitization of filtered output and improved safety
+Added "strict" mode for compile-time analysis and improved compiler warnings/errors
+Improved performance of placeholder resolution
+Improved build consistency by removing non-determinism
+Fixed documentation
+Fixed benchmarks
+Set up TravisCI
+Removed psyco and -O4 optimization level
+Fixed unit tests
+
 0.7.15 - 2012-02-09
 add ability to restrict searchlist access in library templates by adding
 #global declarations.
