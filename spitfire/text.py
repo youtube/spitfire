@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+from builtins import zip
 import re
 import string
 import unicodedata
@@ -63,8 +64,8 @@ mangled_character_names = [
     'LATIN CAPITAL LETTER Z WITH ACUTE',
 ]
 
-char_map = dict(zip(normal_characters, [unicodedata.lookup(name)
-                                        for name in mangled_character_names]))
+char_map = dict(list(zip(normal_characters, [unicodedata.lookup(name)
+                                        for name in mangled_character_names])))
 
 
 # return a string with interesting unicode characters to make sure
