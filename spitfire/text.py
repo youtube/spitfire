@@ -3,12 +3,20 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from builtins import zip
+#from builtins import zip
 import re
 import string
 import unicodedata
+import sys
+if sys.version_info[0] < 3:
+    ascii_lowercase = string.lowercase
+    ascii_uppercase = string.uppercase
+else:
+    ascii_lowercase = string.ascii_lowercase
+    ascii_uppercase = string.ascii_uppercase
 
-normal_characters = string.lowercase + string.uppercase
+
+normal_characters = ascii_lowercase + ascii_uppercase
 mangled_character_names = [
     'LATIN SMALL LETTER A WITH RING ABOVE',
     'LATIN SMALL LETTER THORN',

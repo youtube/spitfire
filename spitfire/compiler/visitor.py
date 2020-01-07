@@ -3,7 +3,13 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-import StringIO
+from __future__ import print_function
+
+import sys
+if sys.version_info[0] < 3:
+    import cStringIO as StringIO
+else:
+    import io as StringIO
 
 
 class TreeWalkError(Exception):
@@ -41,9 +47,9 @@ def flatten_tree(root):
 
 def print_tree(root, output=None):
     if output:
-        print >> output, flatten_tree(root)
+        print(flatten_tree(root), file=output)
     else:
-        print flatten_tree(root)
+        print(flatten_tree(root))
 
 
 # perform an in-order traversal of the AST and call the generate methods
@@ -63,14 +69,14 @@ class TreeVisitor(object):
         text = self.output.getvalue()
         try:
             text = text.encode(self.ast_root.encoding)
-        except AttributeError, e:
+        except AttributeError as e:
             pass
         return text
 
     def generate_text(self, visit_node):
         try:
             return visit_node.node_repr
-        except AttributeError, e:
+        except AttributeError as e:
             raise TreeWalkError("can't write visit_node: %s\n\t%s" %
                                 (visit_node, e))
 
@@ -172,14 +178,14 @@ class TreeVisitor(object):
         v = self.visitDefault(node)[0]
         for n in [node.test_expression, node.true_expression,
                   node.false_expression]:
-            #print "visitASTParameterListNode:", n, text
+            #print("visitASTParameterListNode:", n, text)
             v.append(VisitNode(str(n)))
         return [v]
 
     def visitASTParameterListNode(self, node):
         v = self.visitDefault(node)[0]
         for n in node.child_nodes:
-            #print "visitASTParameterListNode:", n, text
+            #print("visitASTParameterListNode:", n, text)
             v.append(VisitNode(str(n)))
         return [v]
 

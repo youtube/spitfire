@@ -120,7 +120,7 @@ class Compiler(object):
         self._hoisted_tree = None
         self._source_code = None
 
-        for key, value in kargs.iteritems():
+        for key, value in kargs.items():
             setattr(self, key, value)
 
         if self.analyzer_options is None:

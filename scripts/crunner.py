@@ -6,10 +6,10 @@
 # license that can be found in the LICENSE file.
 
 from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from builtins import object
+#from future import standard_library
+#standard_library.install_aliases()
+#from builtins import str
+#from builtins import object
 import copy
 import logging
 import optparse

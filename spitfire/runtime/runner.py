@@ -35,7 +35,7 @@ def load_search_list(filename):
     else:
         try:
             data = eval(raw_data)
-        except Exception, e:
+        except Exception as e:
             logging.error('load_search_list\n%s', raw_data)
             raise
     return data

@@ -125,7 +125,7 @@ class AnalyzerOptions(object):
     @classmethod
     def get_help(cls):
         return ', '.join(['[no-]' + name.replace('_', '-')
-                          for name, value in vars(cls()).iteritems()
+                          for name, value in vars(cls()).items()
                           if not name.startswith('__') and type(value) == bool])
 
 
