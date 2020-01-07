@@ -5,7 +5,10 @@
 
 import sys
 
-import cStringIO as StringIO
+if sys.version_info[0] < 3:
+    import StringIO as StringIO
+else:
+    import io as StringIO
 
 from spitfire.compiler import analyzer
 from spitfire.compiler import ast
@@ -57,7 +60,7 @@ def macro_i18n(macro_node, arg_map, compiler):
     # most apps will have to stub this part out somehow i think
     macro_content_ast = util.parse(macro_node.value, 'i18n_goal')
     i18n_msg = make_i18n_message(macro_node.value, macro_content_ast)
-    i18n_msg_utf8 = i18n_msg.encode(sys.getdefaultencoding())
+    i18n_msg_utf8 = i18n_msg.encode('utf-8')
     #print "macro_content_ast"
     #print "orginal:", macro_node.value
     #print "i18n:", i18n_msg_utf8
@@ -76,5 +79,5 @@ def macro_function_i18n(call_node, arg_map, compiler):
         raise analyzer.SemanticAnalyzerError(
             '$i18n argument "%s" must be a string literal' % msg_arg_node)
     i18n_msg = text.i18n_mangled_message(msg_arg_node.value)
-    i18n_msg_utf8 = i18n_msg.encode(sys.getdefaultencoding())
+    i18n_msg_utf8 = i18n_msg.encode('utf-8')
     return u"'%s'" % i18n_msg.replace("'", "\\'")

@@ -296,7 +296,7 @@ class Compiler(object):
 
         outfile_path = os.path.join(self.output_directory, relative_dir,
                                     outfile_name)
-        outfile = open(outfile_path, 'w')
+        outfile = open(outfile_path, 'wb')
         outfile.write(src_code)
         outfile.close()
 

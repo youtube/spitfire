@@ -27,7 +27,7 @@ else
 endif
 
 COMPILER = PYTHONPATH=. $(PYTHON) scripts/spitfire-compile
-CRUNNER = $(PYTHON) scripts/crunner.py
+CRUNNER = PYTHONPATH=. $(PYTHON) scripts/crunner.py
 UNITTEST = $(PYTHON) -m unittest
 YAPPS = $(PYTHON) third_party/yapps2/yapps2.py
 

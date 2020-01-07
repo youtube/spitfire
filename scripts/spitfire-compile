@@ -48,8 +48,9 @@ def process_file(spt_compiler, filename, options):
 
 
 if __name__ == '__main__':
-    reload(sys)
-    sys.setdefaultencoding('utf8')
+    if sys.version_info[0] < 3:
+        reload(sys)
+        sys.setdefaultencoding('utf8')
 
     option_parser = optparse.OptionParser()
     options.add_common_options(option_parser)

@@ -9,6 +9,10 @@ import functools
 import types
 from spitfire import runtime
 from spitfire.runtime import udn
+import sys
+if sys.version_info[0] > 2:
+    unicode = basestring = str
+    long = int
 
 
 # decorate a function object so the default filter will not be applied to the

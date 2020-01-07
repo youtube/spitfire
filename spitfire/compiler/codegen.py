@@ -4,8 +4,11 @@
 # license that can be found in the LICENSE file.
 
 import logging
-
-import cStringIO as StringIO
+import sys
+if sys.version_info[0] < 3:
+    import cStringIO as io
+else:
+    import io
 
 from spitfire.compiler import ast
 
@@ -58,7 +61,7 @@ class CodeGenerator(object):
         # the stack.
         self.function_stack = []
         self.options = options
-        self.output = StringIO.StringIO()
+        self.output = io.StringIO()
         self.template = None
         self.baked_mode = False
 
@@ -70,7 +73,7 @@ class CodeGenerator(object):
     def generate_python(self, code_node):
         try:
             return code_node.src_line
-        except AttributeError, e:
+        except AttributeError as e:
             self.compiler.error(CodegenError("can't write code_node: %s\n\t%s" %
                                              (code_node, e)))
 
@@ -694,7 +697,7 @@ class CodeGenerator(object):
         try:
             return [CodeNode(line % vars(node))
                     for line in v['AST%s_tmpl' % node.__class__.__name__]]
-        except KeyError, e:
+        except KeyError as e:
             self.compiler.error(CodegenError("no codegen for %s %s" % (type(
                 node), vars(node))))
 

@@ -8,7 +8,10 @@ import optparse
 import os.path
 import sys
 
-import cPickle as pickle
+if sys.version_info[0] < 3:
+    import cPickle as pickle
+else:
+    import pickle
 
 
 def run_template(class_object):

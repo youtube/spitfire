@@ -4,10 +4,11 @@
 # license that can be found in the LICENSE file.
 
 import logging
-import new
+from types import ModuleType
 import os.path
 import re
 import sys
+import io
 
 from spitfire.compiler import options
 from spitfire.compiler import parser
@@ -54,13 +55,20 @@ def parse_template(src_text, xspt_mode=False):
         return parse(src_text)
 
 
-def read_template_file(filename):
-    f = open(filename, 'r')
-    try:
-        return f.read().decode('utf8')
-    finally:
-        f.close()
-
+if sys.version_info[0] < 3:
+    def read_template_file(filename):
+        f = open(filename, 'r')
+        try:
+            return f.read().decode('utf-8')
+        finally:
+            f.close()
+else:
+    def read_template_file(filename):
+        f = open(filename, 'r', encoding='utf-8')
+        try:
+            return f.read()
+        finally:
+            f.close()
 
 def read_function_registry(filename):
     f = open(filename)
@@ -137,11 +145,11 @@ def load_template(template_src,
 
 # a helper method to import a template without having to save it to disk
 def load_module_from_src(src_code, filename, module_name):
-    module = new.module(module_name)
+    module = ModuleType(module_name)
     sys.modules[module_name] = module
 
     bytecode = compile(src_code, filename, 'exec')
-    exec bytecode in module.__dict__
+    exec(bytecode, module.__dict__)
     return module
 
 

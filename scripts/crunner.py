@@ -130,8 +130,11 @@ class TestRunner(object):
 
         classname = util.filename2classname(filename)
         modulename = util.filename2modulename(filename)
+        suffix = '.%d' % sys.version_info[0]
         test_output_path = os.path.join(self.options.test_output,
                                         classname + '.txt')
+        if os.path.exists(test_output_path + suffix):
+            test_output_path += suffix
 
         if self.options.verbose:
             sys.stderr.write(modulename + ' ... ')
@@ -165,7 +168,7 @@ class TestRunner(object):
                 if 'source_code' in self.options.debug_flags:
                     print("source_code:", file=buffer)
                     for i, line in enumerate(self.compiler._source_code.split(
-                            '\n')):
+                            b'\n')):
                         print('% 3s' % (i + 1), line, file=buffer)
 
         test_failed = False
@@ -191,7 +194,10 @@ class TestRunner(object):
                 try:
                     template_class = getattr(template_module, classname)
                     template = template_class(search_list=self.search_list)
-                    current_output = template.main().encode('utf8')
+                    if sys.version_info[0] < 3:
+                        current_output = template.main().encode('utf8')
+                    else:
+                        current_output = template.main()
                 except Exception as e:
                     # An exception here doesn't meant that the test fails
                     # necessarily since libraries don't have a class; as long as
@@ -218,6 +224,7 @@ class TestRunner(object):
                 test_output = None
             else:
                 test_output = test_file.read()
+                test_file.close()
                 if current_output != test_output:
                     test_failed = True
                     if self.options.debug:
@@ -264,8 +271,9 @@ class TestRunner(object):
 
 
 if __name__ == '__main__':
-    reload(sys)
-    sys.setdefaultencoding('utf8')
+    if sys.version_info[0] < 3:
+        reload(sys)
+        sys.setdefaultencoding('utf8')
 
     option_parser = optparse.OptionParser()
     options.add_common_options(option_parser)
