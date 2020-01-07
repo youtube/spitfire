@@ -8,7 +8,10 @@ import optparse
 import os.path
 import sys
 
-import cPickle as pickle
+if sys.version_info[0] < 3:
+    import cPickle as pickle
+else:
+    import pickle
 
 
 def run_template(class_object):
@@ -35,7 +38,7 @@ def load_search_list(filename):
     else:
         try:
             data = eval(raw_data)
-        except Exception, e:
+        except Exception as e:
             logging.error('load_search_list\n%s', raw_data)
             raise
     return data

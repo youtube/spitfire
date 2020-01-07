@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file.
 
 import sys
+import io
 import traceback
 import xml.dom.minidom
 
@@ -27,7 +28,7 @@ class XHTML2AST(object):
     attr_op_namespace = 'pyattr'
 
     def build_template(self, filename):
-        f = open(filename)
+        f = io.open(filename, 'r', encoding='utf-8')
         data = f.read().decode('utf8')
         f.close()
         return self.parse(data)

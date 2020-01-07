@@ -120,7 +120,7 @@ class Compiler(object):
         self._hoisted_tree = None
         self._source_code = None
 
-        for key, value in kargs.iteritems():
+        for key, value in kargs.items():
             setattr(self, key, value)
 
         if self.analyzer_options is None:
@@ -296,7 +296,7 @@ class Compiler(object):
 
         outfile_path = os.path.join(self.output_directory, relative_dir,
                                     outfile_name)
-        outfile = open(outfile_path, 'w')
+        outfile = open(outfile_path, 'wb')
         outfile.write(src_code)
         outfile.close()
 

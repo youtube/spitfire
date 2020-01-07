@@ -1,12 +1,15 @@
 # Yapps 2.0 Runtime
 #
 # This module is needed to run generated parsers.
+from __future__ import division, print_function
 
-from string import join, count, find, rfind
 import logging
 import re
-import StringIO
 import sys
+if sys.version_info[0] < 3:
+    import StringIO
+else:
+    import io as StringIO
 
 class SyntaxError(Exception):
   """When we run into an unexpected token, this is the exception to use"""
@@ -109,7 +112,7 @@ class Scanner(object):
       if best_pat == '(error)' and best_match < 0:
         msg = "Bad Token"
         if restrict:
-          msg = "Trying to find one of "+join(restrict,", ")
+          msg = "Trying to find one of "+ ', '.join(restrict)
         raise SyntaxError(self.pos, msg)
 
       # If we found something that isn't to be ignored, return it
@@ -157,25 +160,25 @@ def format_error(input, err, scanner):
   """This is a really dumb long function to print error messages nicely."""
   error_message = StringIO.StringIO()
   p = err.pos
-  print >> error_message, "error position", p
+  print("error position", p, file=error_message)
   # Figure out the line number
-  line = count(input[:p], '\n')
-  print >> error_message, err.msg, "on line", repr(line+1) + ":"
+  line = input[:p].count('\n')
+  print(err.msg, "on line", repr(line+1) + ":", file=error_message)
   # Now try printing part of the line
   text = input[max(p-80, 0):p+80]
   p = p - max(p-80, 0)
 
   # Strip to the left
-  i = rfind(text[:p], '\n')
-  j = rfind(text[:p], '\r')
+  i = text[:p].rfind('\n')
+  j = text[:p].rfind('\r')
   if i < 0 or (0 <= j < i): i = j
   if 0 <= i < p:
     p = p - i - 1
   text = text[i+1:]
 
   # Strip to the right
-  i = find(text,'\n', p)
-  j = find(text,'\r', p)
+  i = text.find('\n', p)
+  j = text.find('\r', p)
   if i < 0 or (0 <= j < i):
     i = j
   if i >= 0:
@@ -188,22 +191,22 @@ def format_error(input, err, scanner):
     p = p - 7
 
   # Now print the string, along with an indicator
-  print >> error_message, '> ', text.replace('\t', ' ').encode(sys.getdefaultencoding())
-  print >> error_message, '> ', ' '*p + '^'
-  print >> error_message, 'List of nearby tokens:', scanner
+  print('> ', text.replace('\t', ' ').encode(sys.getdefaultencoding()), file=error_message)
+  print('> ', ' '*p + '^', file=error_message)
+  print('List of nearby tokens:', scanner, file=error_message)
   return error_message.getvalue()
 
 
 def wrap_error_reporter(parser, rule):
   try:
     return getattr(parser, rule)()
-  except SyntaxError, e:
+  except SyntaxError as e:
     logging.exception('syntax error')
     input = parser._scanner.input
     try:
       error_msg = format_error(input, e, parser._scanner)
     except ImportError:
-      error_msg = 'Syntax Error %s on line\n' % (e.msg, 1 + count(input[:e.pos]))
-  except NoMoreTokens, e:
+      error_msg = 'Syntax Error %s on line\n' % (e.msg, 1 + input[:e.pos].count())
+  except NoMoreTokens as e:
     error_msg = 'Could not complete parsing; stopped around here:\n%s\n%s' % (parser._scanner, e)
   raise FatalParseError(error_msg)

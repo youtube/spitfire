@@ -5,8 +5,6 @@
 
 # an 'abstract' base class for a template, seems like a good idea for now
 
-import cStringIO as StringIO
-
 from spitfire import runtime
 from spitfire.runtime import baked
 from spitfire.runtime import filters

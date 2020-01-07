@@ -9,7 +9,11 @@
 # syntactically, 'name' will always be a valid identifier - so you won't get
 # name='my attribute' - it must be a legal python identifier
 
-import __builtin__
+import sys
+if sys.version_info[0] < 3:
+    import __builtin__ as builtins
+else:
+    import builtins
 import inspect
 import logging
 import weakref
@@ -180,7 +184,7 @@ def _resolve_placeholder(name, template, global_vars):
     # fixme: finally try to resolve builtins - this should be configurable
     # if you compile optimized modes, this isn't necessary
     try:
-        return getattr(__builtin__, name)
+        return getattr(builtins, name)
     except AttributeError:
         return UndefinedPlaceholder(name, search_list)
 

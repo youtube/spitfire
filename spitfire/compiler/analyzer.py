@@ -96,7 +96,7 @@ class SemanticAnalyzer(object):
         try:
             if len(ast_node_list) != 1:
                 return ast_node_list
-        except TypeError, e:
+        except TypeError as e:
             self.compiler.error(SemanticAnalyzerError('method: %s, result: %s' %
                                                       (method, ast_node_list)))
 
@@ -446,7 +446,7 @@ class SemanticAnalyzer(object):
                 fragment_ast = util.parse(macro_output, 'fragment_goal')
             elif isinstance(pnode, ast.CallFunctionNode):
                 fragment_ast = util.parse(macro_output, 'rhs_expression')
-        except Exception, e:
+        except Exception as e:
             self.compiler.error(MacroParseError(e), pos=pnode.pos)
         return self.build_ast(fragment_ast)
 
@@ -464,7 +464,7 @@ class SemanticAnalyzer(object):
         try:
             temp_fragment = util.parse(pnode.value, macro_parse_rule or
                                        'fragment_goal')
-        except Exception, e:
+        except Exception as e:
             self.compiler.error(MacroParseError(e), pos=pnode.pos)
 
         if not self.uses_raw:

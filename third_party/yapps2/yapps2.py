@@ -25,6 +25,7 @@
 #   Exception.__init__ (thanks Alex Verstak)
 # * Style change: replaced raise "string exception" with raise
 #   ClassException(...) (thanks Alex Verstak)
+from __future__ import print_function
 
 from yappsrt import *
 import sys
@@ -39,6 +40,7 @@ class Generator:
         self.options = options
         self.preparser = ''
         self.postparser = None
+        self.firstline = 'from __future__ import print_function'
 
         self.tokens = {} # Map from tokens to regexps
         self.ignore = [] # List of token names to ignore in parsing
@@ -48,7 +50,7 @@ class Generator:
                 n = t
                 self.ignore.append(n)
             if n in self.tokens.keys() and self.tokens[n] != t:
-                print 'Warning: token', n, 'multiply defined.'
+                print('Warning: token', n, 'multiply defined.')
             self.tokens[n] = t
             self.terminals.append(n)
 
@@ -96,6 +98,9 @@ class Generator:
         self.add_to(b, a)
 
     def write(self, *args):
+        if self.firstline:
+            self.output.write(self.firstline)
+            self.firstline = None
         for a in args:
             self.output.write(a)
 
@@ -144,20 +149,20 @@ class Generator:
     def dump_information(self):
         self.calculate()
         for r in self.goals:
-            print '    _____' + '_'*len(r)
-            print ('___/Rule '+r+'\\' + '_'*80)[:79]
+            print('    _____' + '_'*len(r))
+            print(('___/Rule '+r+'\\' + '_'*80)[:79])
             queue = [self.rules[r]]
             while queue:
                 top = queue[0]
                 del queue[0]
 
-                print repr(top)
+                print(repr(top))
                 top.first.sort()
                 top.follow.sort()
                 eps = []
                 if top.accepts_epsilon: eps = ['(null)']
-                print '     FIRST:', join(top.first+eps, ', ')
-                print '    FOLLOW:', join(top.follow, ', ')
+                print('     FIRST:', join(top.first+eps, ', '))
+                print('    FOLLOW:', join(top.follow, ', '))
                 for x in top.get_children(): queue.append(x)
 
     def generate_output(self):
@@ -167,17 +172,17 @@ class Generator:
         self.write("from string import *\n")
         self.write("import re\n")
         self.write("from third_party.yapps2.yappsrt import *\n")
-	self.write("\n")
-	self.write("class ", self.name, "Scanner(Scanner):\n")
+        self.write("\n")
+        self.write("class ", self.name, "Scanner(Scanner):\n")
         self.write("    patterns = [\n")
         for p in self.terminals:
             self.write("        (%s, re.compile(%s)),\n" % (
                 repr(p), repr(self.tokens[p])))
         self.write("    ]\n")
-	self.write("    def __init__(self, str):\n")
-	self.write("        Scanner.__init__(self,None,%s,str)\n" %
+        self.write("    def __init__(self, str):\n")
+        self.write("        Scanner.__init__(self,None,%s,str)\n" %
                    repr(self.ignore))
-	self.write("\n")
+        self.write("\n")
 
         self.write("class ", self.name, "(Parser):\n")
         for r in self.goals:
@@ -202,8 +207,8 @@ class Generator:
             self.write(INDENT*3, "f = open(argv[2],'r')\n")
             self.write(INDENT*2, "else:\n")
             self.write(INDENT*3, "f = stdin\n")
-            self.write(INDENT*2, "print parse(argv[1], f.read())\n")
-            self.write(INDENT, "else: print 'Args:  <rule> [<filename>]'\n")
+            self.write(INDENT*2, "print(parse(argv[1], f.read())\n")
+            self.write(INDENT, "else: print('Args:  <rule> [<filename>]'\n")
 
 ######################################################################
 class Node:
@@ -290,7 +295,7 @@ class NonTerminal(Node):
                 self.accepts_epsilon = self.target.accepts_epsilon
                 gen.changed()
         except KeyError: # Oops, it's nonexistent
-            print 'Error: no rule <%s>' % self.name
+            print('Error: no rule <%s>' % self.name)
             self.target = self
 
     def __str__(self):
@@ -413,11 +418,11 @@ class Choice(Node):
             tokens_seen = tokens_seen + testset
             if removed:
                 if not testset:
-                    print 'Error in rule', self.rule+':', c, 'never matches.'
+                    print('Error in rule', self.rule+':', c, 'never matches.')
                 else:
-                    print 'Warning:', self
-                print ' * These tokens are being ignored:', join(removed, ', ')
-                print '   due to previous choices using them.'
+                    print('Warning:', self)
+                print(' * These tokens are being ignored:', join(removed, ', '))
+                print('   due to previous choices using them.')
 
             if testset:
                 if not tokens_unseen: # context sensitive scanners only!
@@ -474,7 +479,7 @@ class Option(Wrapper):
 
     def output(self, gen, indent):
         if self.child.accepts_epsilon:
-            print 'Warning in rule', self.rule+': contents may be empty.'
+            print('Warning in rule', self.rule+': contents may be empty.')
         gen.write(indent, "if %s:\n" %
                   gen.peek_test(self.first, self.child.first))
         self.child.output(gen, indent+INDENT)
@@ -495,9 +500,9 @@ class Plus(Wrapper):
 
     def output(self, gen, indent):
         if self.child.accepts_epsilon:
-            print 'Warning in rule', self.rule+':'
-            print ' * The repeated pattern could be empty.  The resulting'
-            print '   parser may not work properly.'
+            print('Warning in rule', self.rule+':')
+            print(' * The repeated pattern could be empty.  The resulting')
+            print('   parser may not work properly.')
         gen.write(indent, "while 1:\n")
         self.child.output(gen, indent+INDENT)
         union = self.first[:]
@@ -517,9 +522,9 @@ class Star(Plus):
 
     def output(self, gen, indent):
         if self.child.accepts_epsilon:
-            print 'Warning in rule', self.rule+':'
-            print ' * The repeated pattern could be empty.  The resulting'
-            print '   parser probably will not work properly.'
+            print('Warning in rule', self.rule+':')
+            print(' * The repeated pattern could be empty.  The resulting')
+            print('   parser probably will not work properly.')
         gen.write(indent, "while %s:\n" %
                   gen.peek_test(self.follow, self.child.first))
         self.child.output(gen, indent+INDENT)
@@ -552,9 +557,9 @@ def cleanup_rep(node, rep):
 
 def resolve_name(tokens, id, args):
     if id in map(lambda x: x[0], tokens):
-	# It's a token
-	if args:
-	    print 'Warning: ignoring parameters on TOKEN %s<<%s>>' % (id, args)
+        # It's a token
+        if args:
+            print('Warning: ignoring parameters on TOKEN %s<<%s>>' % (id, args))
         return Terminal(id)
     else:
         # It's a name, so assume it's a nonterminal
@@ -717,13 +722,13 @@ def generate(inputfilename, outputfilename='', dump=0, **flags):
     and an output filename (defaulting to X.py)."""
 
     if not outputfilename:
-	if inputfilename[-2:] == '.g':
+        if inputfilename[-2:] == '.g':
             outputfilename = inputfilename[:-2]+'.py'
-	else:
+        else:
             raise Exception("Missing output filename")
 
-    print 'Input Grammar:', inputfilename
-    print 'Output File:', outputfilename
+    print('Input Grammar:', inputfilename)
+    print('Output File:', outputfilename)
 
     DIVIDER = '\n%%\n' # This pattern separates the pre/post parsers
     preparser, postparser = None, None # Code before and after the parser desc
@@ -754,7 +759,7 @@ def generate(inputfilename, outputfilename='', dump=0, **flags):
         for opt,_,_ in yapps_options:
             if f == opt: break
         else:
-            print 'Warning: unrecognized option', f
+            print('Warning: unrecognized option', f)
     # Add command line options to the set
     for f in flags.keys(): t.options[f] = flags[f]
 
@@ -769,24 +774,24 @@ if __name__ == '__main__':
     import getopt
     optlist, args = getopt.getopt(sys.argv[1:], 'f:', ['dump'])
     if not args or len(args) > 2:
-        print 'Usage:'
-        print '  python', sys.argv[0], '[flags] input.g [output.py]'
-        print 'Flags:'
-        print ('  --dump' + ' '*40)[:35] + 'Dump out grammar information'
+        print('Usage:')
+        print('  python', sys.argv[0], '[flags] input.g [output.py]')
+        print('Flags:')
+        print(('  --dump' + ' '*40)[:35] + 'Dump out grammar information')
         for flag, _, doc in yapps_options:
-            print ('  -f' + flag + ' '*40)[:35] + doc
+            print(('  -f' + flag + ' '*40)[:35] + doc)
     else:
         # Read in the options and create a list of flags
-	flags = {}
-	for opt in optlist:
-	    for flag, name, _ in yapps_options:
-		if opt == ('-f', flag):
-		    flags[name] = 1
-		    break
-	    else:
+        flags = {}
+        for opt in optlist:
+            for flag, name, _ in yapps_options:
+                if opt == ('-f', flag):
+                    flags[name] = 1
+                    break
+            else:
                 if opt == ('--dump', ''):
                     flags['dump'] = 1
-		else:
-                    print 'Warning: unrecognized option', opt[0], opt[1]
+                else:
+                    print('Warning: unrecognized option', opt[0], opt[1])
 
-        apply(generate, tuple(args), flags)
+        generate(*args, **flags)

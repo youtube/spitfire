@@ -5,6 +5,11 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+from __future__ import print_function
+#from future import standard_library
+#standard_library.install_aliases()
+#from builtins import str
+#from builtins import object
 import copy
 import logging
 import optparse
@@ -13,7 +18,7 @@ import sys
 import time
 import traceback
 
-import cStringIO as StringIO
+import io as StringIO
 
 from spitfire.compiler import compiler
 from spitfire.compiler import options
@@ -60,11 +65,11 @@ class ResolveCounter(object):
         return self._get_item(key)
 
 
-sys_modules = sys.modules.keys()
+sys_modules = list(sys.modules.keys())
 
 
 def reset_sys_modules():
-    for key in sys.modules.keys():
+    for key in list(sys.modules.keys()):
         if key not in sys_modules:
             del sys.modules[key]
 
@@ -105,18 +110,18 @@ class TestRunner(object):
 
     def end(self):
         self.finish_time = time.time()
-        print >> sys.stderr
+        print(file=sys.stderr)
         if self.num_tests_failed > 0:
             sys.stderr.write(self.buffer.getvalue())
-        print >> sys.stderr, '-' * 70
-        print >> sys.stderr, 'Ran %d tests in %0.3fs' % (
-            self.num_tests_run, self.finish_time - self.start_time)
-        print >> sys.stderr
+        print('-' * 70, file=sys.stderr)
+        print('Ran %d tests in %0.3fs' % (
+            self.num_tests_run, self.finish_time - self.start_time), file=sys.stderr)
+        print(file=sys.stderr)
         if self.num_tests_failed > 0:
-            print >> sys.stderr, 'FAILED (failures=%d)' % self.num_tests_failed
+            print('FAILED (failures=%d)' % self.num_tests_failed, file=sys.stderr)
             sys.exit(1)
         else:
-            print >> sys.stderr, 'OK'
+            print('OK', file=sys.stderr)
             sys.exit(0)
 
     def process_file(self, filename):
@@ -125,8 +130,11 @@ class TestRunner(object):
 
         classname = util.filename2classname(filename)
         modulename = util.filename2modulename(filename)
+        suffix = '.%d' % sys.version_info[0]
         test_output_path = os.path.join(self.options.test_output,
                                         classname + '.txt')
+        if os.path.exists(test_output_path + suffix):
+            test_output_path += suffix
 
         if self.options.verbose:
             sys.stderr.write(modulename + ' ... ')
@@ -137,31 +145,31 @@ class TestRunner(object):
                 self.compiler.compile_file(filename)
             except Exception as e:
                 compile_failed = True
-                print >> buffer, '=' * 70
-                print >> buffer, 'FAIL:', modulename, '(' + filename + ')'
-                print >> buffer, '-' * 70
+                print('=' * 70, file=buffer)
+                print('FAIL:', modulename, '(' + filename + ')', file=buffer)
+                print('-' * 70, file=buffer)
                 traceback.print_exc(None, buffer)
             if self.options.debug:
                 if 'parse_tree' in self.options.debug_flags:
-                    print >> buffer, "parse_tree:"
+                    print("parse_tree:", file=buffer)
                     visitor.print_tree(self.compiler._parse_tree, output=buffer)
                 if 'analyzed_tree' in self.options.debug_flags:
-                    print >> buffer, "analyzed_tree:"
+                    print("analyzed_tree:", file=buffer)
                     visitor.print_tree(self.compiler._analyzed_tree,
                                        output=buffer)
                 if 'optimized_tree' in self.options.debug_flags:
-                    print >> buffer, "optimized_tree:"
+                    print("optimized_tree:", file=buffer)
                     visitor.print_tree(self.compiler._optimized_tree,
                                        output=buffer)
                 if 'hoisted_tree' in self.options.debug_flags:
-                    print >> buffer, "hoisted_tree:"
+                    print("hoisted_tree:", file=buffer)
                     visitor.print_tree(self.compiler._hoisted_tree,
                                        output=buffer)
                 if 'source_code' in self.options.debug_flags:
-                    print >> buffer, "source_code:"
+                    print("source_code:", file=buffer)
                     for i, line in enumerate(self.compiler._source_code.split(
-                            '\n')):
-                        print >> buffer, '% 3s' % (i + 1), line
+                            b'\n')):
+                        print('% 3s' % (i + 1), line, file=buffer)
 
         test_failed = False
         if not self.options.skip_test:
@@ -186,7 +194,10 @@ class TestRunner(object):
                 try:
                     template_class = getattr(template_module, classname)
                     template = template_class(search_list=self.search_list)
-                    current_output = template.main().encode('utf8')
+                    if sys.version_info[0] < 3:
+                        current_output = template.main().encode('utf8')
+                    else:
+                        current_output = template.main()
                 except Exception as e:
                     # An exception here doesn't meant that the test fails
                     # necessarily since libraries don't have a class; as long as
@@ -213,13 +224,14 @@ class TestRunner(object):
                 test_output = None
             else:
                 test_output = test_file.read()
+                test_file.close()
                 if current_output != test_output:
                     test_failed = True
                     if self.options.debug:
-                        print >> buffer, "expected output:"
-                        print >> buffer, test_output
-                        print >> buffer, "actual output:"
-                        print >> buffer, current_output
+                        print("expected output:", file=buffer)
+                        print(test_output, file=buffer)
+                        print("actual output:", file=buffer)
+                        print(current_output, file=buffer)
 
             if compile_failed or test_failed:
                 self.num_tests_failed += 1
@@ -232,23 +244,23 @@ class TestRunner(object):
                 f = open(current_output_path, 'w')
                 f.write(current_output)
                 f.close()
-                print >> buffer, '=' * 70
-                print >> buffer, 'FAIL:', modulename, '(' + filename + ')'
-                print >> buffer, '-' * 70
-                print >> buffer, 'Compare expected and actual output with:'
-                print >> buffer, ' '.join(['    diff -u', test_output_path,
-                                           current_output_path])
-                print >> buffer, 'Show debug information for the test with:'
+                print('=' * 70, file=buffer)
+                print('FAIL:', modulename, '(' + filename + ')', file=buffer)
+                print('-' * 70, file=buffer)
+                print('Compare expected and actual output with:', file=buffer)
+                print(' '.join(['    diff -u', test_output_path,
+                                           current_output_path]), file=buffer)
+                print('Show debug information for the test with:', file=buffer)
                 test_cmd = [arg for arg in sys.argv if arg not in self.files]
                 if '--debug' not in test_cmd:
                     test_cmd.append('--debug')
                 test_cmd = ' '.join(test_cmd)
-                print >> buffer, '   ', test_cmd, filename
+                print('   ', test_cmd, filename, file=buffer)
                 if raised_exception:
-                    print >> buffer, '-' * 70
-                    print >> buffer, current_output
+                    print('-' * 70, file=buffer)
+                    print(current_output, file=buffer)
                     traceback.print_exc(None, buffer)
-                print >> buffer
+                print(file=buffer)
                 self.buffer.write(buffer.getvalue())
             else:
                 if self.options.verbose:
@@ -259,8 +271,9 @@ class TestRunner(object):
 
 
 if __name__ == '__main__':
-    reload(sys)
-    sys.setdefaultencoding('utf8')
+    if sys.version_info[0] < 3:
+        reload(sys)
+        sys.setdefaultencoding('utf8')
 
     option_parser = optparse.OptionParser()
     options.add_common_options(option_parser)

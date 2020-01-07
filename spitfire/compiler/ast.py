@@ -2,8 +2,13 @@
 #
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
+from __future__ import print_function
 
-import __builtin__
+import sys
+if sys.version_info[0] < 3:
+    import __builtin__ as builtins
+else:
+    import builtins
 import copy
 import traceback
 
@@ -61,8 +66,8 @@ class ASTNode(object):
             else:
                 try:
                     node.parent = self
-                except AttributeError, e:
-                    print e, node
+                except AttributeError as e:
+                    print(e, node)
                     raise
                 self.child_nodes.append(node)
 
@@ -898,7 +903,7 @@ class FragmentNode(ASTNode):
 
 
 class TemplateNode(ASTNode):
-    __builtin_set = frozenset(dir(__builtin__))
+    __builtin_set = frozenset(dir(builtins))
 
     def __init__(self, classname=None, pos=None, **kargs):
         ASTNode.__init__(self, pos=pos, **kargs)
@@ -1047,7 +1052,7 @@ class OrderedDict(object):
             yield key, self._dict[key]
 
     def update(self, ordered_dict):
-        for key, value in ordered_dict.iteritems():
+        for key, value in ordered_dict.items():
             self[key] = value
 
     def __str__(self):

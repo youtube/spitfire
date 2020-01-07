@@ -3,13 +3,14 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+from __future__ import print_function
 
 class TreeWalkError(Exception):
     pass
 
 
 def print_tree(root):
-    print TreeVisitor(root).get_text()
+    print(TreeVisitor(root).get_text())
 
 
 # perform an in-order traversal of the AST and call the generate methods

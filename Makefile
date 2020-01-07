@@ -26,8 +26,8 @@ else
   PIP_INSTALL_FLAGS=--user
 endif
 
-COMPILER = $(PYTHON) scripts/spitfire-compile
-CRUNNER = $(PYTHON) scripts/crunner.py
+COMPILER = PYTHONPATH=. $(PYTHON) scripts/spitfire-compile
+CRUNNER = PYTHONPATH=. $(PYTHON) scripts/crunner.py
 UNITTEST = $(PYTHON) -m unittest
 YAPPS = $(PYTHON) third_party/yapps2/yapps2.py
 
@@ -70,7 +70,7 @@ test_function_registry: build
 
 no_whitespace_tests: build
 	$(call _clean_tests)
-	$(COMPILER) tests/*.txt tests/*.tmpl
+	$(COMPILER) tests/*.txt tests/*.tmpl --compiler-stack-traces
 	$(CRUNNER) tests/*.txt tests/*.tmpl
 	$(COMPILER) -O1 tests/*.txt tests/*.tmpl
 	$(CRUNNER) -O1 tests/*.txt tests/*.tmpl

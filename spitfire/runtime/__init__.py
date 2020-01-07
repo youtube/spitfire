@@ -68,7 +68,7 @@ def import_module_symbol(name):
     module = __import__(module_name, globals(), locals(), [symbol_name])
     try:
         symbol = getattr(module, symbol_name)
-    except AttributeError, e:
+    except AttributeError as e:
         raise ImportError("can't import %s" % name)
     return symbol
 

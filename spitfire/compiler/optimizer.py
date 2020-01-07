@@ -3,7 +3,14 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-import __builtin__
+from __future__ import print_function
+
+import sys
+if sys.version_info[0] < 3:
+    import __builtin__ as builtins
+else:
+    import builtins
+    from functools import reduce
 import copy
 import logging
 import os.path
@@ -13,7 +20,7 @@ from spitfire.compiler import ast
 from spitfire.compiler import analyzer
 from spitfire.compiler import walker
 
-builtin_names = vars(__builtin__)
+builtin_names = vars(builtins)
 
 _BINOP_INVALID_COUNT = 1000  # Any value > 0 will work.
 _BINOP_INITIAL_COUNT = 0
@@ -153,7 +160,7 @@ class _BaseAnalyzer(object):
     def optimize_ast(self):
         self.visit_ast(self.ast_root)
         if self.options.debug:
-            print "unoptimized_node_types", self.unoptimized_node_types
+            print("unoptimized_node_types", self.unoptimized_node_types)
         return self.ast_root
 
     # build an AST node list from a single parse node
@@ -163,7 +170,7 @@ class _BaseAnalyzer(object):
         method_name = 'analyze%s' % node.__class__.__name__
         method = getattr(self, method_name, self.default_optimize_node)
         if method_name in self.compiler.debug_flags:
-            print method_name, node
+            print(method_name, node)
         return method(node)
 
     def skip_analyze_node(self, node):
@@ -174,7 +181,7 @@ class _BaseAnalyzer(object):
     analyzeTargetNode = skip_analyze_node
 
     def default_optimize_node(self, node):
-        # print "default_optimize_node", type(node)
+        # print("default_optimize_node", type(node))
         self.unoptimized_node_types.add(type(node))
         return
 
@@ -236,21 +243,21 @@ class _BaseAnalyzer(object):
             conditional_node)
 
         if self.options.hoist_conditional_aliases:
-            #print "reanalyzeConditionalNode", conditional_node
-            #print "  parent_block", parent_block
-            #print "  parent_scope", parent_block.scope
+            #print("reanalyzeConditionalNode", conditional_node)
+            #print("  parent_block", parent_block)
+            #print("  parent_scope", parent_block.scope)
             # NOTE: need to iterate over items, in case we modify something
             items = conditional_node.scope.aliased_expression_map.items()
             for alias_node, alias in items:
-                #print "  check alias:", alias
-                #print "    alias_node:", alias_node
+                #print("  check alias:", alias)
+                #print("    alias_node:", alias_node)
                 assign_alias_node = ast.AssignNode(alias,
                                                    alias_node,
                                                    pos=alias_node.pos)
                 if alias_node in parent_block.scope.aliased_expression_map:
                     if self._is_condition_invariant(alias_node,
                                                     conditional_node):
-                        #print "  hoist:", assign_alias_node
+                        #print("  hoist:", assign_alias_node)
                         self.hoist(conditional_node, parent_block,
                                    insertion_point, alias_node,
                                    assign_alias_node)
@@ -288,9 +295,9 @@ class _BaseAnalyzer(object):
         node_dependency_set = self.get_node_dependencies(node)
         condition_invariant = (
             not node_dependency_set & conditional_node.scope.local_identifiers)
-        #print "is_condition_invariant:", condition_invariant
-        #print "  locals:", conditional_node.scope.local_identifiers
-        #print "  deps:", node_dependency_set
+        #print("is_condition_invariant:", condition_invariant)
+        #print("  locals:", conditional_node.scope.local_identifiers)
+        #print("  deps:", node_dependency_set)
         return condition_invariant
 
     def _is_loop_invariant(self, node, loop_node):
@@ -303,9 +310,9 @@ class _BaseAnalyzer(object):
 
     def _is_loop_invariant_legacy(self, node, loop_node):
         node_dependency_set = self.get_node_dependencies(node)
-        #     print "is loop invariant node:", node
+        #     print("is loop invariant node:", node)
         #     for x in node_dependency_set:
-        #       print "  dep:", x
+        #       print("  dep:", x)
 
         # find dependencies within the loop node but outside the node we're
         # checking
@@ -366,8 +373,8 @@ class _BaseAnalyzer(object):
             #elif isinstance(n, (ast.GetUDNNode, ast.FilterNode)):
             #  node_dependency_set.update(
             #    self.get_node_dependencies(node.expression))
-            #print "get_node_dependencies", node
-            #print "  deps:", node_dependency_set
+            #print("get_node_dependencies", node)
+            #print("  deps:", node_dependency_set)
         return node_dependency_set
 
 
@@ -626,11 +633,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
                 alias_name = _generate_filtered_placeholder(
                     filter_node.expression)
                 if alias_name in scope.alias_name_set:
-                    print "duplicate alias_name", alias_name
-                    print "scope", scope
-                    print "scope.alias_name_set", scope.alias_name_set
-                    print " ".join("scope.aliased_expression_map",
-                                   scope.aliased_expression_map)
+                    print("duplicate alias_name", alias_name)
+                    print("scope", scope)
+                    print("scope.alias_name_set", scope.alias_name_set)
+                    print(" ".join("scope.aliased_expression_map",
+                                   scope.aliased_expression_map))
                     return
 
                 alias = ast.IdentifierNode(alias_name, pos=filter_node.pos)
@@ -682,8 +689,8 @@ class OptimizationAnalyzer(_BaseAnalyzer):
                                         None,
                                         pos=placeholder.pos)
             cached_placeholder.parent = assign_rph
-            #print "optimize scope:", insert_block
-            #print "optimize marker:", insert_marker
+            #print("optimize scope:", insert_block)
+            #print("optimize marker:", insert_marker)
             insert_block.insert_before(insert_marker, assign_rph)
             self.visit_ast(assign_rph, insert_block)
             assign_rph.right = placeholder
@@ -712,7 +719,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
                          'Define the variable in all branches of the '
                          'conditional or before the conditional.') % local_var),
                     pos=placeholder.pos)
-            # print "local_identifiers", local_identifiers
+            # print("local_identifiers", local_identifiers)
             self._placeholdernode_replacement(
                 placeholder, local_var, cached_placeholder, local_identifiers)
 
@@ -725,7 +732,7 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 #     if not alias:
 #       alias_name = '_%s' % (expression.name)
 #       if alias_name in function.alias_name_set:
-#         print "duplicate alias_name", alias_name
+#         print("duplicate alias_name", alias_name)
 #         return
 
 #       alias = ast.IdentifierNode(alias_name)
@@ -735,11 +742,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
 #       # fixme: check to see if this expression is loop-invariant
 #       # must add a test case for this
 #       child_node_set = set(node.getChildNodes())
-#       #print "child_node_set", child_node_set
-#       #print "parent_loop", parent_loop, "parent", node.parent
+#       #print("child_node_set", child_node_set)
+#       #print("parent_loop", parent_loop, "parent", node.parent)
 #       if (parent_loop is not None and
 #           not parent_loop.loop_variant_set.intersection(child_node_set)):
-#         #print "pull up loop invariant", assign_alias
+#         #print("pull up loop invariant", assign_alias)
 #         parent_loop.parent.insert_before(parent_loop, assign_alias)
 #       else:
 #         insert_block, insert_marker = self.get_insert_block_and_point(node)
@@ -766,11 +773,11 @@ class OptimizationAnalyzer(_BaseAnalyzer):
                 alias_format = '%s_%s'
             alias_name = alias_format % (node.expression.name, node.name)
             if alias_name in scope.alias_name_set:
-                print "duplicate alias_name", alias_name
-                print "scope", scope
-                print "scope.alias_name_set", scope.alias_name_set
-                print " ".join("scope.aliased_expression_map",
-                               scope.aliased_expression_map)
+                print("duplicate alias_name", alias_name)
+                print("scope", scope)
+                print("scope.alias_name_set", scope.alias_name_set)
+                print(" ".join("scope.aliased_expression_map",
+                               scope.aliased_expression_map))
                 return
 
             alias = ast.IdentifierNode(alias_name)
@@ -782,13 +789,13 @@ class OptimizationAnalyzer(_BaseAnalyzer):
             # fixme: check to see if this expression is loop-invariant
             # must add a test case for this
             child_node_set = set(node.getChildNodes())
-            #print "child_node_set", child_node_set
-            #print "parent_loop", parent_loop, "parent", node.parent
+            #print("child_node_set", child_node_set)
+            #print("parent_loop", parent_loop, "parent", node.parent)
             if (self.options.inline_hoist_loop_invariant_aliases and
                     parent_loop is not None and
                     not parent_loop.loop_variant_set.intersection(
                         child_node_set)):
-                # print "pull up loop invariant", assign_alias
+                # print("pull up loop invariant", assign_alias)
                 parent_loop.parent.insert_before(parent_loop, assign_alias)
             else:
                 insert_block, insert_marker = self.get_insert_block_and_point(
@@ -1018,8 +1025,8 @@ class FinalPassAnalyzer(_BaseAnalyzer):
               assign_alias_node):
 
         # prune the implementation in the nested block
-        # print "prune", alias_node
-        # print " ".join("parent_block aliases",
+        # print("prune", alias_node)
+        # print(" ".join("parent_block aliases",)
         #                parent_block.scope.aliased_expression_map)
         parent_node.remove(assign_alias_node)
         # if we've already hoisted an assignment, don't do it again
@@ -1045,7 +1052,7 @@ class FinalPassAnalyzer(_BaseAnalyzer):
                     else:
                         parent_block.insert_before(parent_node,
                                                    assign_alias_node)
-                    # print "insert_before", alias_node
+                    # print("insert_before", alias_node)
             else:
                 # still need to insert the alias
                 parent_block.insert_before(insertion_point, assign_alias_node)
