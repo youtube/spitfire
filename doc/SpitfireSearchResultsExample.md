@@ -1,6 +1,6 @@
 This is a basic search template that I use a few hundred times a day in my desktop search tool.
 
-```
+```html
 #from spitfire.runtime.filters import escape_html
 #filter escape_html
 <html>

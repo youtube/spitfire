@@ -1,7 +1,7 @@
 # Quick Installation Notes #
 
 Copy this code into an file called example.spt:
-```
+```html
 <html>
   <head>
     <title>Spitfire example</title>
@@ -23,7 +23,7 @@ Run the compiler on your example file.
 spitfire-compiler example.spt
 ```
 This will produce a file called example.py. Now start up your python interpreter and try the following:
-```
+```python
 import example
 data = example.example(search_list=[{'name':"Trurl"}]).main()
 print data

@@ -67,7 +67,7 @@ There are a number of directives that have been omitted, at least for the time b
   * #assert
   * #breakpoint
   * #cache
-  * #compiler-setttings
+  * #compiler-settings
   * #include
   * #del
   * #echo

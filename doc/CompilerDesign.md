@@ -14,7 +14,7 @@ Problems:
   * some optimizations seem to be better suited by a new 'pass' - they don't seem to fit well into the existing model
   * some blurring of where python is injected. 'semantic analyzer' actually does some pseudo-codegen operations.
     * AST actually has some pseudo-codegen too - FunctionNode() generates a function header
-    * makes some optimizations more complex - one simple spitfire expression becomes a large chunk of python psuedo-code that is tricky to optimize
+    * makes some optimizations more complex - one simple spitfire expression becomes a large chunk of python pseudo-code that is tricky to optimize
 
 # 0.7.x #
 
