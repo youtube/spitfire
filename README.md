@@ -17,16 +17,52 @@ templates.  Spitfire has been the primary template language for
 ## Example
 
 ```html
-<html>
-<head><title>$title</title></head>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$title</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        a {
+            text-decoration: none;
+            color: #3498db;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
 <body>
-  <ul>
-    #for $user in $users
-      <li><a href="$user.url">$user.name</a></li>
-    #end for
-  </ul>
+    <div style="width: 80%; margin: 0 auto;">
+        <h1>Welcome to Spitfire!</h1>
+        <p>Check out our users:</p>
+        <ul>
+            #for $user in $users
+            <li><a href="$user.url">$user.name</a></li>
+            #end for
+        </ul>
+    </div>
 </body>
+
 </html>
+
 ```
 
 
